@@ -7,7 +7,8 @@ const CONFIG: SegmenterConfig = {
     sampleRate: 16_000,
     frameSamples: 480,
     preRollMs: 90,        // 3 frames
-    speechStartFrames: 2,
+    speechStartFrames: 2, // 2 voiced of the last 3 frames opens a segment
+    speechStartWindow: 3,
     silenceEndMs: 90,     // 3 frames
     minSpeechMs: 90,      // 3 voiced frames
     maxSegmentMs: 600,    // 20 frames
@@ -29,6 +30,19 @@ describe('SpeechSegmenter', () => {
         const s = makeSegmenter();
         const events = feed(s, [silent(), voiced(), silent(), silent()]);
         expect(events).toEqual([]);
+    });
+
+    test('choppy onset (voiced-dip-voiced, like "send it") still opens a segment', () => {
+        // Consonant dips reset a strictly-consecutive counter; the majority
+        // window (2 of 3 here) tolerates them at normal speaking volume.
+        const s = makeSegmenter();
+        const events = feed(s, [
+            voiced(), silent(), voiced(),       // onset fires on the 3rd frame
+            voiced(),
+            silent(), silent(), silent(),       // pause closes the segment
+        ]);
+        expect(events[0]).toEqual({ type: 'speech_start' });
+        expect(events[1]?.type).toBe('segment');
     });
 
     test('sustained speech opens a segment; a pause closes it', () => {

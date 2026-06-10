@@ -71,6 +71,8 @@ export async function transcribeAudio(params: {
     file: File;
     model?: string;
     language?: string;
+    /** Vocabulary-bias prompt (e.g. "Pipali" + command phrases) for reliable proper-noun transcription. */
+    prompt?: string;
 }): Promise<TranscribeResult> {
     const model = params.model || DEFAULT_STT_MODEL;
 
@@ -79,6 +81,7 @@ export async function transcribeAudio(params: {
         form.append('file', params.file);
         form.append('model', model);
         if (params.language) form.append('language', params.language);
+        if (params.prompt) form.append('prompt', params.prompt);
         const result = await platformFetch<{ text: string; model: string }>(
             `${getPlatformUrl()}/voice/transcribe`,
             { method: 'POST', body: form },
@@ -91,6 +94,7 @@ export async function transcribeAudio(params: {
         file: params.file,
         model,
         ...(params.language ? { language: params.language } : {}),
+        ...(params.prompt ? { prompt: params.prompt } : {}),
         response_format: 'json',
     });
     log.info({ model, chars: transcription.text?.length ?? 0 }, 'Transcribed audio (local)');

@@ -70,13 +70,15 @@ function ensureAudioContext(): AudioContext | null {
     }
 }
 
-export type VoiceCueProfile = 'confirmation' | 'complete' | 'error';
+export type VoiceCueProfile = 'confirmation' | 'complete' | 'error' | 'session_start' | 'session_end';
 
 // Distinct two-tone signatures so the user can tell, by ear, what Pipali wants.
 const VOICE_CUE_TONES: Record<VoiceCueProfile, [number, number]> = {
-    confirmation: [660, 880],  // gentle rising — "I need a decision"
-    complete: [880, 1320],     // brighter rising — "I'm done"
-    error: [440, 300],         // descending — "something went wrong"
+    confirmation: [660, 880],   // gentle rising — "I need a decision"
+    complete: [880, 1320],      // brighter rising — "I'm done"
+    error: [440, 300],          // descending — "something went wrong"
+    session_start: [520, 780],  // soft rising — "listening session started"
+    session_end: [780, 520],    // soft falling — "listening session ended"
 };
 
 /** Play the attention cue for a voice event (does not speak). */

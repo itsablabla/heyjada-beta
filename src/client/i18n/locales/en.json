@@ -92,8 +92,9 @@
         "enabledLabel": "Voice mode",
         "enabledHint": "When on, Pipali plays a sound when it needs you and reads results aloud after you give a go-ahead. Microphone and audio stay on this device.",
         "status": {
-            "idle": "Voice: tap to talk",
-            "announced": "Pipali has something to say — tap to listen",
+            "idle": "Listening for \"Pipali…\" — tap to talk",
+            "dormant": "Voice asleep — tap to wake",
+            "announced": "Pipali has something to say — say \"Pipali, go ahead\" or tap",
             "speaking": "Speaking — tap to reply",
             "listening": "Listening — tap to send",
             "transcribing": "Transcribing…"

@@ -1,7 +1,7 @@
 // Message input area with model selector, file attachment, connection status, and send/stop controls
 
 import React, { useEffect, useRef } from 'react';
-import { ArrowUp, Square, Upload, X, FileText, FileSpreadsheet, File, Paperclip, ChevronDown, Circle, Headphones, Mic, Volume2, Loader2 } from 'lucide-react';
+import { ArrowUp, Square, Upload, X, FileText, FileSpreadsheet, File, Paperclip, ChevronDown, Circle, Headphones, Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
 import type { ConfirmationRequest, ChatModelInfo } from '../../types';
 import type { StagedFile } from '../../hooks/useFileDrop';
 import { ConfirmationDialog } from '../confirmation/ConfirmationDialog';
@@ -32,7 +32,7 @@ interface InputAreaProps {
     onPickFiles?: (browserFiles?: File[]) => void;
     voiceSupported?: boolean;
     voiceEnabled?: boolean;
-    voiceStatus?: 'idle' | 'announced' | 'speaking' | 'listening' | 'transcribing';
+    voiceStatus?: 'idle' | 'dormant' | 'announced' | 'speaking' | 'listening' | 'transcribing';
     voiceTranscript?: string;
     onVoiceEnable?: () => void;
     onVoiceTap?: () => void;
@@ -99,7 +99,8 @@ export function InputArea({
             : voiceStatus === 'speaking' ? t('voice.status.speaking')
                 : voiceStatus === 'listening' ? t('voice.status.listening')
                     : voiceStatus === 'transcribing' ? t('voice.status.transcribing')
-                        : t('voice.status.idle');
+                        : voiceStatus === 'dormant' ? t('voice.status.dormant')
+                            : t('voice.status.idle');
     const showHint = useRef(Math.random() < 0.05).current;
     const placeholder = !showHint
         ? t('inputArea.askAnything')
@@ -361,6 +362,7 @@ export function InputArea({
                                 >
                                     {!voiceEnabled ? <Headphones size={16} />
                                         : voiceStatus === 'transcribing' ? <Loader2 size={16} className="spin" />
+                                        : voiceStatus === 'dormant' ? <MicOff size={16} />
                                         : voiceStatus === 'speaking' || voiceStatus === 'announced' ? <Volume2 size={16} />
                                         : <Mic size={16} />}
                                 </button>

@@ -253,8 +253,9 @@
         "enabledLabel": "Sprachmodus",
         "enabledHint": "Wenn aktiv, gibt Pipali einen Ton aus, wenn es dich braucht, und liest Ergebnisse vor, sobald du grünes Licht gibst. Mikrofon und Audio bleiben auf diesem Gerät.",
         "status": {
-            "idle": "Sprache: zum Sprechen tippen",
-            "announced": "Pipali möchte etwas sagen – zum Anhören tippen",
+            "idle": "Wartet auf \"Pipali…\" – zum Sprechen tippen",
+            "dormant": "Sprachmodus schläft – zum Aufwecken tippen",
+            "announced": "Pipali möchte etwas sagen – sage \"Pipali, go ahead\" oder tippe",
             "speaking": "Spricht – zum Antworten tippen",
             "listening": "Hört zu – zum Senden tippen",
             "transcribing": "Transkribiert…"

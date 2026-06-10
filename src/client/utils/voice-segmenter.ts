@@ -32,7 +32,10 @@ export interface SegmenterConfig {
     sampleRate: number;
     frameSamples: number;
     preRollMs: number;
+    /** Voiced frames within the onset window required to open a segment. */
     speechStartFrames: number;
+    /** Onset window size — majority voting tolerates consonant dips. */
+    speechStartWindow: number;
     silenceEndMs: number;
     minSpeechMs: number;
     maxSegmentMs: number;
@@ -49,6 +52,7 @@ export function defaultSegmenterConfig(sampleRate: number): SegmenterConfig {
         frameSamples: Math.round((sampleRate * VOICE_TUNABLES.analysisFrameMs) / 1000),
         preRollMs: VOICE_TUNABLES.preRollMs,
         speechStartFrames: VOICE_TUNABLES.speechStartFrames,
+        speechStartWindow: VOICE_TUNABLES.speechStartWindow,
         silenceEndMs: VOICE_TUNABLES.silenceEndMs,
         minSpeechMs: VOICE_TUNABLES.minSpeechMs,
         maxSegmentMs: VOICE_TUNABLES.maxSegmentMs,
@@ -65,7 +69,7 @@ export class SpeechSegmenter {
     private preRoll: Float32Array[] = [];
     private collecting = false;
     private collected: Float32Array[] = [];
-    private voicedRun = 0;
+    private recentVoiced: boolean[] = [];
     private silenceRun = 0;
     private voicedFrames = 0;
 
@@ -84,19 +88,21 @@ export class SpeechSegmenter {
             this.preRoll.push(frame.slice());
             if (this.preRoll.length > this.maxPreRollFrames) this.preRoll.shift();
 
-            if (!voiced) {
-                this.voicedRun = 0;
-                return [];
-            }
-            this.voicedRun++;
-            if (this.voicedRun < this.config.speechStartFrames) return [];
+            // Majority vote over a sliding window, not strictly consecutive
+            // frames: the consonant dips in short commands ("send it") would
+            // otherwise reset onset and demand unnaturally loud speech.
+            this.recentVoiced.push(voiced);
+            if (this.recentVoiced.length > this.config.speechStartWindow) this.recentVoiced.shift();
+            const voicedInWindow = this.recentVoiced.filter(Boolean).length;
+            if (!voiced || voicedInWindow < this.config.speechStartFrames) return [];
 
             // Onset confirmed — open a segment seeded with the pre-roll
-            // (which already contains the hysteresis frames).
+            // (which already contains the onset-window frames).
             this.collecting = true;
             this.collected = this.preRoll;
             this.preRoll = [];
-            this.voicedFrames = this.voicedRun;
+            this.recentVoiced = [];
+            this.voicedFrames = voicedInWindow;
             this.silenceRun = 0;
             return [{ type: 'speech_start' }];
         }
@@ -125,7 +131,7 @@ export class SpeechSegmenter {
         this.preRoll = [];
         this.collected = [];
         this.collecting = false;
-        this.voicedRun = 0;
+        this.recentVoiced = [];
         this.silenceRun = 0;
         this.voicedFrames = 0;
     }
@@ -135,7 +141,7 @@ export class SpeechSegmenter {
         const voicedFrames = this.voicedFrames;
         this.collected = [];
         this.collecting = false;
-        this.voicedRun = 0;
+        this.recentVoiced = [];
         this.silenceRun = 0;
         this.voicedFrames = 0;
 

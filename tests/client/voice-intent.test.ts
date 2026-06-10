@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'bun:test';
-import { parseConfirmationIntent, parseGoAhead, normalizeUtterance } from '../../src/client/utils/voice-intent';
+import { parseConfirmationIntent, parseGoAhead, parseAddressing, normalizeUtterance } from '../../src/client/utils/voice-intent';
 
 describe('normalizeUtterance', () => {
     test('lowercases, strips punctuation/apostrophes, and drops filler', () => {
@@ -18,6 +18,34 @@ describe('parseGoAhead', () => {
     test('rejects empty or unrelated speech', () => {
         expect(parseGoAhead('')).toBe(false);
         expect(parseGoAhead('what is the meaning of life')).toBe(false);
+    });
+});
+
+describe('parseAddressing', () => {
+    test('matches the address word with payload extraction', () => {
+        expect(parseAddressing('Pipali, also check the logs')).toEqual({ addressed: true, payload: 'also check the logs' });
+        expect(parseAddressing('pipali go ahead')).toEqual({ addressed: true, payload: 'go ahead' });
+    });
+
+    test('allows lead-ins like hey/ok', () => {
+        expect(parseAddressing('Hey Pipali, what is pending?')).toEqual({ addressed: true, payload: 'what is pending?' });
+        expect(parseAddressing('Okay Pipali')).toEqual({ addressed: true, payload: '' });
+    });
+
+    test('tolerates STT mangling of the proper noun', () => {
+        expect(parseAddressing('Bipali, summarize this').addressed).toBe(true);
+        expect(parseAddressing('Pipally check the deploy').addressed).toBe(true);
+        expect(parseAddressing('Pip ali, run the report').addressed).toBe(true);
+    });
+
+    test('rejects unaddressed ambient speech', () => {
+        for (const s of ['the pipeline is broken', 'happily ever after', 'yes, exactly', 'can you pass the salt', '']) {
+            expect(parseAddressing(s).addressed).toBe(false);
+        }
+    });
+
+    test('requires the address word at the start, not mid-sentence', () => {
+        expect(parseAddressing('I told Pipali to check it').addressed).toBe(false);
     });
 });
 

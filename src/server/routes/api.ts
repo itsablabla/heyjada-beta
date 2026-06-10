@@ -993,8 +993,9 @@ api.post('/voice/transcribe', async (c) => {
 
     const model = typeof body['model'] === 'string' ? body['model'] : undefined;
     const language = typeof body['language'] === 'string' ? body['language'] : undefined;
+    const prompt = typeof body['prompt'] === 'string' ? body['prompt'].slice(0, 500) : undefined;
     try {
-        return c.json(await transcribeAudio({ file, model, language }));
+        return c.json(await transcribeAudio({ file, model, language, prompt }));
     } catch (error) {
         return voiceErrorResponse(c, error);
     }

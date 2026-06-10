@@ -253,8 +253,9 @@
         "enabledLabel": "音声モード",
         "enabledHint": "有効にすると、対応が必要なときにPipaliが音で知らせ、合図をすると結果を読み上げます。マイクと音声はこの端末内に留まります。",
         "status": {
-            "idle": "音声：タップして話す",
-            "announced": "Pipaliからお知らせがあります — タップして聞く",
+            "idle": "「Pipali…」の呼びかけを待機中 — タップして話す",
+            "dormant": "音声モードは休止中 — タップして再開",
+            "announced": "Pipaliからお知らせがあります — 「Pipali, go ahead」と言うかタップ",
             "speaking": "読み上げ中 — タップして返答",
             "listening": "聞き取り中 — タップして送信",
             "transcribing": "文字起こし中…"

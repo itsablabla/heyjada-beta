@@ -42,11 +42,12 @@ function extensionForMime(mime: string): string {
 }
 
 /** Transcribe a recorded audio blob to text via the app's voice route. */
-export async function transcribeAudio(blob: Blob, opts?: { model?: string; language?: string }): Promise<string> {
+export async function transcribeAudio(blob: Blob, opts?: { model?: string; language?: string; prompt?: string }): Promise<string> {
     const form = new FormData();
     form.append('file', blob, `utterance.${extensionForMime(blob.type)}`);
     if (opts?.model) form.append('model', opts.model);
     if (opts?.language) form.append('language', opts.language);
+    if (opts?.prompt) form.append('prompt', opts.prompt);
 
     const res = await apiFetch('/api/voice/transcribe', { method: 'POST', body: form });
     if (!res.ok) throw await toVoiceError(res);
