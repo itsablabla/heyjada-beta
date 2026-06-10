@@ -1,75 +1,17 @@
 /**
- * Client-side voice audio: microphone capture (getUserMedia + MediaRecorder)
- * and the network calls to the app's voice routes. Playback lives in the audio
- * layer (notifications.ts) so it can share the AudioContext and a single queue.
+ * Client-side voice audio: capture support detection and the network calls to
+ * the app's voice routes. Capture itself lives in voice-capture.ts (AudioWorklet);
+ * playback lives in notifications.ts so it can share the AudioContext and queue.
  */
 
 import { apiFetch } from './api';
 
-// Chromium MediaRecorder favors webm/opus; WKWebView (Safari/Tauri) favors mp4/aac.
-const PREFERRED_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/mpeg'];
-
-export function pickRecorderMimeType(): string | undefined {
-    if (typeof MediaRecorder === 'undefined') return undefined;
-    for (const t of PREFERRED_MIME_TYPES) {
-        if (MediaRecorder.isTypeSupported?.(t)) return t;
-    }
-    return undefined; // let the browser pick its default
-}
-
+/** Segmented capture needs getUserMedia + AudioWorklet (Safari/WKWebView 14.1+, Chromium, Firefox). */
 export function isVoiceCaptureSupported(): boolean {
     return typeof navigator !== 'undefined'
         && !!navigator.mediaDevices?.getUserMedia
-        && typeof MediaRecorder !== 'undefined';
-}
-
-/**
- * Records a single microphone utterance. The caller drives start()/stop();
- * stop() resolves with the recorded audio Blob and releases the mic.
- */
-export class VoiceRecorder {
-    private recorder?: MediaRecorder;
-    private stream?: MediaStream;
-    private chunks: Blob[] = [];
-    private mimeType?: string;
-
-    async start(): Promise<void> {
-        this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        this.mimeType = pickRecorderMimeType();
-        this.chunks = [];
-        this.recorder = new MediaRecorder(this.stream, this.mimeType ? { mimeType: this.mimeType } : undefined);
-        this.recorder.ondataavailable = (e) => { if (e.data.size > 0) this.chunks.push(e.data); };
-        this.recorder.start();
-    }
-
-    isRecording(): boolean {
-        return this.recorder?.state === 'recording';
-    }
-
-    async stop(): Promise<Blob> {
-        return new Promise<Blob>((resolve, reject) => {
-            const rec = this.recorder;
-            if (!rec) { reject(new Error('Recorder not started')); return; }
-            rec.onstop = () => {
-                const blob = new Blob(this.chunks, { type: this.mimeType || rec.mimeType || 'audio/webm' });
-                this.cleanup();
-                resolve(blob);
-            };
-            try { rec.stop(); } catch (e) { this.cleanup(); reject(e as Error); }
-        });
-    }
-
-    cancel(): void {
-        try { this.recorder?.stop(); } catch { /* ignore */ }
-        this.cleanup();
-    }
-
-    private cleanup(): void {
-        this.stream?.getTracks().forEach((t) => t.stop());
-        this.stream = undefined;
-        this.recorder = undefined;
-        this.chunks = [];
-    }
+        && typeof AudioContext !== 'undefined'
+        && typeof AudioWorkletNode !== 'undefined';
 }
 
 export interface VoiceRequestError extends Error {

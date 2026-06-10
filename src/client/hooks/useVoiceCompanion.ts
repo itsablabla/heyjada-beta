@@ -8,6 +8,11 @@
  * over the user. After speaking it listens, transcribes, and routes the reply:
  * a confirmation decision, free-form guidance, or a follow-up message.
  *
+ * Listening uses the segmented turn model: continuous capture, pauses close
+ * STT segments (never the turn), a live transcript accumulates, and the turn
+ * ends on a tail end phrase, a cancel phrase, or a tap. Discard phrase clears
+ * the transcript and keeps listening so the user can rephrase.
+ *
  * Announcements are gated to the active conversation and deduped so replayed
  * run_complete / confirmation events (reconnect, observe) never double-speak.
  */
@@ -15,9 +20,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
 import { CONFIRMATION_OPTIONS } from '../../server/processor/confirmation/confirmation.types';
-import { VoiceRecorder, isVoiceCaptureSupported, transcribeAudio, synthesizeSpeech } from '../utils/voice-audio';
+import { isVoiceCaptureSupported, transcribeAudio, synthesizeSpeech } from '../utils/voice-audio';
+import { SegmentedCapture } from '../utils/voice-capture';
+import { TurnTranscript } from '../utils/voice-turn';
 import { playVoiceCue, speakAudio, stopSpeaking, type VoiceCueProfile } from '../utils/notifications';
-import { parseConfirmationIntent, parseGoAhead } from '../utils/voice-intent';
+import { parseConfirmationIntent } from '../utils/voice-intent';
 import { buildConfirmationSummary, buildCompletionSummary } from '../utils/voice-summary';
 
 export type VoiceStatus = 'idle' | 'announced' | 'speaking' | 'listening' | 'transcribing';
@@ -37,6 +44,13 @@ interface PendingCompletion {
     summary: string;
 }
 type Pending = PendingConfirmation | PendingCompletion;
+
+interface ActiveTurn {
+    transcript: TurnTranscript;
+    capture: SegmentedCapture | null;
+    inFlight: number;
+    finishing: boolean;
+}
 
 export interface UseVoiceCompanionParams {
     enabled: boolean;
@@ -61,6 +75,7 @@ function resolveOptionIds(req: ConfirmationRequest) {
 export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     const { enabled, activeConversationId } = params;
     const [status, setStatus] = useState<VoiceStatus>('idle');
+    const [liveTranscript, setLiveTranscript] = useState('');
 
     const supported = isVoiceCaptureSupported();
 
@@ -73,26 +88,94 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     const pendingRef = useRef<Pending | null>(null);
     const prefetchRef = useRef<Map<string, Promise<ArrayBuffer>>>(new Map());
     const spokenKeysRef = useRef<Set<string>>(new Set());
-    const recorderRef = useRef<VoiceRecorder | null>(null);
+    const turnRef = useRef<ActiveTurn | null>(null);
     const busyRef = useRef(false);
+    // Breaks the cycle: segment results route to reply handlers, which can
+    // re-speak and listen again — which is where segments come from.
+    const routeRef = useRef<(text: string) => void>(() => {});
 
     const reportError = useCallback((message: string) => {
         cbRef.current.onError?.(message);
     }, []);
 
+    // Shared teardown: stop capture, detach the turn, clear the live transcript.
+    const releaseTurn = useCallback((turn: ActiveTurn) => {
+        turn.capture?.stop();
+        if (turnRef.current === turn) turnRef.current = null;
+        setLiveTranscript('');
+    }, []);
+
     const reset = useCallback(() => {
         stopSpeaking();
-        recorderRef.current?.cancel();
-        recorderRef.current = null;
+        const turn = turnRef.current;
+        if (turn) releaseTurn(turn);
         pendingRef.current = null;
         busyRef.current = false;
+        setLiveTranscript('');
         setStatus('idle');
-    }, []);
+    }, [releaseTurn]);
 
     // Turning voice off stops any in-flight audio/recording.
     useEffect(() => {
         if (!enabled) reset();
     }, [enabled, reset]);
+
+    const completeTurn = useCallback((turn: ActiveTurn, message: string) => {
+        releaseTurn(turn);
+        routeRef.current(message);
+    }, [releaseTurn]);
+
+    // A spoken cancel phrase or unrecoverable state: abandon the turn entirely.
+    const cancelTurn = useCallback((turn: ActiveTurn) => {
+        releaseTurn(turn);
+        setStatus(pendingRef.current ? 'announced' : 'idle');
+    }, [releaseTurn]);
+
+    const startListening = useCallback(async () => {
+        const turn: ActiveTurn = { transcript: new TurnTranscript(), capture: null, inFlight: 0, finishing: false };
+
+        const onSegment = (wav: Blob, seq: number) => {
+            turn.inFlight++;
+            transcribeAudio(wav)
+                .catch((err) => {
+                    reportError(err instanceof Error ? err.message : 'Transcription failed');
+                    return '';
+                })
+                .then((text) => {
+                    turn.inFlight--;
+                    // turnRef stays === turn until completeTurn/cancel/reset, so this
+                    // single check also aborts segments that resolve after a reset.
+                    if (turnRef.current !== turn) return;
+                    const action = turn.transcript.addSegment(seq, text);
+                    setLiveTranscript(turn.transcript.text);
+                    if (turn.finishing) {
+                        if (turn.inFlight === 0) completeTurn(turn, turn.transcript.finalize());
+                    } else if (action.type === 'submit') {
+                        completeTurn(turn, action.message);
+                    } else if (action.type === 'discard') {
+                        // "Scratch that": wipe what was said, keep listening for the rephrase.
+                        turn.transcript.clear();
+                        setLiveTranscript('');
+                    } else if (action.type === 'cancel') {
+                        cancelTurn(turn);
+                    }
+                });
+        };
+
+        turnRef.current = turn;
+        setLiveTranscript('');
+        try {
+            const capture = new SegmentedCapture({ onSegment });
+            await capture.start();
+            if (turnRef.current !== turn) { capture.stop(); return; }
+            turn.capture = capture;
+            setStatus('listening');
+        } catch (err) {
+            if (turnRef.current === turn) turnRef.current = null;
+            reportError(err instanceof Error ? err.message : 'Microphone unavailable');
+            reset();
+        }
+    }, [reportError, reset, completeTurn, cancelTurn]);
 
     const prefetch = useCallback((key: string, text: string) => {
         const p = synthesizeSpeech(text).catch((err) => {
@@ -128,20 +211,6 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         spokenKeysRef.current.add(key);
         announce({ kind: 'completion', key, conversationId: convId, summary: buildCompletionSummary(response) }, 'complete');
     }, [supported, announce]);
-
-    // Record an utterance, transcribe it, and hand back the text.
-    const startListening = useCallback(async () => {
-        const recorder = new VoiceRecorder();
-        recorderRef.current = recorder;
-        try {
-            await recorder.start();
-            setStatus('listening');
-        } catch (err) {
-            recorderRef.current = null;
-            reportError(err instanceof Error ? err.message : 'Microphone unavailable');
-            reset();
-        }
-    }, [reportError, reset]);
 
     const speakPending = useCallback(async (pending: Pending) => {
         setStatus('speaking');
@@ -197,32 +266,36 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         setStatus('idle');
     }, [speakPending, reset]);
 
-    const stopAndProcess = useCallback(async () => {
-        const recorder = recorderRef.current;
-        if (!recorder) { setStatus('idle'); return; }
-        setStatus('transcribing');
-        let text = '';
-        try {
-            const blob = await recorder.stop();
-            recorderRef.current = null;
-            text = await transcribeAudio(blob);
-        } catch (err) {
-            recorderRef.current = null;
-            reportError(err instanceof Error ? err.message : 'Transcription failed');
-            reset();
+    const routeTranscript = useCallback((text: string) => {
+        const pending = pendingRef.current;
+        const trimmed = text.trim();
+        if (!trimmed) {
+            // Nothing intelligible — keep any pending announcement actionable.
+            setStatus(pending ? 'announced' : 'idle');
             return;
         }
-
-        const pending = pendingRef.current;
-        if (pending?.kind === 'confirmation') handleConfirmationReply(pending, text);
-        else if (pending?.kind === 'completion') handleCompletionReply(pending, text);
+        if (pending?.kind === 'confirmation') handleConfirmationReply(pending, trimmed);
+        else if (pending?.kind === 'completion') handleCompletionReply(pending, trimmed);
         else {
-            // General push-to-talk: send as a normal message.
-            const trimmed = text.trim();
-            if (trimmed) cbRef.current.sendMessage(trimmed, activeConvRef.current);
+            cbRef.current.sendMessage(trimmed, activeConvRef.current);
             setStatus('idle');
         }
-    }, [reportError, reset, handleConfirmationReply, handleCompletionReply]);
+    }, [handleConfirmationReply, handleCompletionReply]);
+
+    useEffect(() => { routeRef.current = routeTranscript; }, [routeTranscript]);
+
+    // Tap while listening: send now, no end phrase required.
+    const finishListeningTap = useCallback(() => {
+        const turn = turnRef.current;
+        if (!turn) { setStatus('idle'); return; }
+
+        turn.finishing = true;
+        setStatus('transcribing');
+        turn.capture?.flush();      // emits the trailing segment synchronously
+        turn.capture?.stop();
+        if (turn.inFlight === 0) completeTurn(turn, turn.transcript.finalize());
+        // Otherwise the last in-flight transcription completes the turn.
+    }, [completeTurn]);
 
     // The mic/headphones control. Behavior depends on the current state.
     const handleTap = useCallback(() => {
@@ -240,14 +313,15 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             stopSpeaking();
             void startListening().finally(done);
         } else if (s === 'listening') {
-            void stopAndProcess().finally(done);
+            finishListeningTap();
+            done();
         } else if (s === 'idle') {
             // Push-to-talk for general chat.
             void startListening().finally(done);
         } else {
             done(); // transcribing — busy
         }
-    }, [status, supported, speakPending, startListening, stopAndProcess, reset]);
+    }, [status, supported, speakPending, startListening, finishListeningTap, reset]);
 
-    return { status, supported, handleTap, onConfirmationRequest, onTaskComplete };
+    return { status, supported, liveTranscript, handleTap, onConfirmationRequest, onTaskComplete };
 }

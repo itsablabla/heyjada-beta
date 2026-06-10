@@ -247,6 +247,7 @@
     "voice": {
         "enable": "Sprachmodus aktivieren",
         "disable": "Sprachmodus deaktivieren",
+        "liveHint": "Pausen sind jederzeit okay – sage \"send it\" oder \"over to you\" zum Senden, \"scratch that\" zum Verwerfen",
         "title": "Sprache",
         "description": "Lass Pipali Bestätigungen und Ergebnisse vorlesen und deine gesprochenen Antworten entgegennehmen – freihändig.",
         "enabledLabel": "Sprachmodus",

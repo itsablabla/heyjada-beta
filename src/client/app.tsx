@@ -1750,6 +1750,7 @@ const App = () => {
                         voiceSupported={voice.supported}
                         voiceEnabled={voiceEnabled}
                         voiceStatus={voice.status}
+                        voiceTranscript={voice.liveTranscript}
                         onVoiceEnable={enableVoice}
                         onVoiceTap={voice.handleTap}
                         models={models}

@@ -247,6 +247,7 @@
     "voice": {
         "enable": "音声モードを有効にする",
         "disable": "音声モードを無効にする",
+        "liveHint": "途中で間を置いてもOK。「send it」か「over to you」で送信、「scratch that」で破棄します",
         "title": "音声",
         "description": "Pipaliが確認や結果を読み上げ、あなたの音声での返答を受け取ります（ハンズフリー）。",
         "enabledLabel": "音声モード",

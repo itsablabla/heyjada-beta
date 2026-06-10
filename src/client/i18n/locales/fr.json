@@ -247,6 +247,7 @@
     "voice": {
         "enable": "Activer le mode vocal",
         "disable": "Désactiver le mode vocal",
+        "liveHint": "Fais des pauses librement — dis \"send it\" ou \"over to you\" pour envoyer, \"scratch that\" pour annuler",
         "title": "Voix",
         "description": "Laisse Pipali énoncer les confirmations et les résultats, et prendre tes réponses vocales — mains libres.",
         "enabledLabel": "Mode vocal",

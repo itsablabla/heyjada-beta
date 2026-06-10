@@ -86,6 +86,7 @@
     "voice": {
         "enable": "Enable voice mode",
         "disable": "Disable voice mode",
+        "liveHint": "Pause anytime — say \"send it\" or \"over to you\" to send, \"scratch that\" to discard",
         "title": "Voice",
         "description": "Let Pipali speak confirmations and results, and take your spoken replies — hands-free.",
         "enabledLabel": "Voice mode",

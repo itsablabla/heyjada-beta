@@ -247,6 +247,7 @@
     "voice": {
         "enable": "启用语音模式",
         "disable": "关闭语音模式",
+        "liveHint": "说话可随时停顿——说 \"send it\" 或 \"over to you\" 发送，说 \"scratch that\" 丢弃",
         "title": "语音",
         "description": "让 Pipali 朗读确认和结果，并接收你的语音回复——双手无需操作。",
         "enabledLabel": "语音模式",

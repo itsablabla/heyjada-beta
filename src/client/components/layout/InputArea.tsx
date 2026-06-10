@@ -33,6 +33,7 @@ interface InputAreaProps {
     voiceSupported?: boolean;
     voiceEnabled?: boolean;
     voiceStatus?: 'idle' | 'announced' | 'speaking' | 'listening' | 'transcribing';
+    voiceTranscript?: string;
     onVoiceEnable?: () => void;
     onVoiceTap?: () => void;
     models: ChatModelInfo[];
@@ -78,6 +79,7 @@ export function InputArea({
     voiceSupported = false,
     voiceEnabled = false,
     voiceStatus = 'idle',
+    voiceTranscript = '',
     onVoiceEnable,
     onVoiceTap,
     models,
@@ -184,6 +186,14 @@ export function InputArea({
                                     </button>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Live voice transcript while a hands-free turn is open */}
+                    {(voiceStatus === 'listening' || voiceStatus === 'transcribing' || !!voiceTranscript) && voiceEnabled && (
+                        <div className="voice-live-transcript" aria-live="polite">
+                            <span className="voice-live-text">{voiceTranscript || '…'}</span>
+                            <span className="voice-live-hint">{t('voice.liveHint')}</span>
                         </div>
                     )}
 
