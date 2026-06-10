@@ -244,6 +244,21 @@
         "taskComplete": "任务完成",
         "taskFinished": "你的任务已完成"
     },
+    "voice": {
+        "enable": "启用语音模式",
+        "disable": "关闭语音模式",
+        "title": "语音",
+        "description": "让 Pipali 朗读确认和结果，并接收你的语音回复——双手无需操作。",
+        "enabledLabel": "语音模式",
+        "enabledHint": "启用后，Pipali 在需要你时会发出提示音，并在你示意后朗读结果。麦克风和音频均保留在本设备上。",
+        "status": {
+            "idle": "语音：点按说话",
+            "announced": "Pipali 有话要说——点按收听",
+            "speaking": "正在朗读——点按回复",
+            "listening": "正在聆听——点按发送",
+            "transcribing": "转写中…"
+        }
+    },
     "settings": {
         "title": "设置",
         "loading": "正在加载设置...",

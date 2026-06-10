@@ -55,6 +55,114 @@ function playNotificationSound(): void {
     }
 }
 
+// ============================================================================
+// Voice companion audio: distinct attention cues + a TTS playback queue
+// ============================================================================
+
+/** Lazily create (and resume) the shared AudioContext. */
+function ensureAudioContext(): AudioContext | null {
+    try {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') void audioCtx.resume();
+        return audioCtx;
+    } catch {
+        return null;
+    }
+}
+
+export type VoiceCueProfile = 'confirmation' | 'complete' | 'error';
+
+// Distinct two-tone signatures so the user can tell, by ear, what Pipali wants.
+const VOICE_CUE_TONES: Record<VoiceCueProfile, [number, number]> = {
+    confirmation: [660, 880],  // gentle rising — "I need a decision"
+    complete: [880, 1320],     // brighter rising — "I'm done"
+    error: [440, 300],         // descending — "something went wrong"
+};
+
+/** Play the attention cue for a voice event (does not speak). */
+export function playVoiceCue(profile: VoiceCueProfile): void {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    try {
+        const [f1, f2] = VOICE_CUE_TONES[profile];
+        const now = ctx.currentTime;
+        for (const [freq, start] of [[f1, 0], [f2, 0.12]] as const) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.3, now + start);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + start + 0.18);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now + start);
+            osc.stop(now + start + 0.18);
+        }
+    } catch {
+        // ignore
+    }
+}
+
+// Serialized TTS playback so a completion summary never overlaps a confirmation readback.
+let speechSource: AudioBufferSourceNode | null = null;
+let speechChain: Promise<void> = Promise.resolve();
+
+function playDecodedBuffer(ctx: AudioContext, data: ArrayBuffer): Promise<void> {
+    return new Promise<void>((resolve) => {
+        // decodeAudioData detaches its input, so decode a copy.
+        ctx.decodeAudioData(data.slice(0))
+            .then((audioBuffer) => {
+                const source = ctx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(ctx.destination);
+                speechSource = source;
+                source.onended = () => {
+                    if (speechSource === source) speechSource = null;
+                    resolve();
+                };
+                source.start();
+            })
+            .catch(() => resolve());
+    });
+}
+
+/** Queue TTS audio for playback; resolves when it finishes. Never overlaps prior speech. */
+export function speakAudio(data: ArrayBuffer): Promise<void> {
+    const ctx = ensureAudioContext();
+    if (!ctx) return Promise.resolve();
+    const play = speechChain.catch(() => {}).then(() => playDecodedBuffer(ctx, data));
+    speechChain = play.catch(() => {});
+    return play;
+}
+
+/** Stop current playback and clear the queue (barge-in). */
+export function stopSpeaking(): void {
+    if (speechSource) {
+        try { speechSource.stop(); } catch { /* already stopped */ }
+        speechSource = null;
+    }
+    speechChain = Promise.resolve();
+}
+
+/** Resume the AudioContext and play a brief tick — call from a user gesture to satisfy autoplay policy. */
+export async function warmAudioContext(): Promise<void> {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    try {
+        if (ctx.state === 'suspended') await ctx.resume();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 660;
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+    } catch {
+        // ignore
+    }
+}
+
 // Track active web notifications for cleanup
 const activeWebNotifications: Map<string, Notification> = new Map();
 

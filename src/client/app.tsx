@@ -28,7 +28,9 @@ import { useFocusManagement, useFileDrop, useModels, useSidecar, useWebSocketCha
 // Utils
 import { setApiBaseUrl, apiFetch } from "./utils/api";
 import { generateUUID, generateDeterministicId, getToolCategory, type ToolCategory } from "./utils/formatting";
-import { initNotifications, notifyConfirmationRequest, notifyTaskComplete, setNotificationClickHandler, setupNotificationClickListener } from "./utils/notifications";
+import { initNotifications, notifyConfirmationRequest, notifyTaskComplete, setNotificationClickHandler, setupNotificationClickListener, warmAudioContext } from "./utils/notifications";
+import { useVoiceSettings } from "./hooks/useVoiceSettings";
+import { useVoiceCompanion } from "./hooks/useVoiceCompanion";
 import { isTauri, onWindowShown, onSidecarReady, listenForDeepLinks } from "./utils/tauri";
 
 // Components
@@ -160,6 +162,15 @@ const App = () => {
     const { isDragging, stagedFiles, uploadFiles, pickAndStageFiles, removeFile, clearFiles, formatAttachedFilesMessage } = useFileDrop();
     const wsUrl = `${wsBaseUrl}/ws/chat`;
 
+    // Voice companion handlers are wired after the hook; the ref lets the
+    // WebSocket callbacks below reach them without a forward reference.
+    const voiceCompanionRef = useRef<{
+        onConfirmationRequest: (request: ConfirmationRequest, convId: string, runId: string) => void;
+        onTaskComplete: (response: string, convId: string) => void;
+    } | null>(null);
+    // Let the voice companion (wired above sendMessage) reuse the standard send pipeline.
+    const sendMessageRef = useRef<((e?: React.FormEvent, options?: { text?: string }) => void) | null>(null);
+
     const {
         isConnected,
         conversationId,
@@ -212,14 +223,16 @@ const App = () => {
             // Clear background marker once the server has created the conversation.
             pendingBackgroundMessageRef.current = null;
         },
-        onConfirmationRequest: (request, convId) => {
+        onConfirmationRequest: (request, convId, runId) => {
             const conv = conversationsRef.current.find(c => c.id === convId);
             notifyConfirmationRequest(request, conv?.title, convId);
+            voiceCompanionRef.current?.onConfirmationRequest(request, convId, runId);
         },
         onTaskComplete: (_request, response, convId) => {
             const state = conversationStatesRef.current.get(convId);
             const userRequest = state?.messages.filter(m => m.role === 'user').pop()?.content;
             notifyTaskComplete(userRequest, response, convId);
+            voiceCompanionRef.current?.onTaskComplete(response, convId);
             setBillingAlerts([]);
             fetchConversations();
         },
@@ -295,6 +308,30 @@ const App = () => {
             console.warn("Run error:", { error, conversationId: convId });
         },
     });
+
+    // Voice companion — hands-free layer over the chat/run/confirmation flow.
+    const { enabled: voiceEnabled, setEnabled: setVoiceEnabled } = useVoiceSettings();
+
+    // Route spoken messages through the standard send pipeline.
+    const sendVoiceMessage = useCallback((text: string) => {
+        sendMessageRef.current?.(undefined, { text });
+    }, []);
+
+    const voice = useVoiceCompanion({
+        enabled: voiceEnabled,
+        activeConversationId: conversationId,
+        sendMessage: sendVoiceMessage,
+        respondToConfirmation,
+        onError: (msg) => console.warn('[voice]', msg),
+        onDisableVoice: () => setVoiceEnabled(false),
+    });
+    voiceCompanionRef.current = voice;
+
+    // Enabling voice requires a user gesture to unlock audio playback.
+    const enableVoice = useCallback(async () => {
+        await warmAudioContext();
+        setVoiceEnabled(true);
+    }, [setVoiceEnabled]);
 
     const syncSelectedModelForConversation = useCallback((id: string | undefined) => {
         if (!id) {
@@ -1481,13 +1518,15 @@ const App = () => {
         }
     };
 
-    const sendMessage = async (e?: React.FormEvent) => {
+    const sendMessage = async (e?: React.FormEvent, options?: { text?: string }) => {
         e?.preventDefault();
         if (!isConnected) return;
 
-        const rawValue = textareaRef.current?.value ?? input;
+        // Voice supplies the message text directly; typed sends read the composer.
+        const isVoice = options?.text !== undefined;
+        const rawValue = options?.text ?? (textareaRef.current?.value ?? input);
         let messageText = rawValue.trim();
-        const hasFiles = stagedFiles.length > 0;
+        const hasFiles = !isVoice && stagedFiles.length > 0;
 
         // Allow sending with only files (no text)
         if (!messageText && hasFiles) {
@@ -1496,12 +1535,15 @@ const App = () => {
         if (!messageText) return;
 
         // Build the full message with file paths for the agent
-        const fileSuffix = formatAttachedFilesMessage(stagedFiles);
+        const fileSuffix = hasFiles ? formatAttachedFilesMessage(stagedFiles) : '';
         const fullMessage = messageText + fileSuffix;
         const fileNames = hasFiles ? stagedFiles.map(f => f.fileName) : undefined;
 
-        setInput("");
-        clearFiles();
+        // Don't clear the user's typed draft when the message came from voice.
+        if (!isVoice) {
+            setInput("");
+            clearFiles();
+        }
 
         if (conversationId) clearConfirmations(conversationId);
 
@@ -1530,6 +1572,7 @@ const App = () => {
         sendWsMessage(fullMessage, conversationId, { clientMessageId, runId, optimistic: false, chatModelId });
         scheduleTextareaFocus();
     };
+    sendMessageRef.current = sendMessage;
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -1704,6 +1747,11 @@ const App = () => {
                         onRemoveFile={removeFile}
                         onPasteFiles={uploadFiles}
                         onPickFiles={pickAndStageFiles}
+                        voiceSupported={voice.supported}
+                        voiceEnabled={voiceEnabled}
+                        voiceStatus={voice.status}
+                        onVoiceEnable={enableVoice}
+                        onVoiceTap={voice.handleTap}
                         models={models}
                         selectedModel={selectedModel}
                         showModelDropdown={showModelDropdown}

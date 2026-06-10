@@ -104,6 +104,28 @@
     background: var(--bg-hover);
 }
 
+/* Voice companion control — reflects the companion state. */
+.voice-button[aria-pressed="true"] {
+    color: var(--color-text);
+}
+.voice-button.voice-announced {
+    color: var(--color-text);
+    animation: pulse-attention 1.5s ease-in-out infinite;
+}
+.voice-button.voice-speaking {
+    color: var(--color-text);
+}
+.voice-button.voice-listening {
+    color: #ef4444;
+    animation: pulse 1.2s ease-in-out infinite;
+}
+.voice-button.voice-transcribing {
+    color: var(--color-text-muted);
+}
+.voice-button .spin {
+    animation: spin 1s linear infinite;
+}
+
 .hidden-file-input {
     display: none;
 }

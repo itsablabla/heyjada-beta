@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Required for voice mode: getUserMedia in the webview triggers the macOS
+         microphone permission prompt; without this key TCC terminates the app. -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Pipali uses the microphone for voice chat: dictating messages and replying to confirmations hands-free.</string>
+</dict>
+</plist>

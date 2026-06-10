@@ -244,6 +244,21 @@
         "taskComplete": "Task abgeschlossen",
         "taskFinished": "Dein Task wurde abgeschlossen"
     },
+    "voice": {
+        "enable": "Sprachmodus aktivieren",
+        "disable": "Sprachmodus deaktivieren",
+        "title": "Sprache",
+        "description": "Lass Pipali Bestätigungen und Ergebnisse vorlesen und deine gesprochenen Antworten entgegennehmen – freihändig.",
+        "enabledLabel": "Sprachmodus",
+        "enabledHint": "Wenn aktiv, gibt Pipali einen Ton aus, wenn es dich braucht, und liest Ergebnisse vor, sobald du grünes Licht gibst. Mikrofon und Audio bleiben auf diesem Gerät.",
+        "status": {
+            "idle": "Sprache: zum Sprechen tippen",
+            "announced": "Pipali möchte etwas sagen – zum Anhören tippen",
+            "speaking": "Spricht – zum Antworten tippen",
+            "listening": "Hört zu – zum Senden tippen",
+            "transcribing": "Transkribiert…"
+        }
+    },
     "settings": {
         "title": "Einstellungen",
         "loading": "Einstellungen werden geladen...",

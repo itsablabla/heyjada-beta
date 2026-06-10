@@ -244,6 +244,21 @@
         "taskComplete": "T\u00e2che termin\u00e9e",
         "taskFinished": "Ta t\u00e2che est termin\u00e9e"
     },
+    "voice": {
+        "enable": "Activer le mode vocal",
+        "disable": "Désactiver le mode vocal",
+        "title": "Voix",
+        "description": "Laisse Pipali énoncer les confirmations et les résultats, et prendre tes réponses vocales — mains libres.",
+        "enabledLabel": "Mode vocal",
+        "enabledHint": "Quand il est activé, Pipali émet un son lorsqu'il a besoin de toi et lit les résultats à voix haute après ton feu vert. Le micro et l'audio restent sur cet appareil.",
+        "status": {
+            "idle": "Voix : appuie pour parler",
+            "announced": "Pipali a quelque chose à dire — appuie pour écouter",
+            "speaking": "Lecture en cours — appuie pour répondre",
+            "listening": "À l'écoute — appuie pour envoyer",
+            "transcribing": "Transcription…"
+        }
+    },
     "settings": {
         "title": "Param\u00e8tres",
         "loading": "Chargement des param\u00e8tres...",

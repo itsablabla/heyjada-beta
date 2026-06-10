@@ -1,11 +1,13 @@
 // Settings page component
 
 import React, { useState, useEffect } from 'react';
-import { Save, Loader2, Check, AlertCircle, Shield, User, FolderLock } from 'lucide-react';
+import { Save, Loader2, Check, AlertCircle, Shield, User, FolderLock, Headphones } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../utils/api';
 import { SUPPORTED_LANGUAGES } from '../../i18n';
 import { PathListEditor } from './PathListEditor';
+import { useVoiceSettings } from '../../hooks/useVoiceSettings';
+import { warmAudioContext } from '../../utils/notifications';
 
 type SettingsTab = 'profile' | 'permissions';
 
@@ -61,6 +63,13 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
     const [error, setError] = useState<string | null>(null);
+
+    // Voice mode (per-device, local). Enabling needs a user gesture to unlock audio.
+    const { enabled: voiceEnabled, setEnabled: setVoiceEnabled } = useVoiceSettings();
+    const onToggleVoice = async (checked: boolean) => {
+        if (checked) await warmAudioContext();
+        setVoiceEnabled(checked);
+    };
 
     // Sandbox state
     const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus | null>(null);
@@ -253,6 +262,7 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                     )}
 
                     {activeTab === 'profile' && (
+                      <>
                         <div className="settings-section">
                             <h3 className="settings-section-title">
                                 <User size={18} />
@@ -353,6 +363,30 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                                 </div>
                             </div>
                         </div>
+                        <div className="settings-section">
+                            <div className="settings-section-header">
+                                <div>
+                                    <h3 className="settings-section-title">
+                                        <Headphones size={18} />
+                                        {t('voice.title')}
+                                    </h3>
+                                    <p className="settings-section-description">
+                                        {t('voice.description')}
+                                    </p>
+                                </div>
+                                <label className="toggle-switch">
+                                    <input
+                                        id="voice-enabled"
+                                        type="checkbox"
+                                        checked={voiceEnabled}
+                                        onChange={(e) => onToggleVoice(e.target.checked)}
+                                    />
+                                    <span className="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <p className="settings-field-hint">{t('voice.enabledHint')}</p>
+                        </div>
+                      </>
                     )}
 
                     {activeTab === 'permissions' && (

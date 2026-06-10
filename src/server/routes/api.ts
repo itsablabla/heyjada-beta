@@ -1,7 +1,7 @@
 import os from 'os';
 import path from 'path';
 import { realpath } from 'fs/promises';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
@@ -18,6 +18,9 @@ import { getDefaultUser } from '../utils';
 import { atifConversationService } from '../processor/conversation/atif/atif.service';
 import { runResearchToCompletion } from '../processor/research-runner';
 import { getActiveStatus } from '../sessions';
+import { transcribeAudio, synthesizeSpeech, VoiceUnavailableError } from '../voice';
+import { PlatformAuthError } from '../http/platform-fetch';
+import { PlatformBillingError } from '../http/billing-errors';
 import { loadSkills, getLoadedSkills, createSkill, getSkill, deleteSkill, updateSkill, toggleSkillVisibility } from '../skills';
 import { loadUserContext, saveUserContext } from '../user-context';
 import { syncPlatformModels, syncPlatformWebTools } from '../auth';
@@ -949,6 +952,71 @@ api.post('/telemetry/client-error', zValidator('json', clientErrorSchema), async
         `Client error: ${message}`,
     );
     return c.json({ received: true });
+});
+
+// ============================================
+// Voice (speech-to-text / text-to-speech)
+// ============================================
+
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024; // OpenAI upload cap
+// MediaRecorder emits webm/opus on Chromium and mp4/aac on WKWebView; audio-only
+// recordings are often labeled with the video container MIME, so accept those too.
+const ALLOWED_AUDIO_MIME = new Set([
+    'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/x-m4a', 'audio/m4a',
+    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/aac', 'audio/flac',
+    'video/webm', 'video/mp4', 'video/ogg',
+]);
+function isAllowedAudioMime(type: string): boolean {
+    const base = type.split(';')[0]!.trim().toLowerCase();
+    return base.startsWith('audio/') || ALLOWED_AUDIO_MIME.has(base);
+}
+
+function voiceErrorResponse(c: Context, error: unknown) {
+    if (error instanceof VoiceUnavailableError) return c.json({ error: error.message, code: 'voice_unavailable' }, 503);
+    if (error instanceof PlatformAuthError) return c.json({ error: error.message, code: 'auth_error' }, 401);
+    if (error instanceof PlatformBillingError) return c.json({ error: error.message, code: 'billing_error' }, 402);
+    log.error({ err: error }, 'Voice request failed');
+    return c.json({ error: error instanceof Error ? error.message : 'Voice request failed', code: 'voice_error' }, 500);
+}
+
+api.post('/voice/transcribe', async (c) => {
+    let body: Record<string, unknown>;
+    try {
+        body = await c.req.parseBody();
+    } catch {
+        return c.json({ error: 'Invalid multipart form data' }, 400);
+    }
+    const file = body['file'];
+    if (!(file instanceof File)) return c.json({ error: 'Missing audio file field "file"' }, 400);
+    if (file.size > MAX_AUDIO_BYTES) return c.json({ error: 'Audio file exceeds 25MB limit' }, 413);
+    if (!isAllowedAudioMime(file.type)) return c.json({ error: `Unsupported audio type '${file.type}'` }, 415);
+
+    const model = typeof body['model'] === 'string' ? body['model'] : undefined;
+    const language = typeof body['language'] === 'string' ? body['language'] : undefined;
+    try {
+        return c.json(await transcribeAudio({ file, model, language }));
+    } catch (error) {
+        return voiceErrorResponse(c, error);
+    }
+});
+
+const voiceSpeechSchema = z.object({
+    text: z.string().min(1).max(4096),
+    voice: z.string().min(1).max(64).optional(),
+    model: z.string().min(1).max(128).optional(),
+    format: z.enum(['mp3', 'opus', 'aac', 'flac', 'wav', 'pcm']).optional(),
+});
+api.post('/voice/speech', zValidator('json', voiceSpeechSchema), async (c) => {
+    const { text, voice, model, format } = c.req.valid('json');
+    try {
+        const result = await synthesizeSpeech({ text, voice, model, format });
+        return new Response(result.audio, {
+            status: 200,
+            headers: { 'Content-Type': result.contentType, 'Content-Length': String(result.audio.length) },
+        });
+    } catch (error) {
+        return voiceErrorResponse(c, error);
+    }
 });
 
 // Mount the automations router

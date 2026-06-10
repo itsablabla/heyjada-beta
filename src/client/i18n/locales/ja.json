@@ -244,6 +244,21 @@
         "taskComplete": "タスク完了",
         "taskFinished": "タスクが完了しました"
     },
+    "voice": {
+        "enable": "音声モードを有効にする",
+        "disable": "音声モードを無効にする",
+        "title": "音声",
+        "description": "Pipaliが確認や結果を読み上げ、あなたの音声での返答を受け取ります（ハンズフリー）。",
+        "enabledLabel": "音声モード",
+        "enabledHint": "有効にすると、対応が必要なときにPipaliが音で知らせ、合図をすると結果を読み上げます。マイクと音声はこの端末内に留まります。",
+        "status": {
+            "idle": "音声：タップして話す",
+            "announced": "Pipaliからお知らせがあります — タップして聞く",
+            "speaking": "読み上げ中 — タップして返答",
+            "listening": "聞き取り中 — タップして送信",
+            "transcribing": "文字起こし中…"
+        }
+    },
     "settings": {
         "title": "設定",
         "loading": "設定を読み込み中...",

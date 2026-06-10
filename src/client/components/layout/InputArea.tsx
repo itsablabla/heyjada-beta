@@ -1,7 +1,7 @@
 // Message input area with model selector, file attachment, connection status, and send/stop controls
 
 import React, { useEffect, useRef } from 'react';
-import { ArrowUp, Square, Upload, X, FileText, FileSpreadsheet, File, Paperclip, ChevronDown, Circle } from 'lucide-react';
+import { ArrowUp, Square, Upload, X, FileText, FileSpreadsheet, File, Paperclip, ChevronDown, Circle, Headphones, Mic, Volume2, Loader2 } from 'lucide-react';
 import type { ConfirmationRequest, ChatModelInfo } from '../../types';
 import type { StagedFile } from '../../hooks/useFileDrop';
 import { ConfirmationDialog } from '../confirmation/ConfirmationDialog';
@@ -30,6 +30,11 @@ interface InputAreaProps {
     onRemoveFile?: (id: string) => void;
     onPasteFiles?: (files: File[]) => void;
     onPickFiles?: (browserFiles?: File[]) => void;
+    voiceSupported?: boolean;
+    voiceEnabled?: boolean;
+    voiceStatus?: 'idle' | 'announced' | 'speaking' | 'listening' | 'transcribing';
+    onVoiceEnable?: () => void;
+    onVoiceTap?: () => void;
     models: ChatModelInfo[];
     selectedModel: ChatModelInfo | null;
     showModelDropdown: boolean;
@@ -70,6 +75,11 @@ export function InputArea({
     onRemoveFile,
     onPasteFiles,
     onPickFiles,
+    voiceSupported = false,
+    voiceEnabled = false,
+    voiceStatus = 'idle',
+    onVoiceEnable,
+    onVoiceTap,
     models,
     selectedModel,
     showModelDropdown,
@@ -81,6 +91,13 @@ export function InputArea({
     const canSend = input.trim() || hasFiles;
     const fileInputRef = useRef<HTMLInputElement>(null);
     const modelDropdownRef = useRef<HTMLDivElement>(null);
+    const voiceTitle = !voiceEnabled
+        ? t('voice.enable')
+        : voiceStatus === 'announced' ? t('voice.status.announced')
+            : voiceStatus === 'speaking' ? t('voice.status.speaking')
+                : voiceStatus === 'listening' ? t('voice.status.listening')
+                    : voiceStatus === 'transcribing' ? t('voice.status.transcribing')
+                        : t('voice.status.idle');
     const showHint = useRef(Math.random() < 0.05).current;
     const placeholder = !showHint
         ? t('inputArea.askAnything')
@@ -323,6 +340,21 @@ export function InputArea({
                             >
                                 <Paperclip size={16} />
                             </button>
+                            {voiceSupported && (
+                                <button
+                                    type="button"
+                                    className={`toolbar-button voice-button ${voiceEnabled ? `voice-${voiceStatus}` : 'voice-disabled'}`}
+                                    onClick={() => (voiceEnabled ? onVoiceTap?.() : onVoiceEnable?.())}
+                                    title={voiceTitle}
+                                    aria-label={voiceTitle}
+                                    aria-pressed={voiceEnabled}
+                                >
+                                    {!voiceEnabled ? <Headphones size={16} />
+                                        : voiceStatus === 'transcribing' ? <Loader2 size={16} className="spin" />
+                                        : voiceStatus === 'speaking' || voiceStatus === 'announced' ? <Volume2 size={16} />
+                                        : <Mic size={16} />}
+                                </button>
+                            )}
                             {isProcessing ? (
                                 canSend ? (
                                     <button

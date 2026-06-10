@@ -83,6 +83,21 @@
         "tierOther": "Other",
         "recommended": "Recommended"
     },
+    "voice": {
+        "enable": "Enable voice mode",
+        "disable": "Disable voice mode",
+        "title": "Voice",
+        "description": "Let Pipali speak confirmations and results, and take your spoken replies — hands-free.",
+        "enabledLabel": "Voice mode",
+        "enabledHint": "When on, Pipali plays a sound when it needs you and reads results aloud after you give a go-ahead. Microphone and audio stay on this device.",
+        "status": {
+            "idle": "Voice: tap to talk",
+            "announced": "Pipali has something to say — tap to listen",
+            "speaking": "Speaking — tap to reply",
+            "listening": "Listening — tap to send",
+            "transcribing": "Transcribing…"
+        }
+    },
     "home": {
         "greetings": {
             "default": [
