@@ -5,6 +5,7 @@ import { generateChatmlMessagesWithContext } from './utils';
 import { sendMessageToGpt } from './openai';
 import type { ATIFTrajectory } from './atif/atif.types';
 import { withTokenRefresh, PlatformAuthError } from '../../http/platform-fetch';
+import { isAuthenticated, getPlatformUrl } from '../../auth';
 import { createChildLogger } from '../../logger';
 
 const log = createChildLogger({ component: 'llm' });
@@ -133,4 +134,37 @@ export async function sendMessageToModel(
     }
 
     log.warn({ modelType: aiModelType }, 'Unsupported model type');
+}
+
+/**
+ * Logical platform model: 'pipali:fast' is not a chat_models row — the
+ * platform's /responses endpoint resolves it to the operator's configured
+ * fast model (else the platform default). Kept row-less on purpose: a row
+ * would need fake pricing, sync special-casing, and selector filtering.
+ */
+export const PLATFORM_FAST_MODEL = 'pipali:fast';
+
+/**
+ * One-shot utility call to the fastest model available: the platform's fast
+ * model when signed in, else whichever model the user configured in the app.
+ * For small internal jobs — spoken summaries, chat titles, etc.
+ */
+export async function sendMessageToFastModel(
+    query: string,
+    systemMessage?: string,
+): Promise<ResponseWithThought | undefined> {
+    if (globalThis.__pipaliMockLLM) {
+        return globalThis.__pipaliMockLLM(query);
+    }
+
+    if (await isAuthenticated()) {
+        const messages: ChatMessage[] = [
+            ...(systemMessage ? [{ role: 'system', content: systemMessage } satisfies ChatMessage] : []),
+            { role: 'user', content: query },
+        ];
+        return withTokenRefresh((token) =>
+            sendMessageToGpt(messages, PLATFORM_FAST_MODEL, token, `${getPlatformUrl()}/openai/v1`));
+    }
+
+    return sendMessageToModel(query, undefined, systemMessage);
 }

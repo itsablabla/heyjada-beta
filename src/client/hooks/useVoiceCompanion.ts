@@ -27,7 +27,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
 import { CONFIRMATION_OPTIONS } from '../../server/processor/confirmation/confirmation.types';
-import { isVoiceCaptureSupported, transcribeAudio, synthesizeSpeech } from '../utils/voice-audio';
+import { isVoiceCaptureSupported, transcribeAudio, synthesizeSpeech, summarizeForSpeech } from '../utils/voice-audio';
 import { SegmentedCapture } from '../utils/voice-capture';
 import { TurnTranscript, isHallucination } from '../utils/voice-turn';
 import { VOICE_TUNABLES, STT_BIAS_PROMPT } from '../utils/voice-config';
@@ -50,6 +50,8 @@ interface PendingCompletion {
     key: string;
     conversationId: string;
     summary: string;
+    /** The full response text, rephrased into spoken style at prefetch time. */
+    raw: string;
 }
 type Pending = PendingConfirmation | PendingCompletion;
 
@@ -320,17 +322,28 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     // ------------------------------------------------------------------
     // Announcements (cues are background notes; they wait to be acknowledged)
     // ------------------------------------------------------------------
-    const prefetch = useCallback((key: string, text: string) => {
-        const p = synthesizeSpeech(text).catch((err) => {
+    const prefetch = useCallback((pending: Pending) => {
+        const p = (async () => {
+            if (pending.kind === 'completion') {
+                // Rephrase into voice-conversation style; the mechanical summary
+                // already in pending.summary is the fallback. Updating the pending
+                // keeps "repeat"/"details" re-reads consistent with what was played.
+                try {
+                    const spoken = (await summarizeForSpeech(pending.raw)).trim();
+                    if (spoken) pending.summary = spoken;
+                } catch { /* keep the mechanical summary */ }
+            }
+            return synthesizeSpeech(pending.summary);
+        })();
+        p.catch((err) => {
             reportError(err instanceof Error ? err.message : 'Voice synthesis failed');
-            throw err;
         });
-        prefetchRef.current.set(key, p);
+        prefetchRef.current.set(pending.key, p);
     }, [reportError]);
 
     const announce = useCallback((pending: Pending, cue: VoiceCueProfile) => {
         playCue(cue);
-        prefetch(pending.key, pending.summary);
+        prefetch(pending);
         pendingRef.current = pending;
         // Don't disturb an open turn or active speech; the pending state is
         // picked up when the current exchange settles.
@@ -353,7 +366,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         const key = `t:${convId}:${response.length}:${response.slice(0, 32)}`;
         if (spokenKeysRef.current.has(key)) return;
         spokenKeysRef.current.add(key);
-        announce({ kind: 'completion', key, conversationId: convId, summary: buildCompletionSummary(response) }, 'complete');
+        announce({ kind: 'completion', key, conversationId: convId, summary: buildCompletionSummary(response), raw: response }, 'complete');
     }, [supported, announce]);
 
     // ------------------------------------------------------------------

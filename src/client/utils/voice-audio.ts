@@ -55,6 +55,19 @@ export async function transcribeAudio(blob: Blob, opts?: { model?: string; langu
     return data.text ?? '';
 }
 
+/** Rephrase a final response into voice-conversation style via the app's voice route. */
+export async function summarizeForSpeech(text: string, opts?: { timeoutMs?: number }): Promise<string> {
+    const res = await apiFetch('/api/voice/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        signal: AbortSignal.timeout(opts?.timeoutMs ?? 12_000),
+    });
+    if (!res.ok) throw await toVoiceError(res);
+    const data = await res.json() as { summary?: string };
+    return data.summary ?? '';
+}
+
 /** Synthesize speech audio for text via the app's voice route. */
 export async function synthesizeSpeech(
     text: string,

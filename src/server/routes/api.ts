@@ -18,7 +18,7 @@ import { getDefaultUser } from '../utils';
 import { atifConversationService } from '../processor/conversation/atif/atif.service';
 import { runResearchToCompletion } from '../processor/research-runner';
 import { getActiveStatus } from '../sessions';
-import { transcribeAudio, synthesizeSpeech, VoiceUnavailableError } from '../voice';
+import { transcribeAudio, synthesizeSpeech, summarizeForSpeech, VoiceUnavailableError } from '../voice';
 import { PlatformAuthError } from '../http/platform-fetch';
 import { PlatformBillingError } from '../http/billing-errors';
 import { loadSkills, getLoadedSkills, createSkill, getSkill, deleteSkill, updateSkill, toggleSkillVisibility } from '../skills';
@@ -1015,6 +1015,16 @@ api.post('/voice/speech', zValidator('json', voiceSpeechSchema), async (c) => {
             status: 200,
             headers: { 'Content-Type': result.contentType, 'Content-Length': String(result.audio.length) },
         });
+    } catch (error) {
+        return voiceErrorResponse(c, error);
+    }
+});
+
+const voiceSummarizeSchema = z.object({ text: z.string().min(1).max(50_000) });
+api.post('/voice/summarize', zValidator('json', voiceSummarizeSchema), async (c) => {
+    const { text } = c.req.valid('json');
+    try {
+        return c.json(await summarizeForSpeech(text));
     } catch (error) {
         return voiceErrorResponse(c, error);
     }

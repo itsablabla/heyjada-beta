@@ -14,6 +14,7 @@ import { AiModelApi, ChatModel } from '../db/schema';
 import { isAuthenticated, getPlatformUrl } from '../auth';
 import { platformFetch, withTokenRefresh } from '../http/platform-fetch';
 import { getClientHeaders } from '../http/client-info';
+import { sendMessageToFastModel } from '../processor/conversation';
 import { createChildLogger } from '../logger';
 
 const log = createChildLogger({ component: 'voice' });
@@ -152,4 +153,24 @@ export async function synthesizeSpeech(params: {
     const bytes = new Uint8Array(await response.arrayBuffer());
     log.info({ model, chars: params.text.length, bytes: bytes.length }, 'Synthesized speech (local)');
     return { audio: toArrayBufferBacked(bytes), contentType, model };
+}
+
+// Prompt to rephrase written text into a natural, spoken style.
+const NATURAL_SPEECH_PROMPT = `You are Pipali's voice. Convert the written response below into how you would naturally say it aloud in a friendly conversation.
+Keep it brief and easy to follow by ear: plain spoken sentences — no markdown, lists, code, or URLs.
+Reply with only the spoken text.`;
+
+/**
+ * Rephrase response text into a natural, voice-conversation style using the
+ * fast model. Throws on failure to let client's prefetch chain fall back to
+ * its mechanical summary (see useVoiceCompanion prefetch).
+ */
+export async function summarizeForSpeech(text: string): Promise<{ summary: string }> {
+    const result = await sendMessageToFastModel(text, NATURAL_SPEECH_PROMPT);
+
+    const summary = (result?.message ?? '').trim();
+    if (!summary) throw new Error('Voice summary came back empty');
+
+    log.info({ inputChars: text.length, summaryChars: summary.length }, 'Summarized response for speech');
+    return { summary };
 }
