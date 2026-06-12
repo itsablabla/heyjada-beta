@@ -167,6 +167,7 @@ const App = () => {
     const voiceCompanionRef = useRef<{
         onConfirmationRequest: (request: ConfirmationRequest, convId: string, runId: string) => void;
         onTaskComplete: (response: string, convId: string) => void;
+        onStepStart: (convId: string) => void;
     } | null>(null);
     // Let the voice companion (wired above sendMessage) reuse the standard send pipeline.
     const sendMessageRef = useRef<((e?: React.FormEvent, options?: { text?: string }) => void) | null>(null);
@@ -235,6 +236,9 @@ const App = () => {
             voiceCompanionRef.current?.onTaskComplete(response, convId);
             setBillingAlerts([]);
             fetchConversations();
+        },
+        onStepStart: (convId) => {
+            voiceCompanionRef.current?.onStepStart(convId);
         },
         onAuthError: (authError, convId) => {
             console.warn("Auth error:", authError);

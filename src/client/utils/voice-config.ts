@@ -32,8 +32,8 @@ export const VOICE_TUNABLES = {
     replyInvitationMs: 10_000,
     /** Session ends (dormant) after this long without addressed speech. */
     idleTimeoutMs: 900_000,
-    /** VAD suppression window around short cue playback (half-duplex for cues). */
-    cueSuppressMs: 500,
+    /** Minimum gap between work heartbeat pulses (steps can fire in bursts). */
+    workPulseMinIntervalMs: 1_000,
 } as const;
 
 /** Tail-position phrases that submit the current turn. */

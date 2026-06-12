@@ -19,7 +19,7 @@
  * Reply turns short-circuit on decisive intents ("yes" resolves immediately).
  * Unmatched confirmation replies are echoed back before reaching the agent.
  *
- * Safety/limits: half-duplex (capture suppressed while Pipali plays audio),
+ * Safety/limits: half-duplex (capture suppressed only while Pipali speaks),
  * an idle timeout that ends the session after prolonged unaddressed silence,
  * announcement dedup across reconnect replays, and an active-conversation gate.
  */
@@ -31,7 +31,7 @@ import { isVoiceCaptureSupported, transcribeAudio, synthesizeSpeech, summarizeFo
 import { SegmentedCapture } from '../utils/voice-capture';
 import { TurnTranscript, isHallucination } from '../utils/voice-turn';
 import { VOICE_TUNABLES, STT_BIAS_PROMPT } from '../utils/voice-config';
-import { playVoiceCue, speakAudio, stopSpeaking, type VoiceCueProfile } from '../utils/notifications';
+import { playVoiceCue, playTranscriptTicks, speakAudio, stopSpeaking, type VoiceCueProfile } from '../utils/notifications';
 import { parseConfirmationIntent, parseGoAhead, parseAddressing } from '../utils/voice-intent';
 import { buildConfirmationSummary, buildCompletionSummary } from '../utils/voice-summary';
 
@@ -127,13 +127,13 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     const handleSegmentRef = useRef<(wav: Blob, seq: number) => void>(() => {});
     const goDormantRef = useRef<() => void>(() => {});
 
-    const reportError = useCallback((message: string) => {
-        cbRef.current.onError?.(message);
-    }, []);
-
     // ------------------------------------------------------------------
-    // Half-duplex: capture is suppressed while any Pipali audio plays.
-    // Counted so an attention cue ending early can't unsuppress mid-TTS.
+    // Half-duplex: capture suppressed only while Pipali speaks (TTS) —
+    // long content audio a mic would transcribe back into the conversation.
+    // Feedback earcons play unsuppressed as the VAD's min-speech rejection,
+    // the addressing gate, and the hallucination guard can absorb it.
+    // This avoids creating deaf windows exactly when users speak — mid-turn
+    // ticks clipping next phrase, work pulses eating "Pipali, stop".
     // ------------------------------------------------------------------
     const acquireSuppression = useCallback(() => {
         suppressCountRef.current++;
@@ -143,11 +143,11 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         suppressCountRef.current = Math.max(0, suppressCountRef.current - 1);
         if (suppressCountRef.current === 0) captureRef.current?.setSuppressed(false);
     }, []);
-    const playCue = useCallback((profile: VoiceCueProfile) => {
-        acquireSuppression();
-        playVoiceCue(profile);
-        setTimeout(releaseSuppression, VOICE_TUNABLES.cueSuppressMs);
-    }, [acquireSuppression, releaseSuppression]);
+
+    const reportError = useCallback((message: string) => {
+        playVoiceCue('error');
+        cbRef.current.onError?.(message);
+    }, []);
 
     // ------------------------------------------------------------------
     // Timers
@@ -181,6 +181,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
 
     const cancelTurn = useCallback((turn: ActiveTurn) => {
         releaseTurn(turn);
+        playVoiceCue('cancel');
         setStatus(pendingRef.current ? 'announced' : 'idle');
     }, [releaseTurn]);
 
@@ -191,6 +192,10 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         sessionTokenRef.current++;
         clearInviteTimer();
         clearIdleTimer();
+        // Suppression must not survive the session it belonged to — a stale
+        // count would start the next session deaf. Late releases from an
+        // interrupted TTS clamp at zero harmlessly.
+        suppressCountRef.current = 0;
         const turn = turnRef.current;
         if (turn) releaseTurn(turn);
         const capture = captureRef.current;
@@ -219,10 +224,10 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         if (sessionTokenRef.current !== token) { capture.stop(); return; }
         captureRef.current = capture;
         if (suppressCountRef.current > 0) capture.setSuppressed(true);
-        playCue('session_start');
+        playVoiceCue('session_start');
         setStatus(pendingRef.current ? 'announced' : 'idle');
         markAddressed();
-    }, [supported, reportError, playCue, markAddressed, clearInviteTimer]);
+    }, [supported, reportError, markAddressed, clearInviteTimer]);
 
     const reset = useCallback(() => {
         stopSpeaking();
@@ -255,6 +260,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     // ------------------------------------------------------------------
     const lapseReply = useCallback((turn: ActiveTurn) => {
         releaseTurn(turn);
+        playVoiceCue('lapse');                       // soft blip: the reply window closed
         const pending = pendingRef.current;
         if (echoRef.current) {
             echoRef.current = null;
@@ -272,6 +278,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         turnRef.current = turn;
         setLiveTranscript('');
         setStatus('listening');
+        playVoiceCue('listening');
         clearInviteTimer();
         inviteTimerRef.current = setTimeout(() => {
             const current = turnRef.current;
@@ -286,6 +293,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         turnRef.current = turn;
         setLiveTranscript('');
         setStatus('listening');
+        playVoiceCue('listening');
     }, []);
 
     // ------------------------------------------------------------------
@@ -342,13 +350,13 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     }, [reportError]);
 
     const announce = useCallback((pending: Pending, cue: VoiceCueProfile) => {
-        playCue(cue);
+        playVoiceCue(cue);
         prefetch(pending);
         pendingRef.current = pending;
         // Don't disturb an open turn or active speech; the pending state is
         // picked up when the current exchange settles.
         setStatus((s) => (s === 'idle' || s === 'announced' ? 'announced' : s));
-    }, [playCue, prefetch]);
+    }, [prefetch]);
 
     const onConfirmationRequest = useCallback((request: ConfirmationRequest, convId: string, runId: string) => {
         if (!cbRef.current.enabled || !supported) return;
@@ -381,6 +389,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 pending.conversationId, pending.runId, pending.request.requestId,
                 CONFIRMATION_OPTIONS.GUIDANCE, guidance,
             );
+            playVoiceCue('submit');
             pendingRef.current = null;
             setStatus('idle');
         } else if (intent.type === 'stop_listening') {
@@ -391,6 +400,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             speakEcho(echo);
         } else {
             // Declined (or anything else): drop the guidance, keep the confirmation pending.
+            playVoiceCue('discard');
             setStatus('announced');
         }
     }, [reset, speakEcho]);
@@ -405,14 +415,14 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         switch (intent.type) {
             case 'approve':
                 if (primary) respond(conversationId, runId, request.requestId, primary.id);
-                pendingRef.current = null; setStatus('idle'); break;
+                playVoiceCue('submit'); pendingRef.current = null; setStatus('idle'); break;
             case 'approve_dont_ask':
                 if (dontAsk) respond(conversationId, runId, request.requestId, dontAsk.id);
                 else if (primary) respond(conversationId, runId, request.requestId, primary.id);
-                pendingRef.current = null; setStatus('idle'); break;
+                playVoiceCue('submit'); pendingRef.current = null; setStatus('idle'); break;
             case 'decline':
                 if (decline) respond(conversationId, runId, request.requestId, decline.id);
-                pendingRef.current = null; setStatus('idle'); break;
+                playVoiceCue('submit'); pendingRef.current = null; setStatus('idle'); break;
             case 'guidance': {
                 // Echo-back safety: never forward unmatched speech to the agent silently.
                 const echo: GuidanceEcho = { pending, guidance: intent.text };
@@ -434,7 +444,10 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         if (intent.type === 'repeat' || intent.type === 'details') { void speakPendingAndListen(pending); return; }
         // Any other speech after a completion becomes a follow-up message.
         const trimmed = text.trim();
-        if (trimmed) cbRef.current.sendMessage(trimmed, pending.conversationId);
+        if (trimmed) {
+            playVoiceCue('submit');
+            cbRef.current.sendMessage(trimmed, pending.conversationId);
+        }
         pendingRef.current = null;
         setStatus('idle');
     }, [speakPendingAndListen, reset]);
@@ -446,6 +459,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             return;
         }
         if (kind === 'composed') {
+            playVoiceCue('submit');
             cbRef.current.sendMessage(trimmed, activeConvRef.current);
             setStatus(pendingRef.current ? 'announced' : 'idle');
             return;
@@ -457,6 +471,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         else if (pending?.kind === 'completion') handleCompletionReply(pending, trimmed);
         else {
             // Reply with nothing pending (e.g. barge-in race): treat as a message.
+            playVoiceCue('submit');
             cbRef.current.sendMessage(trimmed, activeConvRef.current);
             setStatus('idle');
         }
@@ -507,9 +522,12 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                     // "Scratch that": wipe what was said, keep listening for the rephrase.
                     turn.transcript.clear();
                     setLiveTranscript('');
+                    playVoiceCue('discard');
                 } else if (action.type === 'cancel') {
                     cancelTurn(turn);
                 } else {
+                    // Typewriter ticks: one per landed word, eyes-free proof of capture.
+                    if (text.trim()) playTranscriptTicks(text.trim().split(/\s+/).length);
                     maybeShortCircuit(turn);
                 }
             });
@@ -553,12 +571,16 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 const turn: ActiveTurn = { kind, transcript: new TurnTranscript(), baseSeq: seq, inFlight: 0, finishing: false };
                 turnRef.current = turn;
                 setStatus('listening');
+                playVoiceCue('listening');
                 const action = turn.transcript.addSegment(0, payload);
                 setLiveTranscript(turn.transcript.text);
                 if (action.type === 'submit') completeTurn(turn, action.message);
                 else if (action.type === 'cancel') cancelTurn(turn);
-                else if (action.type === 'discard') { turn.transcript.clear(); setLiveTranscript(''); }
-                else maybeShortCircuit(turn);
+                else if (action.type === 'discard') { turn.transcript.clear(); setLiveTranscript(''); playVoiceCue('discard'); }
+                else {
+                    playTranscriptTicks(payload.split(/\s+/).length);
+                    maybeShortCircuit(turn);
+                }
             });
     }, [markAddressed, reset, speakPendingAndListen, openComposedTurn, completeTurn, cancelTurn, maybeShortCircuit]);
 
@@ -568,6 +590,24 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         else handleOpenSegment(wav, seq);
     }, [handleTurnSegment, handleOpenSegment]);
     useEffect(() => { handleSegmentRef.current = handleSegment; }, [handleSegment]);
+
+    // ------------------------------------------------------------------
+    // Working heartbeat: a soft pulse per agent step (tool call / mid-run
+    // message), throttled so step bursts don't drum. The user hears Pipali's
+    // actual work cadence, and the pulses stopping is itself a signal — the
+    // completion cue then lands with contrast.
+    // ------------------------------------------------------------------
+    const lastWorkPulseRef = useRef(0);
+    const onStepStart = useCallback((convId: string) => {
+        if (!cbRef.current.enabled || !supported) return;
+        if (convId !== activeConvRef.current) return;        // active-conversation gate
+        if (!captureRef.current || turnRef.current) return;  // session dormant, or mid-exchange
+        if (suppressCountRef.current > 0) return;            // Pipali audio already playing
+        const now = Date.now();
+        if (now - lastWorkPulseRef.current < VOICE_TUNABLES.workPulseMinIntervalMs) return;
+        lastWorkPulseRef.current = now;
+        playVoiceCue('working');
+    }, [supported]);
 
     // ------------------------------------------------------------------
     // Tap control
@@ -614,5 +654,5 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         }
     }, [status, supported, startSession, speakPendingAndListen, openReplyTurn, finishListeningTap, openComposedTurn]);
 
-    return { status, supported, liveTranscript, handleTap, onConfirmationRequest, onTaskComplete };
+    return { status, supported, liveTranscript, handleTap, onConfirmationRequest, onTaskComplete, onStepStart };
 }

@@ -7,6 +7,7 @@
 import { isTauri } from './tauri';
 import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
 import i18n from '../i18n';
+import { VOICE_EARCONS, TRANSCRIPT_TICK, clampTickCount, tickBurstDurationMs, type EarconNote, type VoiceCueProfile } from './voice-earcons';
 
 let notificationPermissionGranted: boolean | null = null;
 
@@ -70,38 +71,57 @@ function ensureAudioContext(): AudioContext | null {
     }
 }
 
-export type VoiceCueProfile = 'confirmation' | 'complete' | 'error' | 'session_start' | 'session_end';
+// Earcon vocabulary (pure data + duration math) lives in voice-earcons.ts so
+// it's testable without an AudioContext; this module owns the players.
+export { voiceCueDurationMs, type VoiceCueProfile } from './voice-earcons';
 
-// Distinct two-tone signatures so the user can tell, by ear, what Pipali wants.
-const VOICE_CUE_TONES: Record<VoiceCueProfile, [number, number]> = {
-    confirmation: [660, 880],   // gentle rising — "I need a decision"
-    complete: [880, 1320],      // brighter rising — "I'm done"
-    error: [440, 300],          // descending — "something went wrong"
-    session_start: [520, 780],  // soft rising — "listening session started"
-    session_end: [780, 520],    // soft falling — "listening session ended"
-};
+function scheduleNote(ctx: AudioContext, base: number, note: EarconNote): void {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = note.freq;
+    gain.gain.setValueAtTime(note.gain, base + note.at);
+    gain.gain.exponentialRampToValueAtTime(0.001, base + note.at + note.dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(base + note.at);
+    osc.stop(base + note.at + note.dur);
+}
 
-/** Play the attention cue for a voice event (does not speak). */
+/** Play a voice earcon (does not speak). */
 export function playVoiceCue(profile: VoiceCueProfile): void {
     const ctx = ensureAudioContext();
     if (!ctx) return;
     try {
-        const [f1, f2] = VOICE_CUE_TONES[profile];
         const now = ctx.currentTime;
-        for (const [freq, start] of [[f1, 0], [f2, 0.12]] as const) {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.3, now + start);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + start + 0.18);
-            osc.connect(gain).connect(ctx.destination);
-            osc.start(now + start);
-            osc.stop(now + start + 0.18);
+        for (const note of VOICE_EARCONS[profile]) scheduleNote(ctx, now, note);
+    } catch {
+        // ignore
+    }
+}
+
+/**
+ * Typewriter burst: one soft tick per transcribed word (capped), alternating
+ * between two pitches — eyes-free verification that words are landing.
+ * Returns the burst duration in ms so callers can suppress capture around it.
+ */
+export function playTranscriptTicks(wordCount: number): number {
+    const ctx = ensureAudioContext();
+    if (!ctx) return 0;
+    try {
+        const now = ctx.currentTime;
+        const ticks = clampTickCount(wordCount);
+        for (let i = 0; i < ticks; i++) {
+            scheduleNote(ctx, now, {
+                freq: TRANSCRIPT_TICK.freqs[i % 2]!,
+                at: i * TRANSCRIPT_TICK.spacing,
+                dur: TRANSCRIPT_TICK.dur,
+                gain: TRANSCRIPT_TICK.gain,
+            });
         }
     } catch {
         // ignore
     }
+    return tickBurstDurationMs(wordCount);
 }
 
 // Serialized TTS playback so a completion summary never overlaps a confirmation readback.
