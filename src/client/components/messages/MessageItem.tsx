@@ -2,17 +2,11 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
 import { Trash2, Paperclip, Clock } from 'lucide-react';
 import type { Message } from '../../types';
 import { ThoughtsSection } from '../thoughts/ThoughtsSection';
 import { StreamingIndicator } from './StreamingIndicator';
-import { ExternalLink } from '../ExternalLink';
-import { safeMarkdownUrlTransform, localImageSrc, normalizeLatexDelimiters } from '../../utils/markdown';
-import { getApiBaseUrl } from '../../utils/api';
+import { ChatMarkdown } from '../ChatMarkdown';
 import { BillingMessage } from '../billing';
 import { AuthErrorMessage } from '../auth';
 import { RunErrorMessage } from './RunErrorMessage';
@@ -101,22 +95,7 @@ export function MessageItem({ message, platformFrontendUrl, onDelete, onBillingC
             {/* Message Content */}
             {message.content ? (
                 <div className="message-content">
-                    <ReactMarkdown
-                        remarkPlugins={[[remarkGfm, { singleTilde: false }], [remarkMath, { singleDollarTextMath: false }]]}
-                        rehypePlugins={[[rehypeKatex, { output: 'mathml' }]]}
-                        urlTransform={safeMarkdownUrlTransform}
-                        components={{
-                            a: ExternalLink,
-                            img: ({ src, alt }) => {
-                                const resolvedSrc = localImageSrc(src, getApiBaseUrl());
-                                return resolvedSrc
-                                    ? <img src={resolvedSrc} alt={alt || ''} className="message-inline-image" />
-                                    : null;
-                            },
-                        }}
-                    >
-                        {normalizeLatexDelimiters(message.content)}
-                    </ReactMarkdown>
+                    <ChatMarkdown>{message.content}</ChatMarkdown>
                 </div>
             ) : isStreaming ? (
                 <StreamingIndicator />

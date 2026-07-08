@@ -1,10 +1,11 @@
 // Individual thought/tool_call rendering
 
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { Thought } from '../../types';
 import { formatToolArgs, getFriendlyToolName, formatToolArgsRich, getToolCategory } from '../../utils/formatting';
 import { getToolResultStatus } from '../../utils/toolStatus';
 import { ExternalLink } from '../ExternalLink';
+import { ChatMarkdown } from '../ChatMarkdown';
 import { ThoughtDiffView } from '../tool-views/ThoughtDiffView';
 import { ThoughtWriteView } from '../tool-views/ThoughtWriteView';
 import { GrepResultView } from '../tool-views/GrepResultView';
@@ -53,18 +54,8 @@ interface ThoughtItemProps {
     uidMap?: Map<string, { role: string; label: string }>; // Chrome snapshot uid→label map
 }
 
-// Parse markdown bold (**text**) into React elements
-function formatBoldText(text: string): React.ReactNode[] {
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((part, i) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-            return <b key={i}>{part.slice(2, -2)}</b>;
-        }
-        return part;
-    });
-}
-
-// Clear markdown formatting markers from text
+// Clear markdown markers for the single-line outline view, where the
+// nowrap/ellipsis truncation needs plain inline text instead of rendered markdown
 function formatPlainText(text: string): string {
     // Remove bold markers to start with; can expand to clear other formatting later
     return text.replace(/\*\*([^*]+)\*\*/g, '$1');
@@ -97,7 +88,7 @@ export function ThoughtItem({ thought, stepNumber, isPreview = false, showResult
                         className={`thought-reasoning ${isInternal ? 'italic' : ''} ${isOutline ? 'outline' : ''}`}
                         title={isTruncated ? text : undefined}
                     >
-                        {isInternal ? formatPlainText(displayText) : formatBoldText(displayText)}
+                        {isOutline ? formatPlainText(displayText) : <ChatMarkdown compact>{displayText}</ChatMarkdown>}
                     </div>
                 </div>
             </div>

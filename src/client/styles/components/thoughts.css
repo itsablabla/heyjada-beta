@@ -276,6 +276,84 @@
     text-overflow: ellipsis;
 }
 
+/* Compact markdown for intermediate messages: full markdown at trajectory
+   scale. Everything inherits the 13px container size; only spacing and
+   chrome are tightened. */
+.chat-markdown-compact {
+    white-space: normal; /* markdown handles paragraph breaks; undo pre-wrap */
+}
+
+.chat-markdown-compact p {
+    margin: 0 0 6px;
+}
+
+.chat-markdown-compact p:last-child {
+    margin-bottom: 0;
+}
+
+.chat-markdown-compact .compact-heading {
+    margin: 10px 0 4px;
+    color: var(--color-text);
+}
+
+.chat-markdown-compact .compact-heading:first-child {
+    margin-top: 0;
+}
+
+.chat-markdown-compact ul,
+.chat-markdown-compact ol {
+    margin: 4px 0 6px;
+    padding-left: 18px;
+}
+
+.chat-markdown-compact li {
+    margin: 2px 0;
+}
+
+.chat-markdown-compact table {
+    border-collapse: collapse;
+    margin: 6px 0;
+    font-size: 12px;
+}
+
+.chat-markdown-compact th,
+.chat-markdown-compact td {
+    padding: 3px 8px;
+    text-align: left;
+    border: 1px solid var(--color-border);
+}
+
+.chat-markdown-compact th {
+    background: var(--color-bg-muted);
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.chat-markdown-compact pre {
+    margin: 6px 0;
+    padding: 6px 8px;
+    font-size: 12px;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+}
+
+.chat-markdown-compact code {
+    font-size: 12px;
+}
+
+/* Keep code upright inside italicized internal thoughts */
+.thought-reasoning.italic .chat-markdown-compact code {
+    font-style: normal;
+}
+
+.chat-markdown-compact blockquote {
+    margin: 6px 0;
+    padding-left: 8px;
+    border-left: 2px solid var(--color-border);
+}
+
 /* Generic tool result view */
 .thought-tool-result {
     margin-top: 8px;
