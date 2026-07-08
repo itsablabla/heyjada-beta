@@ -11,7 +11,7 @@ import type { Message } from '../../types';
 import { ThoughtsSection } from '../thoughts/ThoughtsSection';
 import { StreamingIndicator } from './StreamingIndicator';
 import { ExternalLink } from '../ExternalLink';
-import { safeMarkdownUrlTransform, localImageSrc } from '../../utils/markdown';
+import { safeMarkdownUrlTransform, localImageSrc, normalizeLatexDelimiters } from '../../utils/markdown';
 import { getApiBaseUrl } from '../../utils/api';
 import { BillingMessage } from '../billing';
 import { AuthErrorMessage } from '../auth';
@@ -102,7 +102,7 @@ export function MessageItem({ message, platformFrontendUrl, onDelete, onBillingC
             {message.content ? (
                 <div className="message-content">
                     <ReactMarkdown
-                        remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: false }]]}
+                        remarkPlugins={[[remarkGfm, { singleTilde: false }], [remarkMath, { singleDollarTextMath: false }]]}
                         rehypePlugins={[[rehypeKatex, { output: 'mathml' }]]}
                         urlTransform={safeMarkdownUrlTransform}
                         components={{
@@ -115,7 +115,7 @@ export function MessageItem({ message, platformFrontendUrl, onDelete, onBillingC
                             },
                         }}
                     >
-                        {message.content}
+                        {normalizeLatexDelimiters(message.content)}
                     </ReactMarkdown>
                 </div>
             ) : isStreaming ? (

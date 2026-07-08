@@ -63,6 +63,33 @@ export function makeMarkdownUrlTransform(options: MarkdownUrlTransformOptions = 
 
 export const safeMarkdownUrlTransform = makeMarkdownUrlTransform();
 
+// Matches fenced code blocks (tolerating an unclosed fence while streaming) and inline code spans.
+const CODE_SEGMENT = /(```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)|`[^`\n]+`)/g;
+
+/**
+ * Convert LaTeX \( \) and \[ \] delimiters to the $$ delimiters remark-math parses.
+ * Models reliably emit the backslash delimiters, which are unambiguous (unlike $,
+ * which collides with currency), so the renderer keeps singleDollarTextMath off
+ * and normalizes here instead. Code blocks and inline code are left untouched.
+ */
+export function normalizeLatexDelimiters(content: string): string {
+    return content
+        .split(CODE_SEGMENT)
+        .map((segment, i) => {
+            // CODE_SEGMENT's single capture group makes split() keep the code
+            // segments, interleaved: even indices are prose, odd are code.
+            if (i % 2 === 1) return segment;
+            return segment
+                // Convert display \[ \] to block $$ delimiters.
+                .replace(/\\\[([\s\S]+?)\\\]/g, (match, math: string) =>
+                    math.trim() ? `\n$$\n${math.trim()}\n$$\n` : match)
+                // Convert inline \( \) to inline $$ delimiters.
+                .replace(/\\\(([\s\S]+?)\\\)/g, (match, math: string) =>
+                    math.trim() ? `$$${math.trim()}$$` : match);
+        })
+        .join('');
+}
+
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp)$/i;
 
 /** Convert a local file path or file:// URL to an API-served image src. Passes through http(s) and data URIs. */
