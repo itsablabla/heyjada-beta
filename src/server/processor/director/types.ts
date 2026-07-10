@@ -64,4 +64,6 @@ export interface ToolExecutionContext {
     runId?: string;
     /** Tracks one-time reminders shown during this research run (persists across iterations) */
     shownReminders?: Set<string>;
+    /** MCP tools whose full schemas are advertised to the model; search_tools and direct calls add to it */
+    loadedMcpTools?: Set<string>;
 }

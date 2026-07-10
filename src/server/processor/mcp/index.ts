@@ -10,4 +10,5 @@ export {
     closeMcpClients,
     getMcpServerStatuses,
     isMcpTool,
+    parseNamespacedToolName,
 } from './manager';

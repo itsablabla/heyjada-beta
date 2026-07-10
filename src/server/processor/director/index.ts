@@ -14,6 +14,7 @@ import { readWebpage, type ReadWebpageArgs } from '../actor/read_webpage';
 import { askUser, type AskUserArgs } from '../actor/ask_user';
 import { generateImage, type GenerateImageArgs } from '../actor/generate_image';
 import { emailUser, type EmailUserArgs } from '../actor/email_user';
+import { applyToolDeferral, searchTools, SEARCH_TOOLS_TOOL_NAME, type SearchToolsArgs } from '../actor/search_tools';
 import * as prompts from './prompts';
 import { getLoadedSkills, formatSkillsForPrompt } from '../../skills';
 import { type ATIFMetrics, type ATIFObservationResult, type ATIFToolCall, type ATIFTrajectory } from '../conversation/atif/atif.types';
@@ -137,6 +138,8 @@ interface ResearchConfig {
     conversationId?: string;
     // Callback for real-time text delta streaming
     onTextChunk?: (chunk: string) => void;
+    // MCP tools whose full schemas are advertised to the model (others are deferred behind search_tools)
+    loadedMcpTools?: Set<string>;
 }
 
 export async function buildSystemPrompt(args: {
@@ -513,12 +516,14 @@ Tips:
 ];
 
 /**
- * Get all available tools including built-in tools and MCP tools
+ * Get all available tools including built-in tools and MCP tools.
+ * When many MCP tools are connected, their schemas are deferred behind the
+ * search_tools tool; only tools in `loadedMcpTools` are advertised in full.
  */
-async function getAllTools(): Promise<ToolDefinition[]> {
+async function getAllTools(loadedMcpTools: Set<string> = new Set()): Promise<ToolDefinition[]> {
     try {
         const mcpTools = await getMcpToolDefinitions();
-        return [...builtInTools, ...mcpTools];
+        return [...builtInTools, ...applyToolDeferral(mcpTools, loadedMcpTools)];
     } catch (error) {
         log.error({ err: error }, 'Failed to load MCP tools');
         return builtInTools;
@@ -535,7 +540,7 @@ async function pickNextTool(
     const isLast = currentIteration >= maxIterations - 1;
 
     // Get all tools (built-in + MCP)
-    const tools = await getAllTools();
+    const tools = await getAllTools(config.loadedMcpTools);
     const toolChoice = isLast ? 'none' : 'auto';
 
     const now = new Date();
@@ -741,6 +746,9 @@ async function executeTool(
     try {
         // Check if this is an MCP tool (contains "__" in name, e.g., "github__create_issue")
         if (isMcpTool(toolCall.function_name)) {
+            // Direct calls to deferred tools work without a prior search; mark
+            // them loaded so their schemas are advertised from the next iteration
+            context?.loadedMcpTools?.add(toolCall.function_name);
             return await executeMcpTool(
                 toolCall.function_name,
                 toolCall.arguments as Record<string, unknown>,
@@ -750,6 +758,14 @@ async function executeTool(
 
         // Built-in tools
         switch (toolCall.function_name) {
+            case SEARCH_TOOLS_TOOL_NAME: {
+                const mcpTools = await getMcpToolDefinitions();
+                const result = searchTools(toolCall.arguments as SearchToolsArgs, mcpTools);
+                for (const match of result.matches) {
+                    context?.loadedMcpTools?.add(match.name);
+                }
+                return result.compiled;
+            }
             case 'list_files': {
                 const result = await listFiles(toolCall.arguments as ListFilesArgs);
                 return result.compiled;
@@ -916,6 +932,18 @@ export async function* research(config: ResearchConfig): AsyncGenerator<Research
     // Persists across iterations so one-time reminders only fire once per research run
     const shownReminders = new Set<string>();
 
+    // MCP tools whose schemas are advertised to the model when deferral is active.
+    // Seeded from tools called earlier in the conversation so they stay available
+    // across turns; grows when search_tools finds tools or a deferred tool is called.
+    const loadedMcpTools = new Set<string>(config.loadedMcpTools);
+    for (const step of config.chatHistory.steps) {
+        for (const tc of step.tool_calls ?? []) {
+            if (isMcpTool(tc.function_name)) {
+                loadedMcpTools.add(tc.function_name);
+            }
+        }
+    }
+
     for (let i = 0; i < config.maxIterations; i++) {
         // Check if paused before starting new iteration
         if (config.abortSignal?.aborted) {
@@ -927,7 +955,7 @@ export async function* research(config: ResearchConfig): AsyncGenerator<Research
             thresholdStepCount = config.chatHistory.steps.length;
         }
 
-        const iteration = await pickNextTool({ ...config, currentIteration: i, thresholdStepCount });
+        const iteration = await pickNextTool({ ...config, currentIteration: i, thresholdStepCount, loadedMcpTools });
 
         // Handle warnings (e.g., invalid JSON in tool arguments, API errors) - feed back to model for retry
         // Must check before empty tool calls check, since warnings with no valid tool calls should continue loop
@@ -1047,6 +1075,7 @@ export async function* research(config: ResearchConfig): AsyncGenerator<Research
             conversationId: config.conversationId,
             runId: config.runId,
             shownReminders,
+            loadedMcpTools,
         };
         iteration.toolResults = await executeToolsInParallel(iteration.toolCalls, executionContext, config.abortSignal);
 
