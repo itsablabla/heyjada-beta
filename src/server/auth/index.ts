@@ -497,10 +497,12 @@ export async function syncPlatformModels(): Promise<void> {
         const existingModelNames = new Set(existingModels.map(m => m.name));
         const platformModelNames = new Set(platformModels.map(m => m.id));
 
-        // Add new models and update existing ones
+        // Add new models and update existing ones. The platform returns models
+        // ordered by priority, so the array index is the display order we persist
+        // for a stable, priority-sorted selector.
         let addedCount = 0;
         let updatedCount = 0;
-        for (const model of platformModels) {
+        for (const [sortOrder, model] of platformModels.entries()) {
             const modelType = model.modelType;
             const visionEnabled = model.visionEnabled;
             const useResponsesApi = model.useResponsesApi;
@@ -525,6 +527,7 @@ export async function syncPlatformModels(): Promise<void> {
                     tagline,
                     costTier,
                     recommended,
+                    sortOrder,
                     aiModelApiId: providerId,
                 });
                 addedCount++;
@@ -542,7 +545,8 @@ export async function syncPlatformModels(): Promise<void> {
                         existingModel.tier !== tier ||
                         existingModel.tagline !== tagline ||
                         existingModel.costTier !== costTier ||
-                        existingModel.recommended !== recommended;
+                        existingModel.recommended !== recommended ||
+                        existingModel.sortOrder !== sortOrder;
 
                     if (hasChanges) {
                         await db.update(ChatModel)
@@ -557,6 +561,7 @@ export async function syncPlatformModels(): Promise<void> {
                                 tagline,
                                 costTier,
                                 recommended,
+                                sortOrder,
                                 updatedAt: new Date()
                             })
                             .where(eq(ChatModel.id, existingModel.id));

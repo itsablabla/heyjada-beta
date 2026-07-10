@@ -165,6 +165,8 @@ export const ChatModel = pgTable('chat_model', {
     tagline: text('tagline'),
     costTier: text('cost_tier'),
     recommended: boolean('recommended').default(false).notNull(),
+    // Display order within the selector, synced from platform.
+    sortOrder: integer('sort_order').default(0).notNull(),
     ...dbBaseModel,
 });
 

@@ -502,7 +502,8 @@ api.get('/models', async (c) => {
         recommended: ChatModel.recommended,
     })
     .from(ChatModel)
-    .leftJoin(AiModelApi, eq(ChatModel.aiModelApiId, AiModelApi.id));
+    .leftJoin(AiModelApi, eq(ChatModel.aiModelApiId, AiModelApi.id))
+    .orderBy(asc(ChatModel.sortOrder), asc(ChatModel.id));
 
     return c.json({ models });
 });
