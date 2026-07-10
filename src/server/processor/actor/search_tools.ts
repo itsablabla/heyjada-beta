@@ -138,6 +138,64 @@ export function searchTools(args: SearchToolsArgs, mcpTools: ToolDefinition[]): 
 }
 
 /**
+ * Provider-executed variant of tool deferral for models that support tool
+ * search (OpenAI gpt-5.4+, Anthropic Claude via platform translation): all MCP
+ * tools are sent marked defer_loading alongside a provider-native tool_search
+ * tool. The provider hides deferred schemas from model context, executes
+ * searches server-side (no app round-trip), and injects matches at the end of
+ * context — deferral state rides in the conversation's raw item history.
+ *
+ * With `namespaced` (models with tool search over the OpenAI Responses API),
+ * each MCP server becomes a namespace tool holding its tools as deferred
+ * children, per the OpenAI tool search guidance — the model sees server names
+ * and descriptions upfront and can load a whole server via one search. The
+ * model then calls tools with a bare name plus a separate namespace field;
+ * getFunctionCallName() rejoins them into the server__tool convention.
+ */
+export function applyProviderToolSearch(
+    mcpTools: ToolDefinition[],
+    options: { namespaced?: boolean; serverDescriptions?: Map<string, string> } = {}
+): ToolDefinition[] {
+    if (mcpTools.length <= MCP_TOOL_DEFER_THRESHOLD) {
+        return mcpTools;
+    }
+    const searchTool: ToolDefinition = { name: 'tool_search', type: 'tool_search', schema: {} };
+    if (!options.namespaced) {
+        return [searchTool, ...mcpTools.map(tool => ({ ...tool, deferLoading: true }))];
+    }
+
+    // One namespace per MCP server; tools without a server prefix stay flat
+    const byServer = new Map<string, ToolDefinition[]>();
+    const flatTools: ToolDefinition[] = [];
+    for (const tool of mcpTools) {
+        const parsed = parseNamespacedToolName(tool.name);
+        if (!parsed) {
+            flatTools.push({ ...tool, deferLoading: true });
+            continue;
+        }
+        const children = byServer.get(parsed.serverName) ?? [];
+        children.push({
+            name: parsed.toolName,
+            // The [MCP: server] prefix is redundant inside the server's namespace
+            description: tool.description?.replace(`[MCP: ${parsed.serverName}] `, ''),
+            schema: tool.schema,
+            deferLoading: true,
+        });
+        byServer.set(parsed.serverName, children);
+    }
+
+    const namespaces = Array.from(byServer.entries()).map(([server, tools]): ToolDefinition => ({
+        type: 'namespace',
+        name: server,
+        description: options.serverDescriptions?.get(server) ?? `Tools provided by the ${server} MCP server.`,
+        schema: {},
+        tools,
+    }));
+
+    return [searchTool, ...namespaces, ...flatTools];
+}
+
+/**
  * Replace the full MCP tool list with the search_tools definition plus any
  * already-loaded tools. Below the threshold all tools pass through unchanged
  * and no search tool is advertised.

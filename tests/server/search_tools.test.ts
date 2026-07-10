@@ -3,9 +3,11 @@ import {
     searchTools,
     buildSearchToolsDefinition,
     applyToolDeferral,
+    applyProviderToolSearch,
     MCP_TOOL_DEFER_THRESHOLD,
     SEARCH_TOOLS_TOOL_NAME,
 } from '../../src/server/processor/actor/search_tools';
+import { toOpenaiTools, getFunctionCallName } from '../../src/server/processor/conversation/openai/utils';
 import type { ToolDefinition } from '../../src/server/processor/conversation/conversation';
 
 function makeTool(server: string, name: string, description: string): ToolDefinition {
@@ -131,10 +133,100 @@ describe('applyToolDeferral', () => {
         expect(result.map(t => t.name)).toEqual([SEARCH_TOOLS_TOOL_NAME, 'server__tool_3', 'server__tool_7']);
     });
 
+    test('provider: passes all tools through below the threshold', () => {
+        const few = TOOLS.slice(0, 3);
+        expect(applyProviderToolSearch(few)).toEqual(few);
+        expect(applyProviderToolSearch(few, { namespaced: true })).toEqual(few);
+    });
+
+    test('provider: defers all tools with a provider tool_search entry above the threshold', () => {
+        const result = applyProviderToolSearch(manyTools);
+        expect(result[0]?.type).toBe('tool_search');
+        expect(result).toHaveLength(manyTools.length + 1);
+        expect(result.slice(1).every(t => t.deferLoading === true)).toBe(true);
+    });
+
+    test('provider namespaced: groups tools into one namespace per server', () => {
+        const multiServer = [
+            ...Array.from({ length: MCP_TOOL_DEFER_THRESHOLD }, (_, i) => makeTool('github', `tool_${i}`, `GitHub tool ${i}`)),
+            makeTool('slack', 'send_message', 'Send a message to a Slack channel'),
+        ];
+        const result = applyProviderToolSearch(multiServer, {
+            namespaced: true,
+            serverDescriptions: new Map([['github', 'Manage GitHub repositories, issues and pull requests.']]),
+        });
+
+        expect(result[0]?.type).toBe('tool_search');
+        const namespaces = result.filter(t => t.type === 'namespace');
+        expect(namespaces.map(n => n.name)).toEqual(['github', 'slack']);
+        // Configured server description is used; servers without one get a generic fallback
+        expect(namespaces[0]?.description).toBe('Manage GitHub repositories, issues and pull requests.');
+        expect(namespaces[1]?.description).toBe('Tools provided by the slack MCP server.');
+
+        const github = namespaces[0]!;
+        expect(github.tools).toHaveLength(MCP_TOOL_DEFER_THRESHOLD);
+        // Children carry bare names, deferred schemas, and no redundant server prefix
+        expect(github.tools?.[0]).toMatchObject({ name: 'tool_0', deferLoading: true, description: 'GitHub tool 0' });
+        // Namespaces themselves are not deferred
+        expect(namespaces.every(n => n.deferLoading === undefined)).toBe(true);
+    });
+
     test('keeps the search_tools index stable as tools are loaded', () => {
         const before = applyToolDeferral(manyTools, new Set())[0]?.description;
         const after = applyToolDeferral(manyTools, new Set(['server__tool_3']))[0]?.description;
         expect(before).toBeDefined();
         expect(after).toBe(before!);
+    });
+});
+
+describe('toOpenaiTools provider tool search mapping', () => {
+    test('maps tool_search type to a provider tool_search tool', () => {
+        const [mapped] = toOpenaiTools([{ name: 'tool_search', type: 'tool_search', schema: {} }]) ?? [];
+        expect(mapped).toEqual({ type: 'tool_search' });
+    });
+
+    test('maps deferLoading to defer_loading on function tools', () => {
+        const tool = makeTool('github', 'create_issue', 'Create an issue');
+        const [mapped] = toOpenaiTools([{ ...tool, deferLoading: true }]) ?? [];
+        expect(mapped).toMatchObject({ type: 'function', name: tool.name, defer_loading: true });
+    });
+
+    test('omits defer_loading on regular function tools', () => {
+        const [mapped] = toOpenaiTools([makeTool('github', 'create_issue', 'Create an issue')]) ?? [];
+        expect(mapped).toMatchObject({ type: 'function' });
+        expect(mapped && 'defer_loading' in mapped).toBe(false);
+    });
+
+    test('maps namespace definitions with deferred children', () => {
+        const [mapped] = toOpenaiTools([{
+            type: 'namespace',
+            name: 'github',
+            description: 'Tools provided by the github MCP server.',
+            schema: {},
+            tools: [{ name: 'create_issue', description: 'Create an issue', schema: { type: 'object' }, deferLoading: true }],
+        }]) ?? [];
+        expect(mapped).toEqual({
+            type: 'namespace',
+            name: 'github',
+            description: 'Tools provided by the github MCP server.',
+            tools: [{
+                type: 'function',
+                name: 'create_issue',
+                description: 'Create an issue',
+                parameters: { type: 'object' },
+                defer_loading: true,
+            }],
+        });
+    });
+});
+
+describe('getFunctionCallName', () => {
+    test('rejoins namespaced calls into the server__tool convention', () => {
+        expect(getFunctionCallName({ name: 'create_issue', namespace: 'github' })).toBe('github__create_issue');
+    });
+
+    test('passes plain calls through unchanged', () => {
+        expect(getFunctionCallName({ name: 'search_web' })).toBe('search_web');
+        expect(getFunctionCallName({ name: 'github__create_issue', namespace: null })).toBe('github__create_issue');
     });
 });

@@ -34,4 +34,10 @@ export interface ToolDefinition {
     schema: Record<string, any>;
     name: string;
     description?: string;
+    /** 'tool_search' emits a provider-native tool search tool; 'namespace' groups child tools */
+    type?: 'function' | 'tool_search' | 'namespace';
+    /** Defer this tool's schema out of model context until discovered via tool search */
+    deferLoading?: boolean;
+    /** Child tools of a namespace definition */
+    tools?: ToolDefinition[];
 }
