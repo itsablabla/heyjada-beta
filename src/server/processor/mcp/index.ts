@@ -5,6 +5,7 @@ export {
     reconnectMcpServer,
     disconnectMcpServer,
     getMcpToolDefinitions,
+    getMcpServerDescriptions,
     executeMcpTool,
     closeMcpClients,
     getMcpServerStatuses,
