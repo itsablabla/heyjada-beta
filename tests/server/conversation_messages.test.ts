@@ -25,11 +25,13 @@ describe('toOpenaiTools', () => {
 
         expect(result).toBeDefined();
         expect(result).toHaveLength(1);
-        expect(result![0]!.type).toBe('function');
-        expect(result![0]!.name).toBe('view_file');
-        expect(result![0]!.description).toBe('Read a file');
-        expect(result![0]!.parameters).toEqual({ type: 'object', properties: { path: { type: 'string' } } });
-        expect(result![0]!.strict).toBe(false);
+        expect(result![0]).toMatchObject({
+            type: 'function',
+            name: 'view_file',
+            description: 'Read a file',
+            parameters: { type: 'object', properties: { path: { type: 'string' } } },
+            strict: false,
+        });
     });
 
     test('should convert multiple tool definitions', () => {
@@ -41,11 +43,10 @@ describe('toOpenaiTools', () => {
         const result = toOpenaiTools(tools);
 
         expect(result).toHaveLength(3);
-        expect(result![0]!.name).toBe('view_file');
-        expect(result![0]!.description).toBeUndefined();
-        expect(result![1]!.name).toBe('edit_file');
-        expect(result![1]!.description).toBe('Edit a file');
-        expect(result![2]!.name).toBe('shell_command');
+        expect(result![0]).toMatchObject({ name: 'view_file' });
+        expect((result![0] as { description?: string }).description).toBeUndefined();
+        expect(result![1]).toMatchObject({ name: 'edit_file', description: 'Edit a file' });
+        expect(result![2]).toMatchObject({ name: 'shell_command' });
     });
 });
 

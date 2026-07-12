@@ -154,6 +154,8 @@ export const ChatModel = pgTable('chat_model', {
     modelType: ChatModelTypeEnum('model_type').default('google').notNull(),
     visionEnabled: boolean('vision_enabled').default(false).notNull(),
     useResponsesApi: boolean('use_responses_api').default(false).notNull(),
+    // Model supports native tool search with deferred tool loading
+    supportsToolSearch: boolean('supports_tool_search').default(false).notNull(),
     aiModelApiId: integer('ai_model_api_id').references(() => AiModelApi.id, { onDelete: 'cascade' }),
     // Token Cost (USD) for Usage Tracking
     inputCostPerMillion: real('input_cost_per_million'),

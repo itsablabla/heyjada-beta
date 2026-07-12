@@ -162,6 +162,13 @@
       "when": 1783678451338,
       "tag": "0022_material_king_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1783723955432,
+      "tag": "0023_bitter_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

@@ -5,8 +5,10 @@ export {
     reconnectMcpServer,
     disconnectMcpServer,
     getMcpToolDefinitions,
+    getMcpServerDescriptions,
     executeMcpTool,
     closeMcpClients,
     getMcpServerStatuses,
     isMcpTool,
+    parseNamespacedToolName,
 } from './manager';

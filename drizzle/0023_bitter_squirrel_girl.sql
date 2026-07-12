@@ -1,0 +1,1 @@
+ALTER TABLE "chat_model" ADD COLUMN "supports_tool_search" boolean DEFAULT false NOT NULL;

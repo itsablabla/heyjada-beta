@@ -283,6 +283,10 @@ export class McpClient {
         return this.config.name;
     }
 
+    get serverDescription(): string | null {
+        return this.config.description ?? null;
+    }
+
     get confirmationMode(): 'always' | 'unsafe_only' | 'never' {
         return this.config.confirmationMode;
     }

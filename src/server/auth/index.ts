@@ -442,6 +442,7 @@ export async function syncPlatformModels(): Promise<void> {
             modelType: 'openai' | 'anthropic' | 'google';
             visionEnabled: boolean;
             useResponsesApi: boolean;
+            supportsToolSearch?: boolean;
             inputCostPerMillion: number;
             outputCostPerMillion: number;
             tier: 'flagship' | 'balanced' | 'lite' | null;
@@ -506,6 +507,7 @@ export async function syncPlatformModels(): Promise<void> {
             const modelType = model.modelType;
             const visionEnabled = model.visionEnabled;
             const useResponsesApi = model.useResponsesApi;
+            const supportsToolSearch = model.supportsToolSearch ?? false;
             const friendlyName = model.name || model.id;
             const inputCostPerMillion = model.inputCostPerMillion ?? null;
             const outputCostPerMillion = model.outputCostPerMillion ?? null;
@@ -521,6 +523,7 @@ export async function syncPlatformModels(): Promise<void> {
                     modelType,
                     visionEnabled,
                     useResponsesApi,
+                    supportsToolSearch,
                     inputCostPerMillion,
                     outputCostPerMillion,
                     tier,
@@ -540,6 +543,7 @@ export async function syncPlatformModels(): Promise<void> {
                         existingModel.modelType !== modelType ||
                         existingModel.visionEnabled !== visionEnabled ||
                         existingModel.useResponsesApi !== useResponsesApi ||
+                        existingModel.supportsToolSearch !== supportsToolSearch ||
                         existingModel.inputCostPerMillion !== inputCostPerMillion ||
                         existingModel.outputCostPerMillion !== outputCostPerMillion ||
                         existingModel.tier !== tier ||
@@ -555,6 +559,7 @@ export async function syncPlatformModels(): Promise<void> {
                                 modelType,
                                 visionEnabled,
                                 useResponsesApi,
+                                supportsToolSearch,
                                 inputCostPerMillion,
                                 outputCostPerMillion,
                                 tier,

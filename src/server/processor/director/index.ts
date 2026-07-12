@@ -14,11 +14,14 @@ import { readWebpage, type ReadWebpageArgs } from '../actor/read_webpage';
 import { askUser, type AskUserArgs } from '../actor/ask_user';
 import { generateImage, type GenerateImageArgs } from '../actor/generate_image';
 import { emailUser, type EmailUserArgs } from '../actor/email_user';
+import { applyProviderToolSearch, applyToolDeferral, searchTools, SEARCH_TOOLS_TOOL_NAME, type SearchToolsArgs } from '../actor/search_tools';
+import { getFunctionCallName } from '../conversation/openai/utils';
+import { getChatModelById, getDefaultChatModel } from '../../db';
 import * as prompts from './prompts';
 import { getLoadedSkills, formatSkillsForPrompt } from '../../skills';
 import { type ATIFMetrics, type ATIFObservationResult, type ATIFToolCall, type ATIFTrajectory } from '../conversation/atif/atif.types';
 import type { ConfirmationContext } from '../confirmation';
-import { getMcpToolDefinitions, executeMcpTool, isMcpTool } from '../mcp';
+import { getMcpToolDefinitions, getMcpServerDescriptions, executeMcpTool, isMcpTool } from '../mcp';
 import { PlatformBillingError } from '../../http/billing-errors';
 import { PlatformAuthError } from '../../http/platform-fetch';
 import { createChildLogger } from '../../logger';
@@ -137,7 +140,15 @@ interface ResearchConfig {
     conversationId?: string;
     // Callback for real-time text delta streaming
     onTextChunk?: (chunk: string) => void;
+    // MCP tools whose full schemas are advertised to the model (others are deferred behind search_tools)
+    loadedMcpTools?: Set<string>;
+    // How MCP tools defer for this run: provider tool search ('namespaced' over the
+    // OpenAI Responses API, 'flat' via provider translation) or the app-side
+    // search_tools actor ('off')
+    providerToolSearch?: ProviderToolSearchMode;
 }
+
+export type ProviderToolSearchMode = 'off' | 'flat' | 'namespaced';
 
 export async function buildSystemPrompt(args: {
     currentDate?: string;
@@ -513,15 +524,43 @@ Tips:
 ];
 
 /**
- * Get all available tools including built-in tools and MCP tools
+ * Get all available tools including built-in tools and MCP tools.
+ * When many MCP tools are connected, their schemas are deferred behind tool
+ * search: models with provider tool search get provider-side deferral (MCP tools
+ * marked defer_loading); others get the app-side search_tools actor, where
+ * only tools in `loadedMcpTools` are advertised in full.
  */
-async function getAllTools(): Promise<ToolDefinition[]> {
+async function getAllTools(loadedMcpTools: Set<string> = new Set(), providerToolSearch: ProviderToolSearchMode = 'off'): Promise<ToolDefinition[]> {
     try {
         const mcpTools = await getMcpToolDefinitions();
-        return [...builtInTools, ...mcpTools];
+        const deferredMcpTools = providerToolSearch !== 'off'
+            ? applyProviderToolSearch(mcpTools, {
+                namespaced: providerToolSearch === 'namespaced',
+                serverDescriptions: getMcpServerDescriptions(),
+            })
+            : applyToolDeferral(mcpTools, loadedMcpTools);
+        return [...builtInTools, ...deferredMcpTools];
     } catch (error) {
         log.error({ err: error }, 'Failed to load MCP tools');
         return builtInTools;
+    }
+}
+
+/**
+ * How the research run's chat model defers MCP tools. Models with provider
+ * tool search get namespaced grouping when served over the OpenAI Responses
+ * API (passthrough), or flat defer_loading otherwise.
+ */
+async function resolveProviderToolSearchMode(chatModelId?: number, user?: typeof User.$inferSelect): Promise<ProviderToolSearchMode> {
+    try {
+        const chatModelWithApi = chatModelId
+            ? await getChatModelById(chatModelId)
+            : await getDefaultChatModel(user);
+        if (!chatModelWithApi?.chatModel.supportsToolSearch) return 'off';
+        return chatModelWithApi.chatModel.useResponsesApi ? 'namespaced' : 'flat';
+    } catch (error) {
+        log.warn({ err: error }, 'Failed to resolve model tool search capability');
+        return 'off';
     }
 }
 
@@ -535,7 +574,7 @@ async function pickNextTool(
     const isLast = currentIteration >= maxIterations - 1;
 
     // Get all tools (built-in + MCP)
-    const tools = await getAllTools();
+    const tools = await getAllTools(config.loadedMcpTools, config.providerToolSearch);
     const toolChoice = isLast ? 'none' : 'auto';
 
     const now = new Date();
@@ -646,7 +685,7 @@ async function pickNextTool(
             try {
                 const args = typeof fc.arguments === 'string' ? JSON.parse(fc.arguments) : fc.arguments;
                 toolCalls.push({
-                    function_name: fc.name,
+                    function_name: getFunctionCallName(fc),
                     arguments: args,
                     tool_call_id: fc.call_id,
                 });
@@ -741,6 +780,9 @@ async function executeTool(
     try {
         // Check if this is an MCP tool (contains "__" in name, e.g., "github__create_issue")
         if (isMcpTool(toolCall.function_name)) {
+            // Direct calls to deferred tools work without a prior search; mark
+            // them loaded so their schemas are advertised from the next iteration
+            context?.loadedMcpTools?.add(toolCall.function_name);
             return await executeMcpTool(
                 toolCall.function_name,
                 toolCall.arguments as Record<string, unknown>,
@@ -750,6 +792,14 @@ async function executeTool(
 
         // Built-in tools
         switch (toolCall.function_name) {
+            case SEARCH_TOOLS_TOOL_NAME: {
+                const mcpTools = await getMcpToolDefinitions();
+                const result = searchTools(toolCall.arguments as SearchToolsArgs, mcpTools);
+                for (const match of result.matches) {
+                    context?.loadedMcpTools?.add(match.name);
+                }
+                return result.compiled;
+            }
             case 'list_files': {
                 const result = await listFiles(toolCall.arguments as ListFilesArgs);
                 return result.compiled;
@@ -916,6 +966,23 @@ export async function* research(config: ResearchConfig): AsyncGenerator<Research
     // Persists across iterations so one-time reminders only fire once per research run
     const shownReminders = new Set<string>();
 
+    // Models with provider tool search defer MCP tools provider-side; others use
+    // the app-side search_tools actor. Resolved once — model is fixed per run.
+    const providerToolSearch = config.providerToolSearch
+        ?? await resolveProviderToolSearchMode(config.chatModelId, config.user);
+
+    // MCP tools whose schemas are advertised to the model when deferral is active.
+    // Seeded from tools called earlier in the conversation so they stay available
+    // across turns; grows when search_tools finds tools or a deferred tool is called.
+    const loadedMcpTools = new Set<string>(config.loadedMcpTools);
+    for (const step of config.chatHistory.steps) {
+        for (const tc of step.tool_calls ?? []) {
+            if (isMcpTool(tc.function_name)) {
+                loadedMcpTools.add(tc.function_name);
+            }
+        }
+    }
+
     for (let i = 0; i < config.maxIterations; i++) {
         // Check if paused before starting new iteration
         if (config.abortSignal?.aborted) {
@@ -927,7 +994,7 @@ export async function* research(config: ResearchConfig): AsyncGenerator<Research
             thresholdStepCount = config.chatHistory.steps.length;
         }
 
-        const iteration = await pickNextTool({ ...config, currentIteration: i, thresholdStepCount });
+        const iteration = await pickNextTool({ ...config, currentIteration: i, thresholdStepCount, loadedMcpTools, providerToolSearch });
 
         // Handle warnings (e.g., invalid JSON in tool arguments, API errors) - feed back to model for retry
         // Must check before empty tool calls check, since warnings with no valid tool calls should continue loop
@@ -1047,6 +1114,7 @@ export async function* research(config: ResearchConfig): AsyncGenerator<Research
             conversationId: config.conversationId,
             runId: config.runId,
             shownReminders,
+            loadedMcpTools,
         };
         iteration.toolResults = await executeToolsInParallel(iteration.toolCalls, executionContext, config.abortSignal);
 

@@ -235,6 +235,20 @@ export async function getMcpToolDefinitions(): Promise<ToolDefinition[]> {
 }
 
 /**
+ * Get the configured description of each connected MCP server, by server name.
+ * Used as the namespace description when MCP tools are grouped per server.
+ */
+export function getMcpServerDescriptions(): Map<string, string> {
+    const descriptions = new Map<string, string>();
+    for (const client of activeClients.values()) {
+        if (client.status === 'connected' && client.serverDescription) {
+            descriptions.set(client.serverName, client.serverDescription);
+        }
+    }
+    return descriptions;
+}
+
+/**
  * Augment a tool's input schema with the operation_type property.
  * This property is required for all MCP tool calls so the confirmation system
  * can determine whether confirmation is needed based on server settings.
