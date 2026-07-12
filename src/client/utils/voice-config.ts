@@ -45,6 +45,9 @@ export const DISCARD_PHRASES = ['scratch that', 'clear that'];
 /** Tail-position phrases that abandon the turn and stop listening. */
 export const CANCEL_PHRASES = ['stop listening', 'cancel that'];
 
+/** Max text length accepted by /api/voice/summarize (keep in sync with the server schema). */
+export const SUMMARIZE_TEXT_CAP = 50_000;
+
 /** The addressing word that marks open-context speech as meant for Pipali. */
 export const ADDRESS_NAME = 'pipali';
 

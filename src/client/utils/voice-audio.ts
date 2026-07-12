@@ -5,6 +5,7 @@
  */
 
 import { apiFetch } from './api';
+import { SUMMARIZE_TEXT_CAP } from './voice-config';
 
 /** Segmented capture needs getUserMedia + AudioWorklet (Safari/WKWebView 14.1+, Chromium, Firefox). */
 export function isVoiceCaptureSupported(): boolean {
@@ -60,7 +61,8 @@ export async function summarizeForSpeech(text: string, opts?: { timeoutMs?: numb
     const res = await apiFetch('/api/voice/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        // Slice instead of tripping the server cap — long responses just lose tail.
+        body: JSON.stringify({ text: text.slice(0, SUMMARIZE_TEXT_CAP) }),
         signal: AbortSignal.timeout(opts?.timeoutMs ?? 12_000),
     });
     if (!res.ok) throw await toVoiceError(res);
