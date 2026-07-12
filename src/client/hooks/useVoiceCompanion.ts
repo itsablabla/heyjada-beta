@@ -192,10 +192,10 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         sessionTokenRef.current++;
         clearInviteTimer();
         clearIdleTimer();
-        // Suppression must not survive the session it belonged to — a stale
-        // count would start the next session deaf. Late releases from an
-        // interrupted TTS clamp at zero harmlessly.
+        // Stale suppression would start the next session deaf; late TTS releases clamp at zero.
         suppressCountRef.current = 0;
+        // A pending that survives dormancy re-synthesizes from its summary on cache miss.
+        prefetchRef.current.clear();
         const turn = turnRef.current;
         if (turn) releaseTurn(turn);
         const capture = captureRef.current;
@@ -267,6 +267,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             setStatus('announced');             // confirmation still unanswered
         } else if (pending?.kind === 'completion') {
             pendingRef.current = null;          // summary was heard; nothing more owed
+            prefetchRef.current.delete(pending.key);
             setStatus('idle');
         } else {
             setStatus(pending ? 'announced' : 'idle');
@@ -350,6 +351,9 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     }, [reportError]);
 
     const announce = useCallback((pending: Pending, cue: VoiceCueProfile) => {
+        // Drop the superseded announcement's prefetched audio.
+        const replaced = pendingRef.current;
+        if (replaced && replaced.key !== pending.key) prefetchRef.current.delete(replaced.key);
         playVoiceCue(cue);
         prefetch(pending);
         pendingRef.current = pending;
@@ -358,14 +362,25 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         setStatus((s) => (s === 'idle' || s === 'announced' ? 'announced' : s));
     }, [prefetch]);
 
+    // Bounded, never cleared: dedup must survive session cycles so reconnect
+    // replays stay silent after a voice off/on.
+    const markSpoken = useCallback((key: string) => {
+        const keys = spokenKeysRef.current;
+        keys.add(key);
+        if (keys.size > 200) {
+            const oldest = keys.values().next().value;
+            if (oldest !== undefined) keys.delete(oldest);
+        }
+    }, []);
+
     const onConfirmationRequest = useCallback((request: ConfirmationRequest, convId: string, runId: string) => {
         if (!cbRef.current.enabled || !supported) return;
         if (convId !== activeConvRef.current) return;            // active-conversation gate
         const key = `c:${request.requestId}`;
         if (spokenKeysRef.current.has(key)) return;              // dedup replays
-        spokenKeysRef.current.add(key);
+        markSpoken(key);
         announce({ kind: 'confirmation', key, conversationId: convId, runId, request, summary: buildConfirmationSummary(request) }, 'confirmation');
-    }, [supported, announce]);
+    }, [supported, announce, markSpoken]);
 
     const onTaskComplete = useCallback((response: string, convId: string) => {
         if (!cbRef.current.enabled || !supported) return;
@@ -373,9 +388,9 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         // No runId in the completion callback — key on content so replays dedup.
         const key = `t:${convId}:${response.length}:${response.slice(0, 32)}`;
         if (spokenKeysRef.current.has(key)) return;
-        spokenKeysRef.current.add(key);
+        markSpoken(key);
         announce({ kind: 'completion', key, conversationId: convId, summary: buildCompletionSummary(response), raw: response }, 'complete');
-    }, [supported, announce]);
+    }, [supported, announce, markSpoken]);
 
     // ------------------------------------------------------------------
     // Reply routing
