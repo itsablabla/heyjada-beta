@@ -78,6 +78,17 @@ describe('parseConfirmationIntent (non-question)', () => {
     test('stop listening', () => {
         expect(parseConfirmationIntent('stop listening', opts)).toEqual({ type: 'stop_listening' });
         expect(parseConfirmationIntent('turn off voice', opts)).toEqual({ type: 'stop_listening' });
+        expect(parseConfirmationIntent('please stop listening', opts)).toEqual({ type: 'stop_listening' });
+    });
+
+    test('stop-listening requires the whole utterance, not a substring', () => {
+        // Hallucinated/ambient sentences containing the phrase must not kill voice.
+        for (const s of [
+            'key phrases: pipali, over to you, stop listening, cancel that',
+            'you should stop listening to that podcast',
+        ]) {
+            expect(parseConfirmationIntent(s, opts)).toEqual({ type: 'guidance', text: s });
+        }
     });
 
     test('free-form utterances become guidance with original text', () => {

@@ -56,8 +56,12 @@ export function normalizeUtterance(text: string): string {
         .trim();
 }
 
+// Exact whole-utterance match only: disabling voice is destructive, and
+// substring matching let hallucinated or ambient sentences that merely
+// contained "stop listening" kill the session (normalize already strips
+// filler, so "please stop listening" still matches).
 function matchesStopListening(n: string): boolean {
-    return STOP_LISTENING.some((p) => n === p || n.includes(p));
+    return STOP_LISTENING.some((p) => n === p);
 }
 
 /**

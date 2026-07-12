@@ -547,6 +547,9 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 if (payload) {
                     const intent = parseConfirmationIntent(payload, { isQuestion: false });
                     if (intent.type === 'stop_listening') {
+                        // Breadcrumb: if voice ever self-disables spuriously,
+                        // this shows exactly what was (mis)heard.
+                        console.warn('[voice] disabled by spoken command:', text);
                         cbRef.current.onDisableVoice?.();
                         reset();
                         return;

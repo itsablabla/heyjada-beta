@@ -1,5 +1,6 @@
 import { test, expect, describe } from 'bun:test';
 import { TurnTranscript, isHallucination, endsWithPhrase, stripTailPhrase } from '../../src/client/utils/voice-turn';
+import { STT_BIAS_PROMPT } from '../../src/client/utils/voice-config';
 
 describe('isHallucination', () => {
     test('flags known Whisper noise hallucinations', () => {
@@ -12,6 +13,26 @@ describe('isHallucination', () => {
         for (const s of ['Thank the team in the email', 'Research the market for me', 'yes']) {
             expect(isHallucination(s)).toBe(false);
         }
+    });
+
+    test('flags echoes of the STT bias prompt, derived from the live constant', () => {
+        // Whisper can echo its conditioning text on noise-only audio — verbatim or truncated.
+        expect(isHallucination(STT_BIAS_PROMPT)).toBe(true);
+        const truncatedEcho = STT_BIAS_PROMPT.split(/\s+/).slice(0, 8).join(' ');
+        expect(isHallucination(truncatedEcho)).toBe(true);
+    });
+
+    test('short command words contained in the prompt stay usable', () => {
+        for (const s of ['Send it.', 'go ahead', 'scratch that', 'Pipali']) {
+            expect(isHallucination(s)).toBe(false);
+        }
+    });
+
+    test('a prompt-echo segment does not pollute the turn transcript', () => {
+        const turn = new TurnTranscript();
+        turn.addSegment(0, 'Draft the launch email.');
+        turn.addSegment(1, STT_BIAS_PROMPT);
+        expect(turn.text).toBe('Draft the launch email.');
     });
 });
 

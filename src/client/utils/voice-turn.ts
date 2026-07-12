@@ -10,7 +10,7 @@
  */
 
 import { normalizeUtterance } from './voice-intent';
-import { END_PHRASES, DISCARD_PHRASES, CANCEL_PHRASES } from './voice-config';
+import { END_PHRASES, DISCARD_PHRASES, CANCEL_PHRASES, STT_BIAS_PROMPT } from './voice-config';
 
 // Whisper-family models hallucinate fixed phrases on noise-only audio.
 // Conservative full-string matches only — never drop real dictation.
@@ -27,10 +27,22 @@ const HALLUCINATION_PATTERNS: RegExp[] = [
     /^hey pipali$/i,
 ];
 
+// Whisper also echoes its conditioning text on noise-only audio. Derived from
+// the live prompt so rewording can't drift; the token floor keeps short
+// utterances that appear in the prompt ("send it") usable as commands.
+const NORMALIZED_BIAS_PROMPT = normalizeUtterance(STT_BIAS_PROMPT);
+const PROMPT_ECHO_MIN_TOKENS = 5;
+
+function isPromptEcho(text: string): boolean {
+    const normalized = normalizeUtterance(text);
+    if (!normalized || normalized.split(' ').length < PROMPT_ECHO_MIN_TOKENS) return false;
+    return NORMALIZED_BIAS_PROMPT.includes(normalized);
+}
+
 export function isHallucination(text: string): boolean {
     const t = text.trim();
     if (!t) return true;
-    return HALLUCINATION_PATTERNS.some((p) => p.test(t));
+    return isPromptEcho(t) || HALLUCINATION_PATTERNS.some((p) => p.test(t));
 }
 
 /** Do the last tokens of `text` (normalized) spell out `phrase`? */
