@@ -85,12 +85,24 @@
     },
     "voice": {
         "enable": "Enable voice mode",
-        "disable": "Disable voice mode",
         "liveHint": "Pause anytime — say \"send it\" or \"over to you\" to send, \"scratch that\" to discard",
         "title": "Voice",
         "description": "Let Pipali speak confirmations and results, and take your spoken replies — hands-free.",
-        "enabledLabel": "Voice mode",
-        "enabledHint": "When on, Pipali plays a sound when it needs you and reads results aloud after you give a go-ahead. Microphone and audio stay on this device.",
+        "mode": {
+            "speak_freely": "Speak freely",
+            "ask_first": "Ask first",
+            "off": "Off"
+        },
+        "modeHint": {
+            "speak_freely": "Speaks as soon as it has something for you",
+            "ask_first": "Chimes, then waits for your go-ahead",
+            "off": "Microphone off"
+        },
+        "modeMenu": {
+            "title": "Voice mode",
+            "spokenHint": "Say \"Pipali, speak freely\" or \"Pipali, ask first\" anytime"
+        },
+        "enabledHint": "While voice is on, speech near this device is transcribed to check whether you're addressing Pipali; unaddressed speech is discarded and never stored.",
         "status": {
             "idle": "Listening for \"Pipali…\" — tap to talk",
             "dormant": "Voice asleep — tap to wake",

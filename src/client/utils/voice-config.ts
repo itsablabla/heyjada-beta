@@ -36,6 +36,19 @@ export const VOICE_TUNABLES = {
     workPulseMinIntervalMs: 1_000,
 } as const;
 
+/**
+ * Voice mode: off, or one of two speaking etiquettes. `ask_first` chimes and
+ * waits for a go-ahead before reading a summary; `speak_freely` reads it as
+ * soon as it's ready. Listening behavior is identical in both.
+ */
+export type VoiceMode = 'off' | 'ask_first' | 'speak_freely';
+
+/** Whole-utterance phrases that switch Pipali to speaking without a go-ahead. */
+export const SPEAK_FREELY_PHRASES = ['speak freely', 'talk freely'];
+
+/** Whole-utterance phrases that switch Pipali back to chiming for a go-ahead. */
+export const ASK_FIRST_PHRASES = ['ask first', 'ask before speaking', 'ask to speak'];
+
 /** Tail-position phrases that submit the current turn. */
 export const END_PHRASES = ['over to you', 'send it'];
 
@@ -59,4 +72,4 @@ export const ADDRESS_LEAD_INS = ['hey', 'ok', 'okay', 'hi'];
  * to make them transcribe reliably for the given context.
  */
 export const STT_BIAS_PROMPT =
-    `A voice message snippet by the user to Pipali, an AI co-worker on their computer. Key Phrases: Pipali, Hey Pipali, ${[...END_PHRASES, ...DISCARD_PHRASES, ...CANCEL_PHRASES].join(', ')}, go ahead.`;
+    `A voice message snippet by the user to Pipali, an AI co-worker on their computer. Key Phrases: Pipali, Hey Pipali, ${[...END_PHRASES, ...DISCARD_PHRASES, ...CANCEL_PHRASES, ...SPEAK_FREELY_PHRASES, ...ASK_FIRST_PHRASES].join(', ')}, go ahead.`;

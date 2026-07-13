@@ -81,6 +81,18 @@ describe('parseConfirmationIntent (non-question)', () => {
         expect(parseConfirmationIntent('please stop listening', opts)).toEqual({ type: 'stop_listening' });
     });
 
+    test('mode switches', () => {
+        expect(parseConfirmationIntent('speak freely', opts)).toEqual({ type: 'set_mode', mode: 'speak_freely' });
+        expect(parseConfirmationIntent('Ask first!', opts)).toEqual({ type: 'set_mode', mode: 'ask_first' });
+        expect(parseConfirmationIntent('please ask before speaking', opts)).toEqual({ type: 'set_mode', mode: 'ask_first' });
+    });
+
+    test('mode switch requires the whole utterance, not a substring', () => {
+        for (const s of ['you can speak freely with me', 'lets ask first thing tomorrow']) {
+            expect(parseConfirmationIntent(s, opts)).toEqual({ type: 'guidance', text: s });
+        }
+    });
+
     test('stop-listening requires the whole utterance, not a substring', () => {
         // Hallucinated/ambient sentences containing the phrase must not kill voice.
         for (const s of [
@@ -118,5 +130,6 @@ describe('parseConfirmationIntent (question / ask_user)', () => {
     test('universal commands still work for questions', () => {
         expect(parseConfirmationIntent('stop listening', opts)).toEqual({ type: 'stop_listening' });
         expect(parseConfirmationIntent('repeat', opts)).toEqual({ type: 'repeat' });
+        expect(parseConfirmationIntent('speak freely', opts)).toEqual({ type: 'set_mode', mode: 'speak_freely' });
     });
 });

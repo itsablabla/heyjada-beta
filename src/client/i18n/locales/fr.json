@@ -246,12 +246,24 @@
     },
     "voice": {
         "enable": "Activer le mode vocal",
-        "disable": "Désactiver le mode vocal",
         "liveHint": "Fais des pauses librement — dis \"send it\" ou \"over to you\" pour envoyer, \"scratch that\" pour annuler",
         "title": "Voix",
         "description": "Laisse Pipali énoncer les confirmations et les résultats, et prendre tes réponses vocales — mains libres.",
-        "enabledLabel": "Mode vocal",
-        "enabledHint": "Quand il est activé, Pipali émet un son lorsqu'il a besoin de toi et lit les résultats à voix haute après ton feu vert. Le micro et l'audio restent sur cet appareil.",
+        "mode": {
+            "speak_freely": "Parler librement",
+            "ask_first": "Demander d'abord",
+            "off": "Désactivé"
+        },
+        "modeHint": {
+            "speak_freely": "Parle dès qu'il a du nouveau pour toi",
+            "ask_first": "Émet un son, puis attend ton feu vert",
+            "off": "Micro désactivé"
+        },
+        "modeMenu": {
+            "title": "Mode vocal",
+            "spokenHint": "Dis \"Pipali, speak freely\" ou \"Pipali, ask first\" à tout moment"
+        },
+        "enabledHint": "Quand le mode vocal est actif, la parole captée près de cet appareil est transcrite pour vérifier si tu t'adresses à Pipali ; la parole non adressée est ignorée et jamais conservée.",
         "status": {
             "idle": "À l'écoute de \"Pipali…\" — appuie pour parler",
             "dormant": "Mode vocal en veille — appuie pour le réveiller",

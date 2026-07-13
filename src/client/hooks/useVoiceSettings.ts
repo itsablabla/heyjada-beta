@@ -1,10 +1,13 @@
 import { useSyncExternalStore, useCallback } from 'react';
+import type { VoiceMode } from '../utils/voice-config';
 
 /**
- * Per-device voice settings. v1 holds a single field — `enabled` — the master
- * voice-mode toggle. It is distinct from OS microphone permission (which only
- * grants capture) and persisted so the "enable and walk away" flow survives the
- * reloads/reconnects that happen while the user is away from the screen.
+ * Per-device voice settings. `mode` is the tri-state voice control: off, or one
+ * of the two speaking etiquettes (ask_first / speak_freely). `lastActiveMode`
+ * remembers the on-mode a plain "voice on" toggle should return to. Distinct
+ * from OS microphone permission (which only grants capture) and persisted so
+ * the "enable and walk away" flow survives reloads/reconnects while the user
+ * is away from the screen.
  *
  * Backed by a tiny shared store so every hook instance in the window stays in
  * sync (same-window writes don't fire `storage` events); the `storage` listener
@@ -12,22 +15,34 @@ import { useSyncExternalStore, useCallback } from 'react';
  */
 
 export interface VoiceSettings {
-    enabled: boolean;
+    mode: VoiceMode;
+    lastActiveMode: Exclude<VoiceMode, 'off'>;
 }
 
 const STORAGE_KEY = 'pipali.voiceSettings.v1';
-const DEFAULTS: VoiceSettings = { enabled: false };
+const DEFAULTS: VoiceSettings = { mode: 'off', lastActiveMode: 'ask_first' };
 
 type PersistedV1 = { v: 1 } & VoiceSettings;
+
+/** Parse a persisted payload; anything unrecognized degrades to defaults. */
+export function parseVoiceSettings(raw: string | null): VoiceSettings {
+    if (!raw) return DEFAULTS;
+    try {
+        const parsed = JSON.parse(raw) as PersistedV1 | null;
+        if (parsed?.v !== 1) return DEFAULTS;
+        const mode = parsed.mode === 'ask_first' || parsed.mode === 'speak_freely' || parsed.mode === 'off'
+            ? parsed.mode : 'off';
+        const last = parsed.lastActiveMode === 'speak_freely' ? 'speak_freely' : 'ask_first';
+        return { mode, lastActiveMode: mode !== 'off' ? mode : last };
+    } catch {
+        return DEFAULTS;
+    }
+}
 
 function read(): VoiceSettings {
     if (typeof window === 'undefined') return DEFAULTS;
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
-        if (!raw) return DEFAULTS;
-        const parsed = JSON.parse(raw) as PersistedV1;
-        if (!parsed || parsed.v !== 1) return DEFAULTS;
-        return { enabled: !!parsed.enabled };
+        return parseVoiceSettings(window.localStorage.getItem(STORAGE_KEY));
     } catch {
         return DEFAULTS;
     }
@@ -55,9 +70,9 @@ if (typeof window !== 'undefined') {
     });
 }
 
-function setEnabled(enabled: boolean): void {
-    if (current.enabled === enabled) return;
-    current = { ...current, enabled };
+function setMode(mode: VoiceMode): void {
+    if (current.mode === mode) return;
+    current = { mode, lastActiveMode: mode !== 'off' ? mode : current.lastActiveMode };
     try {
         const payload: PersistedV1 = { v: 1, ...current };
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -69,5 +84,5 @@ function setEnabled(enabled: boolean): void {
 
 export function useVoiceSettings() {
     const settings = useSyncExternalStore(subscribe, () => current, () => DEFAULTS);
-    return { ...settings, setEnabled: useCallback(setEnabled, []) };
+    return { ...settings, setMode: useCallback(setMode, []) };
 }

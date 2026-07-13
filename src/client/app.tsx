@@ -31,6 +31,7 @@ import { generateUUID, generateDeterministicId, getToolCategory, type ToolCatego
 import { initNotifications, notifyConfirmationRequest, notifyTaskComplete, setNotificationClickHandler, setupNotificationClickListener, warmAudioContext } from "./utils/notifications";
 import { useVoiceSettings } from "./hooks/useVoiceSettings";
 import { useVoiceCompanion } from "./hooks/useVoiceCompanion";
+import type { VoiceMode } from "./utils/voice-config";
 import { isTauri, onWindowShown, onSidecarReady, listenForDeepLinks } from "./utils/tauri";
 
 // Components
@@ -314,7 +315,7 @@ const App = () => {
     });
 
     // Voice companion — hands-free layer over the chat/run/confirmation flow.
-    const { enabled: voiceEnabled, setEnabled: setVoiceEnabled } = useVoiceSettings();
+    const { mode: voiceMode, lastActiveMode: lastVoiceMode, setMode: setVoiceMode } = useVoiceSettings();
 
     // Route spoken messages through the standard send pipeline.
     const sendVoiceMessage = useCallback((text: string) => {
@@ -322,20 +323,21 @@ const App = () => {
     }, []);
 
     const voice = useVoiceCompanion({
-        enabled: voiceEnabled,
+        mode: voiceMode,
         activeConversationId: conversationId,
         sendMessage: sendVoiceMessage,
         respondToConfirmation,
         onError: (msg) => console.warn('[voice]', msg),
-        onDisableVoice: () => setVoiceEnabled(false),
+        onModeChange: setVoiceMode,
     });
     voiceCompanionRef.current = voice;
 
-    // Enabling voice requires a user gesture to unlock audio playback.
-    const enableVoice = useCallback(async () => {
-        await warmAudioContext();
-        setVoiceEnabled(true);
-    }, [setVoiceEnabled]);
+    // Turning voice on requires a user gesture to unlock audio playback.
+    const selectVoiceMode = useCallback(async (mode: VoiceMode) => {
+        if (mode !== 'off') await warmAudioContext();
+        setVoiceMode(mode);
+    }, [setVoiceMode]);
+    const enableVoice = useCallback(() => selectVoiceMode(lastVoiceMode), [selectVoiceMode, lastVoiceMode]);
 
     const syncSelectedModelForConversation = useCallback((id: string | undefined) => {
         if (!id) {
@@ -1752,10 +1754,11 @@ const App = () => {
                         onPasteFiles={uploadFiles}
                         onPickFiles={pickAndStageFiles}
                         voiceSupported={voice.supported}
-                        voiceEnabled={voiceEnabled}
+                        voiceMode={voiceMode}
                         voiceStatus={voice.status}
                         voiceTranscript={voice.liveTranscript}
                         onVoiceEnable={enableVoice}
+                        onVoiceModeChange={selectVoiceMode}
                         onVoiceTap={voice.handleTap}
                         models={models}
                         selectedModel={selectedModel}

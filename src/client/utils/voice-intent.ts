@@ -9,7 +9,7 @@
  * Pure module — no DOM, no I/O — so it's cheap to unit-test exhaustively.
  */
 
-import { ADDRESS_NAME, ADDRESS_LEAD_INS } from './voice-config';
+import { ADDRESS_NAME, ADDRESS_LEAD_INS, SPEAK_FREELY_PHRASES, ASK_FIRST_PHRASES } from './voice-config';
 
 export type VoiceIntent =
     | { type: 'approve' }
@@ -18,6 +18,7 @@ export type VoiceIntent =
     | { type: 'details' }
     | { type: 'repeat' }
     | { type: 'stop_listening' }
+    | { type: 'set_mode'; mode: 'ask_first' | 'speak_freely' }
     | { type: 'guidance'; text: string };
 
 // Single-token filler stripped before matching ("um, yes please" → "yes").
@@ -62,6 +63,14 @@ export function normalizeUtterance(text: string): string {
 // filler, so "please stop listening" still matches).
 function matchesStopListening(n: string): boolean {
     return STOP_LISTENING.some((p) => n === p);
+}
+
+// Same whole-utterance rule: mode phrases are short imperatives, and a
+// sentence merely containing one must not flip the speaking etiquette.
+function matchesModeSwitch(n: string): 'ask_first' | 'speak_freely' | null {
+    if (SPEAK_FREELY_PHRASES.some((p) => n === p)) return 'speak_freely';
+    if (ASK_FIRST_PHRASES.some((p) => n === p)) return 'ask_first';
+    return null;
 }
 
 /**
@@ -137,6 +146,8 @@ export function parseConfirmationIntent(text: string, opts: { isQuestion: boolea
 
     // Universal commands, available even for questions.
     if (matchesStopListening(n)) return { type: 'stop_listening' };
+    const mode = matchesModeSwitch(n);
+    if (mode) return { type: 'set_mode', mode };
     if (REPEAT.has(n)) return { type: 'repeat' };
     if (n.includes('dont ask again') || n === 'always' || n === 'yes always') {
         return { type: 'approve_dont_ask' };

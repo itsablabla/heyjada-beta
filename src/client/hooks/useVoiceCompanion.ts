@@ -14,6 +14,12 @@
  * with "Pipali, go ahead" or a tap; after Pipali speaks, a short reply
  * invitation accepts a bare reply, then lapses back to open.
  *
+ * The voice mode sets speaking etiquette: `ask_first` gates announcements on
+ * the go-ahead as above; `speak_freely` reads each announcement once, at the
+ * earliest moment the channel is free — standing consent for solo multi-tasking.
+ * Modes switch at any moment, decoupled from companion state: spoken ("Pipali,
+ * speak freely" / "ask first" / "stop listening") in every parser context, or via UI.
+ *
  * Turns use the segmented model (Phase A): pauses close STT segments, never
  * the turn; a live transcript accumulates; turns end on a tail phrase or tap.
  * Reply turns short-circuit on decisive intents ("yes" resolves immediately).
@@ -30,8 +36,8 @@ import { CONFIRMATION_OPTIONS } from '../../server/processor/confirmation/confir
 import { isVoiceCaptureSupported, transcribeAudio, synthesizeSpeech, summarizeForSpeech } from '../utils/voice-audio';
 import { SegmentedCapture } from '../utils/voice-capture';
 import { TurnTranscript, isHallucination } from '../utils/voice-turn';
-import { VOICE_TUNABLES, STT_BIAS_PROMPT } from '../utils/voice-config';
-import { playVoiceCue, playTranscriptTicks, speakAudio, stopSpeaking, type VoiceCueProfile } from '../utils/notifications';
+import { VOICE_TUNABLES, STT_BIAS_PROMPT, type VoiceMode } from '../utils/voice-config';
+import { playVoiceCue, playTranscriptTicks, speakAudio, stopSpeaking, voiceCueDurationMs, type VoiceCueProfile } from '../utils/notifications';
 import { parseConfirmationIntent, parseGoAhead, parseAddressing } from '../utils/voice-intent';
 import { buildConfirmationSummary, buildCompletionSummary } from '../utils/voice-summary';
 
@@ -44,6 +50,10 @@ interface PendingConfirmation {
     runId: string;
     request: ConfirmationRequest;
     summary: string;
+    /** Synthesis finished and the announce cue played; gates speak_freely auto-play. */
+    ready: boolean;
+    /** Readout attempted at least once; speak_freely auto-plays only unheard pendings. */
+    heard: boolean;
 }
 interface PendingCompletion {
     kind: 'completion';
@@ -52,6 +62,8 @@ interface PendingCompletion {
     summary: string;
     /** The full response text, rephrased into spoken style at prefetch time. */
     raw: string;
+    ready: boolean;
+    heard: boolean;
 }
 type Pending = PendingConfirmation | PendingCompletion;
 
@@ -72,12 +84,13 @@ interface ActiveTurn {
 }
 
 export interface UseVoiceCompanionParams {
-    enabled: boolean;
+    mode: VoiceMode;
     activeConversationId: string | undefined;
     sendMessage: (text: string, conversationId?: string) => void;
     respondToConfirmation: (conversationId: string, runId: string, requestId: string, optionId: string, guidance?: string) => void;
     onError?: (message: string) => void;
-    onDisableVoice?: () => void;
+    /** Persist a mode change (spoken switches route through here too). */
+    onModeChange?: (mode: VoiceMode) => void;
 }
 
 function resolveOptionIds(req: ConfirmationRequest) {
@@ -94,12 +107,12 @@ function resolveOptionIds(req: ConfirmationRequest) {
 /** Intents decisive enough to resolve a reply turn without an end phrase. */
 function isReplyShortCircuit(intentType: string, pendingKind: 'confirmation' | 'completion' | 'echo'): boolean {
     if (intentType === 'guidance') return false;
-    if (pendingKind === 'completion') return ['repeat', 'details', 'stop_listening'].includes(intentType);
+    if (pendingKind === 'completion') return ['repeat', 'details', 'stop_listening', 'set_mode'].includes(intentType);
     return true;
 }
 
 export function useVoiceCompanion(params: UseVoiceCompanionParams) {
-    const { enabled, activeConversationId } = params;
+    const { mode, activeConversationId } = params;
     const [status, setStatus] = useState<VoiceStatus>('idle');
     const [liveTranscript, setLiveTranscript] = useState('');
 
@@ -126,6 +139,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     const routeRef = useRef<(kind: TurnKind, text: string) => void>(() => {});
     const handleSegmentRef = useRef<(wav: Blob, seq: number) => void>(() => {});
     const goDormantRef = useRef<() => void>(() => {});
+    const settleRef = useRef<() => void>(() => {});
 
     // ------------------------------------------------------------------
     // Half-duplex: capture suppressed only while Pipali speaks (TTS) —
@@ -182,7 +196,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     const cancelTurn = useCallback((turn: ActiveTurn) => {
         releaseTurn(turn);
         playVoiceCue('cancel');
-        setStatus(pendingRef.current ? 'announced' : 'idle');
+        settleRef.current();
     }, [releaseTurn]);
 
     // ------------------------------------------------------------------
@@ -239,15 +253,17 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         setStatus('idle');
     }, [stopSession]);
 
-    // The session lives exactly as long as voice is enabled.
+    // The session lives exactly as long as voice is on. Keyed on the boolean
+    // so switching between the two on-modes never restarts capture.
+    const active = mode !== 'off';
     useEffect(() => {
-        if (!enabled || !supported) {
+        if (!active || !supported) {
             reset();
             return;
         }
         void startSession();
         return () => stopSession(false);
-    }, [enabled, supported, startSession, stopSession, reset]);
+    }, [active, supported, startSession, stopSession, reset]);
 
     const goDormant = useCallback(() => {
         stopSession(true);
@@ -263,15 +279,12 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         playVoiceCue('lapse');                       // soft blip: the reply window closed
         const pending = pendingRef.current;
         if (echoRef.current) {
-            echoRef.current = null;
-            setStatus('announced');             // confirmation still unanswered
-        } else if (pending?.kind === 'completion') {
-            pendingRef.current = null;          // summary was heard; nothing more owed
+            echoRef.current = null;                  // confirmation still unanswered
+        } else if (pending?.kind === 'completion' && pending.heard) {
+            pendingRef.current = null;               // summary was heard; nothing more owed
             prefetchRef.current.delete(pending.key);
-            setStatus('idle');
-        } else {
-            setStatus(pending ? 'announced' : 'idle');
         }
+        settleRef.current();
     }, [releaseTurn]);
 
     const openReplyTurn = useCallback(() => {
@@ -316,6 +329,8 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     }, [startSession, acquireSuppression, releaseSuppression, openReplyTurn]);
 
     const speakPendingAndListen = useCallback(async (pending: Pending) => {
+        // Marked on attempt, not success — a failing synthesis must not loop.
+        pending.heard = true;
         await speakThenListen(() => {
             const cached = prefetchRef.current.get(pending.key);
             prefetchRef.current.delete(pending.key);
@@ -328,10 +343,58 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         void speakThenListen(() => synthesizeSpeech(text));
     }, [speakThenListen]);
 
+    /**
+     * Park at announced/idle — except speak_freely owes any unheard *ready*
+     * pending a readout. Pre-ready pendings stay parked; announce's readiness
+     * callback picks them up, so speech never stalls waiting on synthesis.
+     */
+    const settle = useCallback(() => {
+        if (turnRef.current) return;    // an open turn owns the channel; it settles on its own resolution
+        const pending = pendingRef.current;
+        if (pending && pending.ready && !pending.heard && cbRef.current.mode === 'speak_freely' && suppressCountRef.current === 0) {
+            void speakPendingAndListen(pending);
+            return;
+        }
+        setStatus(pending ? 'announced' : 'idle');
+    }, [speakPendingAndListen]);
+    useEffect(() => { settleRef.current = settle; }, [settle]);
+
+    /** Short spoken confirmation that doesn't invite a reply (unlike speakThenListen). */
+    const speakAck = useCallback(async (text: string) => {
+        setStatus('speaking');
+        acquireSuppression();
+        try {
+            await speakAudio(await synthesizeSpeech(text));
+        } catch {
+            // best-effort; the mode switch itself already took effect
+        } finally {
+            releaseSuppression();
+        }
+        settle();
+    }, [acquireSuppression, releaseSuppression, settle]);
+
+    const applyMode = useCallback((target: Exclude<VoiceMode, 'off'>) => {
+        cbRef.current.onModeChange?.(target);
+        void speakAck(target === 'speak_freely'
+            ? "Okay, I'll speak as soon as I have something."
+            : "Okay, I'll chime first and wait for your go-ahead.");
+    }, [speakAck]);
+
+    // A UI switch to speak_freely while an announcement waits unheard reads it
+    // immediately — the "okay, just tell me" gesture. Spoken switches land here
+    // too, but speakAck already holds suppression then, so settle covers them.
+    useEffect(() => {
+        if (mode !== 'speak_freely') return;
+        const pending = pendingRef.current;
+        if (pending && pending.ready && !pending.heard && !turnRef.current && suppressCountRef.current === 0) {
+            void speakPendingAndListen(pending);
+        }
+    }, [mode, speakPendingAndListen]);
+
     // ------------------------------------------------------------------
     // Announcements (cues are background notes; they wait to be acknowledged)
     // ------------------------------------------------------------------
-    const prefetch = useCallback((pending: Pending) => {
+    const prefetch = useCallback((pending: Pending): Promise<ArrayBuffer> => {
         const p = (async () => {
             if (pending.kind === 'completion') {
                 // Rephrase into voice-conversation style; the mechanical summary
@@ -348,19 +411,37 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             reportError(err instanceof Error ? err.message : 'Voice synthesis failed');
         });
         prefetchRef.current.set(pending.key, p);
+        return p;
     }, [reportError]);
 
     const announce = useCallback((pending: Pending, cue: VoiceCueProfile) => {
         // Drop the superseded announcement's prefetched audio.
         const replaced = pendingRef.current;
         if (replaced && replaced.key !== pending.key) prefetchRef.current.delete(replaced.key);
-        playVoiceCue(cue);
-        prefetch(pending);
+        const audio = prefetch(pending);
         pendingRef.current = pending;
+        // The cue marks the readout as *ready*, not the text as complete —
+        // summarize + TTS take seconds, and a cue at text-completion invites a
+        // go-ahead into dead air (or, in speak_freely, opens a confusing gap
+        // between chime and speech). Synthesis failure surfaces via the error
+        // cue in prefetch instead.
+        audio.then(() => {
+            if (pendingRef.current !== pending || pending.heard) return;   // superseded, reset, or already being read
+            pending.ready = true;
+            playVoiceCue(cue);
+            // speak_freely: read it once the cue has landed — even from
+            // dormant; the idle timeout bounds listening, not speaking.
+            setTimeout(() => {
+                if (pendingRef.current !== pending || pending.heard) return;
+                if (cbRef.current.mode === 'speak_freely' && !turnRef.current && suppressCountRef.current === 0) {
+                    void speakPendingAndListen(pending);
+                }
+            }, voiceCueDurationMs(cue));
+        }, () => {});
         // Don't disturb an open turn or active speech; the pending state is
         // picked up when the current exchange settles.
         setStatus((s) => (s === 'idle' || s === 'announced' ? 'announced' : s));
-    }, [prefetch]);
+    }, [prefetch, speakPendingAndListen]);
 
     // Bounded, never cleared: dedup must survive session cycles so reconnect
     // replays stay silent after a voice off/on.
@@ -374,22 +455,22 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     }, []);
 
     const onConfirmationRequest = useCallback((request: ConfirmationRequest, convId: string, runId: string) => {
-        if (!cbRef.current.enabled || !supported) return;
+        if (cbRef.current.mode === 'off' || !supported) return;
         if (convId !== activeConvRef.current) return;            // active-conversation gate
         const key = `c:${request.requestId}`;
         if (spokenKeysRef.current.has(key)) return;              // dedup replays
         markSpoken(key);
-        announce({ kind: 'confirmation', key, conversationId: convId, runId, request, summary: buildConfirmationSummary(request) }, 'confirmation');
+        announce({ kind: 'confirmation', key, conversationId: convId, runId, request, summary: buildConfirmationSummary(request), ready: false, heard: false }, 'confirmation');
     }, [supported, announce, markSpoken]);
 
     const onTaskComplete = useCallback((response: string, convId: string) => {
-        if (!cbRef.current.enabled || !supported) return;
+        if (cbRef.current.mode === 'off' || !supported) return;
         if (convId !== activeConvRef.current) return;
         // No runId in the completion callback — key on content so replays dedup.
         const key = `t:${convId}:${response.length}:${response.slice(0, 32)}`;
         if (spokenKeysRef.current.has(key)) return;
         markSpoken(key);
-        announce({ kind: 'completion', key, conversationId: convId, summary: buildCompletionSummary(response), raw: response }, 'complete');
+        announce({ kind: 'completion', key, conversationId: convId, summary: buildCompletionSummary(response), raw: response, ready: false, heard: false }, 'complete');
     }, [supported, announce, markSpoken]);
 
     // ------------------------------------------------------------------
@@ -408,8 +489,10 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             pendingRef.current = null;
             setStatus('idle');
         } else if (intent.type === 'stop_listening') {
-            cbRef.current.onDisableVoice?.();
+            cbRef.current.onModeChange?.('off');
             reset();
+        } else if (intent.type === 'set_mode') {
+            applyMode(intent.mode);      // drops the echoed guidance; confirmation stays pending
         } else if (intent.type === 'repeat') {
             echoRef.current = echo;
             speakEcho(echo);
@@ -418,7 +501,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             playVoiceCue('discard');
             setStatus('announced');
         }
-    }, [reset, speakEcho]);
+    }, [reset, speakEcho, applyMode]);
 
     const handleConfirmationReply = useCallback((pending: PendingConfirmation, text: string) => {
         const isQuestion = pending.request.operation === 'ask_user';
@@ -448,14 +531,22 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             case 'details':
             case 'repeat':
                 void speakPendingAndListen(pending); break;  // re-read, then listen again
+            case 'set_mode':
+                applyMode(intent.mode); break;               // confirmation stays pending
             case 'stop_listening':
-                cbRef.current.onDisableVoice?.(); reset(); break;
+                cbRef.current.onModeChange?.('off'); reset(); break;
         }
-    }, [speakPendingAndListen, speakEcho, reset]);
+    }, [speakPendingAndListen, speakEcho, reset, applyMode]);
 
     const handleCompletionReply = useCallback((pending: PendingCompletion, text: string) => {
         const intent = parseConfirmationIntent(text, { isQuestion: false });
-        if (intent.type === 'stop_listening') { cbRef.current.onDisableVoice?.(); reset(); return; }
+        if (intent.type === 'stop_listening') { cbRef.current.onModeChange?.('off'); reset(); return; }
+        if (intent.type === 'set_mode') {
+            pendingRef.current = null;               // heard already; the ack ends the exchange
+            prefetchRef.current.delete(pending.key);
+            applyMode(intent.mode);
+            return;
+        }
         if (intent.type === 'repeat' || intent.type === 'details') { void speakPendingAndListen(pending); return; }
         // Any other speech after a completion becomes a follow-up message.
         const trimmed = text.trim();
@@ -465,18 +556,18 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         }
         pendingRef.current = null;
         setStatus('idle');
-    }, [speakPendingAndListen, reset]);
+    }, [speakPendingAndListen, reset, applyMode]);
 
     const routeTurn = useCallback((kind: TurnKind, text: string) => {
         const trimmed = text.trim();
         if (!trimmed) {
-            setStatus(pendingRef.current ? 'announced' : 'idle');
+            settle();
             return;
         }
         if (kind === 'composed') {
             playVoiceCue('submit');
             cbRef.current.sendMessage(trimmed, activeConvRef.current);
-            setStatus(pendingRef.current ? 'announced' : 'idle');
+            settle();
             return;
         }
         const echo = echoRef.current;
@@ -490,7 +581,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             cbRef.current.sendMessage(trimmed, activeConvRef.current);
             setStatus('idle');
         }
-    }, [handleEchoReply, handleConfirmationReply, handleCompletionReply]);
+    }, [settle, handleEchoReply, handleConfirmationReply, handleCompletionReply]);
 
     useEffect(() => { routeRef.current = routeTurn; }, [routeTurn]);
 
@@ -565,8 +656,12 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                         // Breadcrumb: if voice ever self-disables spuriously,
                         // this shows exactly what was (mis)heard.
                         console.warn('[voice] disabled by spoken command:', text);
-                        cbRef.current.onDisableVoice?.();
+                        cbRef.current.onModeChange?.('off');
                         reset();
+                        return;
+                    }
+                    if (intent.type === 'set_mode') {
+                        applyMode(intent.mode);
                         return;
                     }
                 }
@@ -600,7 +695,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                     maybeShortCircuit(turn);
                 }
             });
-    }, [markAddressed, reset, speakPendingAndListen, openComposedTurn, completeTurn, cancelTurn, maybeShortCircuit]);
+    }, [markAddressed, reset, applyMode, speakPendingAndListen, openComposedTurn, completeTurn, cancelTurn, maybeShortCircuit]);
 
     const handleSegment = useCallback((wav: Blob, seq: number) => {
         const turn = turnRef.current;
@@ -617,7 +712,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     // ------------------------------------------------------------------
     const lastWorkPulseRef = useRef(0);
     const onStepStart = useCallback((convId: string) => {
-        if (!cbRef.current.enabled || !supported) return;
+        if (cbRef.current.mode === 'off' || !supported) return;
         if (convId !== activeConvRef.current) return;        // active-conversation gate
         if (!captureRef.current || turnRef.current) return;  // session dormant, or mid-exchange
         if (suppressCountRef.current > 0) return;            // Pipali audio already playing
@@ -643,7 +738,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     }, [clearInviteTimer, completeTurn]);
 
     const handleTap = useCallback(() => {
-        if (!cbRef.current.enabled || !supported || busyRef.current) return;
+        if (cbRef.current.mode === 'off' || !supported || busyRef.current) return;
         busyRef.current = true;
         const done = () => { busyRef.current = false; };
 

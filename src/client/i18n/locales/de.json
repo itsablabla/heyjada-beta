@@ -246,12 +246,24 @@
     },
     "voice": {
         "enable": "Sprachmodus aktivieren",
-        "disable": "Sprachmodus deaktivieren",
         "liveHint": "Pausen sind jederzeit okay – sage \"send it\" oder \"over to you\" zum Senden, \"scratch that\" zum Verwerfen",
         "title": "Sprache",
         "description": "Lass Pipali Bestätigungen und Ergebnisse vorlesen und deine gesprochenen Antworten entgegennehmen – freihändig.",
-        "enabledLabel": "Sprachmodus",
-        "enabledHint": "Wenn aktiv, gibt Pipali einen Ton aus, wenn es dich braucht, und liest Ergebnisse vor, sobald du grünes Licht gibst. Mikrofon und Audio bleiben auf diesem Gerät.",
+        "mode": {
+            "speak_freely": "Frei sprechen",
+            "ask_first": "Erst fragen",
+            "off": "Aus"
+        },
+        "modeHint": {
+            "speak_freely": "Spricht, sobald es etwas für dich hat",
+            "ask_first": "Meldet sich per Ton und wartet auf dein Okay",
+            "off": "Mikrofon aus"
+        },
+        "modeMenu": {
+            "title": "Sprachmodus",
+            "spokenHint": "Sage jederzeit \"Pipali, speak freely\" oder \"Pipali, ask first\""
+        },
+        "enabledHint": "Solange der Sprachmodus aktiv ist, wird Sprache in der Nähe dieses Geräts transkribiert, um zu prüfen, ob du Pipali ansprichst; nicht adressierte Sprache wird verworfen und nie gespeichert.",
         "status": {
             "idle": "Wartet auf \"Pipali…\" – zum Sprechen tippen",
             "dormant": "Sprachmodus schläft – zum Aufwecken tippen",
