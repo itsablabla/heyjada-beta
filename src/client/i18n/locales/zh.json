@@ -245,10 +245,12 @@
         "taskFinished": "你的任务已完成"
     },
     "voice": {
+        "beta": "测试版",
+        "betaHint": "开启后，消息输入框旁会显示语音控制按钮。",
         "enable": "启用语音模式",
         "liveHint": "说话可随时停顿——说 \"send it\" 或 \"over to you\" 发送，说 \"scratch that\" 丢弃",
         "title": "语音",
-        "description": "让 Pipali 朗读确认和结果，并接收你的语音回复——双手无需操作。",
+        "description": "用语音与 Pipali 交流——解放双手、双眼，离开书桌也能工作。",
         "mode": {
             "speak_freely": "有话直说",
             "ask_first": "先问一声",

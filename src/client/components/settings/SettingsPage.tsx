@@ -7,8 +7,6 @@ import { apiFetch } from '../../utils/api';
 import { SUPPORTED_LANGUAGES } from '../../i18n';
 import { PathListEditor } from './PathListEditor';
 import { useVoiceSettings } from '../../hooks/useVoiceSettings';
-import { warmAudioContext } from '../../utils/notifications';
-import type { VoiceMode } from '../../utils/voice-config';
 
 type SettingsTab = 'profile' | 'permissions';
 
@@ -65,12 +63,8 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
     const [error, setError] = useState<string | null>(null);
 
-    // Voice mode (per-device, local). Turning on needs a user gesture to unlock audio.
-    const { mode: voiceMode, setMode: setVoiceMode } = useVoiceSettings();
-    const onSelectVoiceMode = async (mode: VoiceMode) => {
-        if (mode !== 'off') await warmAudioContext();
-        setVoiceMode(mode);
-    };
+    // Voice feature flag (beta, per-device). Session mode lives in the chat-input menu.
+    const { enabled: voiceFeatureEnabled, setEnabled: setVoiceEnabled } = useVoiceSettings();
 
     // Sandbox state
     const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus | null>(null);
@@ -364,37 +358,6 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                                 </div>
                             </div>
                         </div>
-                        <div className="settings-section">
-                            <div className="settings-section-header">
-                                <div>
-                                    <h3 className="settings-section-title">
-                                        <Headphones size={18} />
-                                        {t('voice.title')}
-                                    </h3>
-                                    <p className="settings-section-description">
-                                        {t('voice.description')}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="voice-mode-choices" role="radiogroup" aria-label={t('voice.modeMenu.title')}>
-                                {(['speak_freely', 'ask_first', 'off'] as const).map((m) => (
-                                    <label key={m} className={`voice-mode-choice ${voiceMode === m ? 'selected' : ''}`}>
-                                        <input
-                                            type="radio"
-                                            name="voice-mode"
-                                            checked={voiceMode === m}
-                                            onChange={() => onSelectVoiceMode(m)}
-                                        />
-                                        <span className="voice-mode-choice-text">
-                                            <span className="voice-mode-choice-label">{t(`voice.mode.${m}`)}</span>
-                                            <span className="voice-mode-choice-hint">{t(`voice.modeHint.${m}`)}</span>
-                                        </span>
-                                    </label>
-                                ))}
-                            </div>
-                            <p className="settings-field-hint">{t('voice.modeMenu.spokenHint')}</p>
-                            <p className="settings-field-hint">{t('voice.enabledHint')}</p>
-                        </div>
                       </>
                     )}
 
@@ -406,6 +369,33 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                                 <span>{sandboxError}</span>
                             </div>
                         )}
+
+                        {/* Voice mode (beta) — gates all voice UI and the mic session */}
+                        <div className="settings-section">
+                            <div className="settings-section-header">
+                                <div>
+                                    <h3 className="settings-section-title">
+                                        <Headphones size={18} />
+                                        {t('voice.title')}
+                                        <span className="settings-beta-badge">{t('voice.beta')}</span>
+                                    </h3>
+                                    <p className="settings-section-description">
+                                        {t('voice.description')}
+                                    </p>
+                                </div>
+                                <label className="toggle-switch">
+                                    <input
+                                        id="voice-enabled"
+                                        type="checkbox"
+                                        checked={voiceFeatureEnabled}
+                                        onChange={(e) => setVoiceEnabled(e.target.checked)}
+                                    />
+                                    <span className="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <p className="settings-field-hint">{t('voice.betaHint')}</p>
+                            <p className="settings-field-hint">{t('voice.enabledHint')}</p>
+                        </div>
 
                         {/* Sandbox toggle */}
                         <div className="settings-section">

@@ -245,10 +245,12 @@
         "taskFinished": "Ta t\u00e2che est termin\u00e9e"
     },
     "voice": {
+        "beta": "Bêta",
+        "betaHint": "En l'activant, les commandes vocales apparaissent à côté de la zone de message.",
         "enable": "Activer le mode vocal",
         "liveHint": "Fais des pauses librement — dis \"send it\" ou \"over to you\" pour envoyer, \"scratch that\" pour annuler",
         "title": "Voix",
-        "description": "Laisse Pipali énoncer les confirmations et les résultats, et prendre tes réponses vocales — mains libres.",
+        "description": "Interagis avec Pipali par la voix. Travaille sans les mains, sans les yeux et sans bureau.",
         "mode": {
             "speak_freely": "Parler librement",
             "ask_first": "Demander d'abord",

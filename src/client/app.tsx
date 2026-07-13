@@ -315,7 +315,9 @@ const App = () => {
     });
 
     // Voice companion — hands-free layer over the chat/run/confirmation flow.
-    const { mode: voiceMode, lastActiveMode: lastVoiceMode, setMode: setVoiceMode } = useVoiceSettings();
+    // `enabled` is the beta feature flag: while off, no voice UI renders and
+    // the store guarantees mode is 'off', so no session can start.
+    const { enabled: voiceFeatureEnabled, mode: voiceMode, lastActiveMode: lastVoiceMode, setMode: setVoiceMode } = useVoiceSettings();
 
     // Route spoken messages through the standard send pipeline.
     const sendVoiceMessage = useCallback((text: string) => {
@@ -1753,7 +1755,7 @@ const App = () => {
                         onRemoveFile={removeFile}
                         onPasteFiles={uploadFiles}
                         onPickFiles={pickAndStageFiles}
-                        voiceSupported={voice.supported}
+                        voiceSupported={voice.supported && voiceFeatureEnabled}
                         voiceMode={voiceMode}
                         voiceStatus={voice.status}
                         voiceTranscript={voice.liveTranscript}

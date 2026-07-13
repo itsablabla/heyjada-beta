@@ -245,10 +245,12 @@
         "taskFinished": "タスクが完了しました"
     },
     "voice": {
+        "beta": "ベータ",
+        "betaHint": "オンにすると、メッセージ入力欄の横に音声コントロールが表示されます。",
         "enable": "音声モードを有効にする",
         "liveHint": "途中で間を置いてもOK。「send it」か「over to you」で送信、「scratch that」で破棄します",
         "title": "音声",
-        "description": "Pipaliが確認や結果を読み上げ、あなたの音声での返答を受け取ります（ハンズフリー）。",
+        "description": "音声でPipaliとやり取りできます。手も目も机も使わずに作業できます。",
         "mode": {
             "speak_freely": "すぐ話す",
             "ask_first": "先に確認",

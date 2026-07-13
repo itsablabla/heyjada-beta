@@ -245,10 +245,12 @@
         "taskFinished": "Dein Task wurde abgeschlossen"
     },
     "voice": {
+        "beta": "Beta",
+        "betaHint": "Wenn aktiviert, erscheinen die Sprachsteuerungen neben dem Eingabefeld.",
         "enable": "Sprachmodus aktivieren",
         "liveHint": "Pausen sind jederzeit okay – sage \"send it\" oder \"over to you\" zum Senden, \"scratch that\" zum Verwerfen",
         "title": "Sprache",
-        "description": "Lass Pipali Bestätigungen und Ergebnisse vorlesen und deine gesprochenen Antworten entgegennehmen – freihändig.",
+        "description": "Interagiere mit Pipali per Sprache. Arbeite, ohne Hände, Augen oder Schreibtisch zu brauchen.",
         "mode": {
             "speak_freely": "Frei sprechen",
             "ask_first": "Erst fragen",

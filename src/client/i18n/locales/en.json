@@ -84,10 +84,12 @@
         "recommended": "Recommended"
     },
     "voice": {
+        "beta": "Beta",
+        "betaHint": "Turning this on adds the voice controls next to the message box.",
         "enable": "Enable voice mode",
         "liveHint": "Pause anytime — say \"send it\" or \"over to you\" to send, \"scratch that\" to discard",
         "title": "Voice",
-        "description": "Let Pipali speak confirmations and results, and take your spoken replies — hands-free.",
+        "description": "Use voice to interact with Pipali. Experience working hands, eyes and desk free.",
         "mode": {
             "speak_freely": "Speak freely",
             "ask_first": "Ask first",
