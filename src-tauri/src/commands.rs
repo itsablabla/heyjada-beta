@@ -58,12 +58,27 @@ pub fn focus_window(app: AppHandle) {
     show_window(&app);
 }
 
+/// Reject machine IDs that don't uniquely identify a device: empty, the systemd
+/// first-boot placeholder "uninitialized", or all-zero (forbidden by the machine-id
+/// spec and shared across un-reset VM/disk clones).
+fn is_degenerate_machine_id(machine_id: &str) -> bool {
+    let id = machine_id.trim();
+    if id.is_empty() || id.eq_ignore_ascii_case("uninitialized") {
+        return true;
+    }
+    // All-zero once GUID separators are stripped (Linux 32×'0' or the zero GUID).
+    id.chars().all(|c| c == '0' || c == '-')
+}
+
 /// Return a stable, salted hash of the OS machine identifier.
-/// Sent to the platform on signup as an anti-abuse signal.
-/// Returns `None` if the machine ID cannot be read so callers can proceed without it.
+/// Sent to the platform as an anti-abuse signal.
+/// Returns `None` if the machine ID cannot be read or isn't device-unique.
 #[tauri::command]
 pub fn get_device_fingerprint() -> Option<String> {
     let machine_id = machine_uid::get().ok()?;
+    if is_degenerate_machine_id(&machine_id) {
+        return None;
+    }
     let mut hasher = Sha256::new();
     hasher.update(FINGERPRINT_SALT.as_bytes());
     hasher.update(b":");
