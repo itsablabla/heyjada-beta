@@ -66,11 +66,19 @@ export const safeMarkdownUrlTransform = makeMarkdownUrlTransform();
 // Matches fenced code blocks (tolerating an unclosed fence while streaming) and inline code spans.
 const CODE_SEGMENT = /(```[\s\S]*?(?:```|$)|~~~[\s\S]*?(?:~~~|$)|`[^`\n]+`)/g;
 
+// Pandoc's single-dollar rules: the opening $ must be followed by a non-space
+// (and not another $), the closing $ preceded by a non-space (and not a \) and
+// not followed by a digit. Currency survives: in "$5-$10" the closing $ is
+// followed by a digit, and in "$5 and $10" it is preceded by a space.
+const INLINE_DOLLAR_MATH = /(?<![$\\])\$(?=[^\s$])([^$\n]+?)(?<=[^\s\\])\$(?![\d$])/g;
+
 /**
- * Convert LaTeX \( \) and \[ \] delimiters to the $$ delimiters remark-math parses.
- * Models reliably emit the backslash delimiters, which are unambiguous (unlike $,
- * which collides with currency), so the renderer keeps singleDollarTextMath off
- * and normalizes here instead. Code blocks and inline code are left untouched.
+ * Convert LaTeX \( \) and \[ \] delimiters, plus Pandoc-style single-dollar
+ * inline math, to the $$ delimiters remark-math parses. The prompt asks models
+ * for the backslash delimiters, but some (e.g. GLM) ignore it and emit their
+ * training prior of $ inline math, so both dialects normalize here while the
+ * renderer keeps singleDollarTextMath off and $ stays plain text otherwise.
+ * Code blocks and inline code are left untouched.
  */
 export function normalizeLatexDelimiters(content: string): string {
     return content
@@ -85,7 +93,11 @@ export function normalizeLatexDelimiters(content: string): string {
                     math.trim() ? `\n$$\n${math.trim()}\n$$\n` : match)
                 // Convert inline \( \) to inline $$ delimiters.
                 .replace(/\\\(([\s\S]+?)\\\)/g, (match, math: string) =>
-                    math.trim() ? `$$${math.trim()}$$` : match);
+                    math.trim() ? `$$${math.trim()}$$` : match)
+                // Convert single-dollar inline math to inline $$ delimiters.
+                // Runs last so the $$ spans the passes above emit (guarded by
+                // the $ lookarounds) pass through untouched.
+                .replace(INLINE_DOLLAR_MATH, (_match, math: string) => `$$${math}$$`);
         })
         .join('');
 }
