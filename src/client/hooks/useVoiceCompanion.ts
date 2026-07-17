@@ -39,7 +39,7 @@ import { TurnTranscript, isHallucination } from '../utils/voice-turn';
 import { VOICE_TUNABLES, STT_BIAS_PROMPT, type VoiceMode } from '../utils/voice-config';
 import { playVoiceCue, playTranscriptTicks, speakAudio, stopSpeaking, voiceCueDurationMs, type VoiceCueProfile } from '../utils/notifications';
 import { parseConfirmationIntent, parseGoAhead, parseAddressing } from '../utils/voice-intent';
-import { buildConfirmationSummary, buildCompletionSummary } from '../utils/voice-summary';
+import { buildConfirmationSummary, buildConfirmationDetail, buildCompletionSummary } from '../utils/voice-summary';
 
 export type VoiceStatus = 'idle' | 'dormant' | 'announced' | 'speaking' | 'listening' | 'transcribing';
 
@@ -382,14 +382,25 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     // ------------------------------------------------------------------
     const prefetch = useCallback((pending: Pending): Promise<ArrayBuffer> => {
         const p = (async () => {
+            // Enrich via the fast model; the mechanical summary already in
+            // pending.summary is the fallback. Updating the pending keeps
+            // "repeat"/"details" re-reads consistent with what was played.
             if (pending.kind === 'completion') {
-                // Rephrase into voice-conversation style; the mechanical summary
-                // already in pending.summary is the fallback. Updating the pending
-                // keeps "repeat"/"details" re-reads consistent with what was played.
                 try {
                     const spoken = (await summarizeForSpeech(pending.raw)).trim();
                     if (spoken) pending.summary = spoken;
                 } catch { /* keep the mechanical summary */ }
+            } else {
+                // Confirmations keep their deterministic frame (intent sentence,
+                // risk, trailer); the model only describes content with no spoken
+                // form of its own — edit diffs and external tool args.
+                const detail = buildConfirmationDetail(pending.request);
+                if (detail) {
+                    try {
+                        const spoken = (await summarizeForSpeech(detail, { kind: 'action' })).trim();
+                        if (spoken) pending.summary = buildConfirmationSummary(pending.request, spoken);
+                    } catch { /* keep the mechanical summary */ }
+                }
             }
             return synthesizeSpeech(pending.summary);
         })();
