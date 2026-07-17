@@ -23,7 +23,7 @@
  * Turns use the segmented model (Phase A): pauses close STT segments, never
  * the turn; a live transcript accumulates; turns end on a tail phrase or tap.
  * Reply turns short-circuit on decisive intents ("yes" resolves immediately).
- * Unmatched confirmation replies are echoed back before reaching the agent.
+ * Free-form replies like confirmation guidance, follow-ups are sent directly.
  *
  * Safety/limits: half-duplex (capture suppressed only while Pipali speaks),
  * an idle timeout that ends the session after prolonged unaddressed silence,
@@ -67,11 +67,6 @@ interface PendingCompletion {
 }
 type Pending = PendingConfirmation | PendingCompletion;
 
-interface GuidanceEcho {
-    pending: PendingConfirmation;
-    guidance: string;
-}
-
 type TurnKind = 'reply' | 'composed';
 
 interface ActiveTurn {
@@ -105,7 +100,7 @@ function resolveOptionIds(req: ConfirmationRequest) {
 }
 
 /** Intents decisive enough to resolve a reply turn without an end phrase. */
-function isReplyShortCircuit(intentType: string, pendingKind: 'confirmation' | 'completion' | 'echo'): boolean {
+function isReplyShortCircuit(intentType: string, pendingKind: 'confirmation' | 'completion'): boolean {
     if (intentType === 'guidance') return false;
     if (pendingKind === 'completion') return ['repeat', 'details', 'stop_listening', 'set_mode'].includes(intentType);
     return true;
@@ -125,7 +120,6 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     useEffect(() => { activeConvRef.current = activeConversationId; }, [activeConversationId]);
 
     const pendingRef = useRef<Pending | null>(null);
-    const echoRef = useRef<GuidanceEcho | null>(null);
     const prefetchRef = useRef<Map<string, Promise<ArrayBuffer>>>(new Map());
     const spokenKeysRef = useRef<Set<string>>(new Set());
     const turnRef = useRef<ActiveTurn | null>(null);
@@ -247,7 +241,6 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         stopSpeaking();
         stopSession(false);
         pendingRef.current = null;
-        echoRef.current = null;
         busyRef.current = false;
         setLiveTranscript('');
         setStatus('idle');
@@ -278,9 +271,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         releaseTurn(turn);
         playVoiceCue('lapse');                       // soft blip: the reply window closed
         const pending = pendingRef.current;
-        if (echoRef.current) {
-            echoRef.current = null;                  // confirmation still unanswered
-        } else if (pending?.kind === 'completion' && pending.heard) {
+        if (pending?.kind === 'completion' && pending.heard) {
             pendingRef.current = null;               // summary was heard; nothing more owed
             prefetchRef.current.delete(pending.key);
         }
@@ -336,11 +327,6 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             prefetchRef.current.delete(pending.key);
             return cached ?? synthesizeSpeech(pending.summary);
         });
-    }, [speakThenListen]);
-
-    const speakEcho = useCallback((echo: GuidanceEcho) => {
-        const text = `I heard: ${echo.guidance}. Say yes to send it, or no to discard.`;
-        void speakThenListen(() => synthesizeSpeech(text));
     }, [speakThenListen]);
 
     /**
@@ -476,33 +462,6 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     // ------------------------------------------------------------------
     // Reply routing
     // ------------------------------------------------------------------
-    const handleEchoReply = useCallback((echo: GuidanceEcho, text: string) => {
-        echoRef.current = null;
-        const intent = parseConfirmationIntent(text, { isQuestion: false });
-        const { pending, guidance } = echo;
-        if (intent.type === 'approve' || intent.type === 'approve_dont_ask') {
-            cbRef.current.respondToConfirmation(
-                pending.conversationId, pending.runId, pending.request.requestId,
-                CONFIRMATION_OPTIONS.GUIDANCE, guidance,
-            );
-            playVoiceCue('submit');
-            pendingRef.current = null;
-            setStatus('idle');
-        } else if (intent.type === 'stop_listening') {
-            cbRef.current.onModeChange?.('off');
-            reset();
-        } else if (intent.type === 'set_mode') {
-            applyMode(intent.mode);      // drops the echoed guidance; confirmation stays pending
-        } else if (intent.type === 'repeat') {
-            echoRef.current = echo;
-            speakEcho(echo);
-        } else {
-            // Declined (or anything else): drop the guidance, keep the confirmation pending.
-            playVoiceCue('discard');
-            setStatus('announced');
-        }
-    }, [reset, speakEcho, applyMode]);
-
     const handleConfirmationReply = useCallback((pending: PendingConfirmation, text: string) => {
         const isQuestion = pending.request.operation === 'ask_user';
         const intent = parseConfirmationIntent(text, { isQuestion });
@@ -521,13 +480,9 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             case 'decline':
                 if (decline) respond(conversationId, runId, request.requestId, decline.id);
                 playVoiceCue('submit'); pendingRef.current = null; setStatus('idle'); break;
-            case 'guidance': {
-                // Echo-back safety: never forward unmatched speech to the agent silently.
-                const echo: GuidanceEcho = { pending, guidance: intent.text };
-                echoRef.current = echo;
-                speakEcho(echo);
-                break;
-            }
+            case 'guidance':
+                respond(conversationId, runId, request.requestId, CONFIRMATION_OPTIONS.GUIDANCE, intent.text);
+                playVoiceCue('submit'); pendingRef.current = null; setStatus('idle'); break;
             case 'details':
             case 'repeat':
                 void speakPendingAndListen(pending); break;  // re-read, then listen again
@@ -536,7 +491,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             case 'stop_listening':
                 cbRef.current.onModeChange?.('off'); reset(); break;
         }
-    }, [speakPendingAndListen, speakEcho, reset, applyMode]);
+    }, [speakPendingAndListen, reset, applyMode]);
 
     const handleCompletionReply = useCallback((pending: PendingCompletion, text: string) => {
         const intent = parseConfirmationIntent(text, { isQuestion: false });
@@ -570,8 +525,6 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             settle();
             return;
         }
-        const echo = echoRef.current;
-        if (echo) { handleEchoReply(echo, trimmed); return; }
         const pending = pendingRef.current;
         if (pending?.kind === 'confirmation') handleConfirmationReply(pending, trimmed);
         else if (pending?.kind === 'completion') handleCompletionReply(pending, trimmed);
@@ -581,7 +534,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             cbRef.current.sendMessage(trimmed, activeConvRef.current);
             setStatus('idle');
         }
-    }, [settle, handleEchoReply, handleConfirmationReply, handleCompletionReply]);
+    }, [settle, handleConfirmationReply, handleCompletionReply]);
 
     useEffect(() => { routeRef.current = routeTurn; }, [routeTurn]);
 
@@ -592,11 +545,10 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         if (turn.kind !== 'reply') return;
         const text = turn.transcript.text;
         if (!text) return;
-        const echo = echoRef.current;
         const pending = pendingRef.current;
-        const pendingKind = echo ? 'echo' : pending?.kind;
+        const pendingKind = pending?.kind;
         if (!pendingKind) return;
-        const isQuestion = !echo && pending?.kind === 'confirmation' && pending.request.operation === 'ask_user';
+        const isQuestion = pending?.kind === 'confirmation' && pending.request.operation === 'ask_user';
         const intent = parseConfirmationIntent(text, { isQuestion });
         if (!isReplyShortCircuit(intent.type, pendingKind)) return;
         releaseTurn(turn);
