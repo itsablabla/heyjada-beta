@@ -1,10 +1,7 @@
 import path from 'path';
 import os from 'os';
 import { resolveCaseInsensitivePath } from './actor.utils';
-import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
-import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
-import { PPTXLoader } from '@langchain/community/document_loaders/fs/pptx';
-import ExcelJS from 'exceljs';
+import { extractDocumentText, getLegacyOfficeReplacement, isReadableDocumentFile } from './document_text';
 import { getSensitivePathReason } from '../../security';
 import {
     type ConfirmationContext,
@@ -46,24 +43,8 @@ export interface ReadFileOptions {
 /** Default maximum lines to read when no limit is specified */
 const DEFAULT_LINE_LIMIT = 50;
 
-/**
- * Sanitize text to remove problematic Unicode escape sequences that PostgreSQL JSON parser rejects.
- * This includes null bytes (\u0000) and other control characters that can appear in PDF text extraction.
- */
-function sanitizeTextForJson(text: string): string {
-    // Remove null bytes and other problematic control characters (U+0000 to U+001F except common whitespace)
-    // Keep \t (0x09), \n (0x0A), \r (0x0D)
-    return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
-}
-
 // Supported image formats
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
-
-// Supported document formats
-const PDF_EXTENSION = '.pdf';
-const DOCX_EXTENSIONS = ['.docx', '.doc'];
-const EXCEL_EXTENSIONS = ['.xlsx'];
-const PPT_EXTENSIONS = ['.pptx', '.ppt'];
 
 /**
  * Check if a file path is an image based on extension
@@ -71,38 +52,6 @@ const PPT_EXTENSIONS = ['.pptx', '.ppt'];
 function isImageFile(filePath: string): boolean {
     const ext = path.extname(filePath).toLowerCase();
     return IMAGE_EXTENSIONS.includes(ext);
-}
-
-/**
- * Check if a file path is a PDF based on extension
- */
-function isPdfFile(filePath: string): boolean {
-    const ext = path.extname(filePath).toLowerCase();
-    return ext === PDF_EXTENSION;
-}
-
-/**
- * Check if a file path is a Word document based on extension
- */
-function isWordDoc(filePath: string): boolean {
-    const ext = path.extname(filePath).toLowerCase();
-    return DOCX_EXTENSIONS.includes(ext);
-}
-
-/**
- * Check if a file path is an Excel spreadsheet based on extension
- */
-function isExcelFile(filePath: string): boolean {
-    const ext = path.extname(filePath).toLowerCase();
-    return EXCEL_EXTENSIONS.includes(ext);
-}
-
-/**
- * Check if a file path is a PowerPoint presentation based on extension
- */
-function isPptFile(filePath: string): boolean {
-    const ext = path.extname(filePath).toLowerCase();
-    return PPT_EXTENSIONS.includes(ext);
 }
 
 /**
@@ -176,9 +125,10 @@ function formatTruncationMessage(result: LineFilterResult, fileType: string = 'F
  * - Text files with offset/limit filtering
  * - Images (jpg, jpeg, png, webp) - returned as base64
  * - PDFs - text extraction with offset/limit
- * - Word documents (.docx, .doc)
- * - Excel spreadsheets (.xlsx, .xls)
- * - PowerPoint presentations (.pptx, .ppt)
+ * - Word documents (.docx)
+ * - Excel spreadsheets (.xlsx)
+ * - PowerPoint presentations (.pptx)
+ * - OpenDocument files (.odt, .ods, .odp)
  *
  * Security:
  * - Sensitive paths (SSH keys, credentials, etc.) require user confirmation
@@ -298,197 +248,48 @@ export async function readFile(
             }
         }
 
-        // Check if file is a PDF
-        if (isPdfFile(resolvedPath)) {
-            try {
-                log.debug(`[PDF] Reading: ${resolvedPath}`);
-                const loader = new PDFLoader(resolvedPath, {
-                    splitPages: false,
-                });
-                const docs = await loader.load();
-
-                if (docs.length === 0) {
-                    return {
-                        query,
-                        file: filePath,
-                        uri: filePath,
-                        compiled: `PDF file '${filePath}' contains no readable text content.`,
-                    };
-                }
-
-                const rawPdfText = docs.map(doc => doc.pageContent).join('\n\n');
-                // Sanitize to remove problematic Unicode characters that break PostgreSQL JSON storage
-                const pdfText = sanitizeTextForJson(rawPdfText);
-                const pageCount = (docs[0]?.metadata as any)?.pdf?.totalPages || docs.length;
-                log.debug(`[PDF] Extracted ${pdfText.length} characters from ${pageCount} page(s)`);
-
-                const filterResult = applyLineFilter(pdfText, offset, limit);
-                const truncationMsg = formatTruncationMessage(filterResult, 'PDF');
-                const filteredText = `[PDF: ${pageCount} page(s), ${filterResult.totalLines} lines]\n\n${filterResult.content}${truncationMsg}`;
-
-                return {
-                    query,
-                    file: filePath,
-                    uri: filePath,
-                    compiled: filteredText,
-                };
-            } catch (pdfError) {
-                log.error({ err: pdfError }, `Error reading PDF ${filePath}`);
-                return {
-                    query,
-                    file: filePath,
-                    uri: filePath,
-                    compiled: `Error reading PDF file ${filePath}: ${pdfError instanceof Error ? pdfError.message : String(pdfError)}`,
-                };
-            }
+        const legacyOfficeReplacement = getLegacyOfficeReplacement(resolvedPath);
+        if (legacyOfficeReplacement) {
+            const extension = path.extname(resolvedPath).toLowerCase();
+            return {
+                query,
+                file: filePath,
+                uri: filePath,
+                compiled: `Legacy Office format '${extension}' is not supported. Convert the file to '${legacyOfficeReplacement}' to view its contents.`,
+            };
         }
 
-        // Check if file is a Word document
-        if (isWordDoc(resolvedPath)) {
+        if (isReadableDocumentFile(resolvedPath)) {
             try {
-                log.debug(`[DOCX] Reading: ${resolvedPath}`);
-                const loader = new DocxLoader(resolvedPath);
-                const docs = await loader.load();
+                const document = await extractDocumentText(resolvedPath);
 
-                if (docs.length === 0) {
+                if (!document.text) {
                     return {
                         query,
                         file: filePath,
                         uri: filePath,
-                        compiled: `Word document '${filePath}' contains no readable text content.`,
+                        compiled: `${document.name} file '${filePath}' contains no readable text content.`,
                     };
                 }
 
-                const rawDocText = docs.map(doc => doc.pageContent).join('\n\n');
-                const docText = sanitizeTextForJson(rawDocText);
-                log.debug(`[DOCX] Extracted ${docText.length} characters`);
-
-                const filterResult = applyLineFilter(docText, offset, limit);
-                const truncationMsg = formatTruncationMessage(filterResult, 'Document');
-                const filteredText = `[Word Document: ${filterResult.totalLines} lines]\n\n${filterResult.content}${truncationMsg}`;
+                log.debug(`Extracted ${document.text.length} characters from ${document.name} ${resolvedPath}`);
+                const filterResult = applyLineFilter(document.text, offset, limit);
+                const truncationMsg = formatTruncationMessage(filterResult, document.truncationLabel);
+                const details = document.detail ? `${document.detail}, ` : '';
 
                 return {
                     query,
                     file: filePath,
                     uri: filePath,
-                    compiled: filteredText,
+                    compiled: `[${document.name}: ${details}${filterResult.totalLines} lines]\n\n${filterResult.content}${truncationMsg}`,
                 };
-            } catch (docxError) {
-                log.error({ err: docxError }, `Error reading Word document ${filePath}`);
+            } catch (documentError) {
+                log.error({ err: documentError }, `Error reading document ${filePath}`);
                 return {
                     query,
                     file: filePath,
                     uri: filePath,
-                    compiled: `Error reading Word document ${filePath}: ${docxError instanceof Error ? docxError.message : String(docxError)}`,
-                };
-            }
-        }
-
-        // Check if file is an Excel spreadsheet
-        if (isExcelFile(resolvedPath)) {
-            try {
-                log.debug(`[XLSX] Reading: ${resolvedPath}`);
-                const { Readable } = await import('stream');
-                const nodeStream = Readable.fromWeb(file.stream() as any);
-                const reader = new ExcelJS.stream.xlsx.WorkbookReader(nodeStream, {
-                    sharedStrings: 'cache',
-                    styles: 'ignore',
-                    hyperlinks: 'ignore',
-                    worksheets: 'emit',
-                    entries: 'emit',
-                });
-
-                // Stream sheets and rows to build CSV text
-                const sheetsText: string[] = [];
-                let sheetCount = 0;
-                for await (const worksheetReader of reader) {
-                    sheetCount++;
-                    const rows: string[] = [];
-                    for await (const row of worksheetReader) {
-                        const cells: string[] = [];
-                        for (let c = 1; c <= row.cellCount; c++) {
-                            const text = row.getCell(c).text ?? '';
-                            if (text.includes(',') || text.includes('"') || text.includes('\n')) {
-                                cells.push(`"${text.replace(/"/g, '""')}"`);
-                            } else {
-                                cells.push(text);
-                            }
-                        }
-                        rows.push(cells.join(','));
-                    }
-                    sheetsText.push(`--- Sheet: ${(worksheetReader as any).name} ---\n${rows.join('\n')}`);
-                }
-
-                if (sheetCount === 0) {
-                    return {
-                        query,
-                        file: filePath,
-                        uri: filePath,
-                        compiled: `Excel file '${filePath}' contains no sheets.`,
-                    };
-                }
-
-                const xlsxText = sheetsText.join('\n\n');
-                log.debug(`[XLSX] Extracted ${xlsxText.length} characters from ${sheetCount} sheet(s)`);
-
-                const filterResult = applyLineFilter(xlsxText, offset, limit);
-                const truncationMsg = formatTruncationMessage(filterResult, 'Spreadsheet');
-                const filteredText = `[Excel: ${sheetCount} sheet(s), ${filterResult.totalLines} lines]\n\n${filterResult.content}${truncationMsg}`;
-
-                return {
-                    query,
-                    file: filePath,
-                    uri: filePath,
-                    compiled: filteredText,
-                };
-            } catch (excelError) {
-                log.error({ err: excelError }, `Error reading Excel file ${filePath}`);
-                return {
-                    query,
-                    file: filePath,
-                    uri: filePath,
-                    compiled: `Error reading Excel file ${filePath}: ${excelError instanceof Error ? excelError.message : String(excelError)}`,
-                };
-            }
-        }
-
-        // Check if file is a PowerPoint presentation
-        if (isPptFile(resolvedPath)) {
-            try {
-                log.debug(`[PPT] Reading: ${resolvedPath}`);
-                const loader = new PPTXLoader(resolvedPath);
-                const docs = await loader.load();
-
-                if (docs.length === 0) {
-                    return {
-                        query,
-                        file: filePath,
-                        uri: filePath,
-                        compiled: `PowerPoint file '${filePath}' contains no readable text content.`,
-                    };
-                }
-
-                const rawPptText = docs.map(doc => doc.pageContent).join('\n\n');
-                const pptText = sanitizeTextForJson(rawPptText);
-                log.debug(`[PPT] Extracted ${pptText.length} characters`);
-
-                const filterResult = applyLineFilter(pptText, offset, limit);
-                const truncationMsg = formatTruncationMessage(filterResult, 'Presentation');
-                const filteredText = `[PowerPoint: ${filterResult.totalLines} lines]\n\n${filterResult.content}${truncationMsg}`;
-
-                return {
-                    query,
-                    file: filePath,
-                    uri: filePath,
-                    compiled: filteredText,
-                };
-            } catch (pptError) {
-                log.error({ err: pptError }, `Error reading PowerPoint file ${filePath}`);
-                return {
-                    query,
-                    file: filePath,
-                    uri: filePath,
-                    compiled: `Error reading PowerPoint file ${filePath}: ${pptError instanceof Error ? pptError.message : String(pptError)}`,
+                    compiled: `Error reading document ${filePath}: ${documentError instanceof Error ? documentError.message : String(documentError)}`,
                 };
             }
         }

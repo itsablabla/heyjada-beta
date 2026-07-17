@@ -182,6 +182,20 @@ describe('readFile', () => {
         expect(result.compiled).toBe(specialContent);
     });
 
+    test.each([
+        { extension: '.doc', replacement: '.docx' },
+        { extension: '.xls', replacement: '.xlsx' },
+        { extension: '.ppt', replacement: '.pptx' },
+    ])('should warn that legacy Office format $extension is unsupported', async ({ extension, replacement }) => {
+        const legacyFile = path.join(testDir, `legacy${extension}`);
+        await fs.writeFile(legacyFile, new Uint8Array([0x00, 0x01, 0x02, 0x03]));
+
+        const result = await readFile({ path: legacyFile });
+
+        expect(result.compiled).toContain(`Legacy Office format '${extension}' is not supported`);
+        expect(result.compiled).toContain(`Convert the file to '${replacement}'`);
+    });
+
     test('should read file with case-insensitive path on case-insensitive FS', async () => {
         // Deliberately change casing in the filename
         const wrongCasePath = path.join(testDir, 'mixedcase.txt');

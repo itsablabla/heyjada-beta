@@ -3,6 +3,7 @@ import { homedir } from 'os';
 import fs from 'fs/promises';
 import { minimatch } from 'minimatch';
 import { clampInt, extractLiteralFromRegex, getExcludedDirNamesForRootDir, isBroadSearch, resolveCaseInsensitivePath, resolvePath, walkFilePaths, runMdfind, TCC_PROTECTED_EXTENSIONS } from './actor.utils';
+import { extractDocumentText, isReadableDocumentFile } from './document_text';
 import { isSensitivePath, getSensitivePathReason } from '../../security';
 import {
     type ConfirmationContext,
@@ -13,12 +14,12 @@ import { createChildLogger } from '../../logger';
 const log = createChildLogger({ component: 'grep_files' });
 
 /**
- * Binary and image file extensions to exclude from grep searches.
- * These files are not text-searchable and would produce garbage output.
+ * File extensions to exclude from raw-text search strategies. Readable
+ * document formats in this set are searched separately after extraction.
  */
 const BINARY_EXTENSIONS = new Set([
     // Images
-    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.webp', '.svg', '.tiff', '.tif',
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.webp', '.tiff', '.tif',
     '.psd', '.ai', '.eps', '.raw', '.cr2', '.nef', '.heic', '.heif', '.avif',
     // Audio
     '.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma', '.m4a', '.aiff', '.opus',
@@ -37,8 +38,8 @@ const BINARY_EXTENSIONS = new Set([
     // Database files
     '.db', '.sqlite', '.sqlite3', '.mdb',
     // Other binary formats
-    '.swf', '.fla', '.blend', '.fbx', '.glb', '.gltf',
-    // Lock files and caches (often large/binary-like)
+    '.swf', '.fla', '.blend', '.fbx', '.glb',
+    // Lock files and binary caches
     '.lock', '.pack', '.idx',
 ]);
 
@@ -162,6 +163,7 @@ function isUnsafeRegex(pattern: string): boolean {
  * - Glob-based file type filtering via `include` parameter
  * - Context lines (before/after matches)
  * - Uses ripgrep when available for speed
+ * - Extracts text from supported PDF, Office, and OpenDocument files
  *
  * Security:
  * - Sensitive paths require user confirmation
@@ -259,6 +261,8 @@ export async function grepFiles(
             ? [tryMdfind, rgPath ? tryRipgrep : null, tryWalker]
             : [rgPath ? tryRipgrep : null, tryMdfind, tryWalker];
 
+        const searchStartedAt = Date.now();
+        let regularResult: GrepStrategyResult | null = null;
         let noFiles = false;
         for (const strategy of strategies) {
             if (!strategy) continue;
@@ -266,6 +270,25 @@ export async function grepFiles(
             if (result === 'no-files') { noFiles = true; continue; }
             if (!result) continue;
             log.info(`Used ${strategy.name} of ${strategies.map(s => s?.name)} to search successfully`)
+            regularResult = result;
+            break;
+        }
+
+        const documentResult = await grepDocumentFiles({
+            regex,
+            searchPath,
+            include,
+            linesBefore: lines_before,
+            linesAfter: lines_after,
+            maxOutputLines: Math.max(0, config.maxResults - (regularResult?.outputLines.length ?? 0)),
+            timeoutMs: Math.max(0, config.timeoutMs - (Date.now() - searchStartedAt)),
+            includeHidden: config.includeHidden,
+            includeAppFolders: config.includeAppFolders,
+            followSymlinks: config.followSymlinks,
+        });
+
+        const result = mergeGrepResults(regularResult, documentResult);
+        if (result.outputLines.length > 0) {
             return formatGrepResult(result, searchPathArg, pattern, include, lines_before, lines_after, config.maxResults);
         }
 
@@ -273,7 +296,7 @@ export async function grepFiles(
             query: generateQuery(0, 0, searchPathArg, pattern, include, lines_before, lines_after, config.maxResults),
             file: searchPathArg,
             uri: searchPathArg,
-            compiled: noFiles ? 'No files found in specified path.' : 'No matches found.',
+            compiled: noFiles && documentResult.noFiles ? 'No files found in specified path.' : 'No matches found.',
         };
 
         // --- strategy functions (closures over local scope) ---
@@ -392,6 +415,21 @@ interface GrepStrategyResult {
     matchedFiles: Set<string>;
     truncated: boolean;
     timedOut: boolean;
+}
+
+function mergeGrepResults(
+    regularResult: GrepStrategyResult | null,
+    documentResult: GrepStrategyResult,
+): GrepStrategyResult {
+    return {
+        outputLines: [...(regularResult?.outputLines ?? []), ...documentResult.outputLines],
+        matchedFiles: new Set([
+            ...(regularResult?.matchedFiles ?? []),
+            ...documentResult.matchedFiles,
+        ]),
+        truncated: Boolean(regularResult?.truncated || documentResult.truncated),
+        timedOut: Boolean(regularResult?.timedOut || documentResult.timedOut),
+    };
 }
 
 function formatGrepResult(
@@ -858,4 +896,95 @@ async function grepWithFallbackWalker(params: {
     const noFiles = !sawAnyFile;
 
     return { outputLines, matchedFiles, truncated, timedOut, noFiles };
+}
+
+async function grepDocumentFiles(params: {
+    regex: RegExp;
+    searchPath: string;
+    include?: string;
+    linesBefore: number;
+    linesAfter: number;
+    maxOutputLines: number;
+    timeoutMs: number;
+    includeHidden: boolean;
+    includeAppFolders: boolean;
+    followSymlinks: boolean;
+}): Promise<GrepStrategyResult & { noFiles: boolean }> {
+    const outputLines: string[] = [];
+    const matchedFiles = new Set<string>();
+    let truncated = false;
+    let timedOut = false;
+    let sawAnyFile = false;
+    const start = Date.now();
+
+    for await (const filePath of walkFilePaths(params.searchPath, {
+        includeHidden: params.includeHidden,
+        includeAppFolders: params.includeAppFolders,
+        followSymlinks: params.followSymlinks,
+    })) {
+        if (Date.now() - start > params.timeoutMs) {
+            timedOut = true;
+            break;
+        }
+
+        if (!isReadableDocumentFile(filePath)) continue;
+
+        if (params.include) {
+            const fileName = path.basename(filePath);
+            if (!minimatch(fileName, params.include, { dot: true })) continue;
+        }
+
+        sawAnyFile = true;
+        if (outputLines.length >= params.maxOutputLines) {
+            truncated = true;
+            break;
+        }
+
+        try {
+            const document = await extractDocumentText(filePath);
+            const lines = document.text.split('\n');
+            let fileHasMatch = false;
+
+            for (let i = 0; i < lines.length && outputLines.length < params.maxOutputLines; i++) {
+                if (Date.now() - start > params.timeoutMs) {
+                    timedOut = true;
+                    break;
+                }
+
+                const line = lines[i] ?? '';
+                if (!params.regex.test(line)) continue;
+
+                if (!fileHasMatch) {
+                    matchedFiles.add(filePath);
+                    fileHasMatch = true;
+                }
+
+                const startIdx = Math.max(0, i - params.linesBefore);
+                for (let j = startIdx; j < i && outputLines.length < params.maxOutputLines; j++) {
+                    outputLines.push(`${filePath}:${j + 1}-${lines[j] ?? ''}`);
+                }
+
+                if (outputLines.length < params.maxOutputLines) {
+                    outputLines.push(`${filePath}:${i + 1}:${line}`);
+                }
+
+                const endIdx = Math.min(lines.length, i + params.linesAfter + 1);
+                for (let j = i + 1; j < endIdx && outputLines.length < params.maxOutputLines; j++) {
+                    outputLines.push(`${filePath}:${j + 1}-${lines[j] ?? ''}`);
+                }
+
+                if ((params.linesBefore > 0 || params.linesAfter > 0) && outputLines.length < params.maxOutputLines) {
+                    outputLines.push('--');
+                }
+            }
+
+            if (outputLines.length >= params.maxOutputLines && params.maxOutputLines > 0) {
+                truncated = true;
+            }
+        } catch (error) {
+            log.debug({ err: error, filePath }, 'Failed to extract document text for grep');
+        }
+    }
+
+    return { outputLines, matchedFiles, truncated, timedOut, noFiles: !sawAnyFile };
 }

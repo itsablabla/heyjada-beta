@@ -196,7 +196,7 @@ export async function buildSystemPrompt(args: {
 const builtInTools: ToolDefinition[] = [
     {
         name: 'view_file',
-        description: 'To view the contents of specific files including text, images, PDFs, and Office documents. For text files, use offset and limit to efficiently read large files. Supports images (jpg, jpeg, png, webp), PDFs, Word docs, Excel spreadsheets, and PowerPoint presentations.',
+        description: 'To view the contents of specific files including text, images (jpeg, png, webp), PDFs, and common office documents (docx, xlsx, pptx, odt, ods, odp). Use offset and limit to efficiently read large text content.',
         schema: {
             type: 'object',
             properties: {
@@ -242,7 +242,7 @@ const builtInTools: ToolDefinition[] = [
     },
     {
         name: 'grep_files',
-        description: 'A grep-like line oriented search tool. Search through files under specified path using regex patterns. Returns all lines matching the pattern. Use this when you need to find all relevant files. The regex pattern will ONLY match content on a single line. Use lines_before, lines_after to show context around matches.',
+        description: 'A grep-like line oriented search tool. Search through plaintext and readable documents (pdf, docx, xlsx, pptx, odt, ods, odp) under a specified path using regex patterns. Returns all lines matching the pattern. Use this when you need to find all relevant files. The regex pattern will ONLY match content on a single line. Use lines_before, lines_after to show context around matches.',
         schema: {
             type: 'object',
             properties: {

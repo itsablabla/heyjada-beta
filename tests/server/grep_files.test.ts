@@ -2,7 +2,84 @@ import { test, expect, describe, beforeAll, afterAll } from 'bun:test';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
+import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
 import { grepFiles } from '../../src/server/processor/actor/grep_files';
+
+const xmlEscape = (text: string) => text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+async function createDocx(textLines: string[]): Promise<Uint8Array> {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?>
+        <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+            <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+            <Default Extension="xml" ContentType="application/xml"/>
+            <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+        </Types>`);
+    zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8"?>
+        <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+            <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+        </Relationships>`);
+    zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?>
+        <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+            <w:body>${textLines.map(line => `<w:p><w:r><w:t>${xmlEscape(line)}</w:t></w:r></w:p>`).join('')}</w:body>
+        </w:document>`);
+    return zip.generateAsync({ type: 'uint8array' });
+}
+
+async function createPptx(textLines: string[]): Promise<Uint8Array> {
+    const zip = new JSZip();
+    zip.file('ppt/slides/slide1.xml', `<?xml version="1.0" encoding="UTF-8"?>
+        <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+            <p:cSld><p:spTree>${textLines.map(line => `<a:p><a:r><a:t>${xmlEscape(line)}</a:t></a:r></a:p>`).join('')}</p:spTree></p:cSld>
+        </p:sld>`);
+    return zip.generateAsync({ type: 'uint8array' });
+}
+
+async function createOpenDocument(mimeType: string, textLines: string[]): Promise<Uint8Array> {
+    const zip = new JSZip();
+    zip.file('mimetype', mimeType, { compression: 'STORE' });
+    zip.file('content.xml', `<?xml version="1.0" encoding="UTF-8"?>
+        <office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">
+            <office:body><office:text>${textLines.map(line => `<text:p>${xmlEscape(line)}</text:p>`).join('')}</office:text></office:body>
+        </office:document-content>`);
+    return zip.generateAsync({ type: 'uint8array' });
+}
+
+function createPdf(textLines: string[]): Uint8Array {
+    const escapePdfText = (text: string) => text.replace(/([\\()])/g, '\\$1');
+    const textCommands = textLines
+        .map((line, index) => `${index === 0 ? '' : '0 -18 Td\n'}(${escapePdfText(line)}) Tj`)
+        .join('\n');
+    const stream = `BT\n/F1 12 Tf\n72 720 Td\n${textCommands}\nET`;
+    const objects = [
+        '<< /Type /Catalog /Pages 2 0 R >>',
+        '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+        '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
+        `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+        '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    ];
+
+    let pdf = '%PDF-1.4\n';
+    const offsets = [0];
+    for (const [index, object] of objects.entries()) {
+        offsets.push(pdf.length);
+        pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+    }
+
+    const xrefOffset = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n`;
+    pdf += '0000000000 65535 f \n';
+    for (const offset of offsets.slice(1)) {
+        pdf += `${offset.toString().padStart(10, '0')} 00000 n \n`;
+    }
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+
+    return new TextEncoder().encode(pdf);
+}
 
 describe('grepFiles', () => {
     const testDir = path.join(os.tmpdir(), 'grep-files-tests');
@@ -40,6 +117,48 @@ describe('grepFiles', () => {
             i % 2 === 0 ? `Match line ${i + 1}` : `No match ${i + 1}`
         ).join('\n');
         await fs.writeFile(path.join(testDir, 'many.txt'), manyMatches);
+
+        await fs.writeFile(
+            path.join(testDir, 'searchable.pdf'),
+            createPdf(['PDF context before', 'Shared searchable needle', 'PDF searchable needle', 'PDF context after'])
+        );
+
+        await fs.writeFile(
+            path.join(testDir, 'shared.txt'),
+            'Shared searchable needle in a text file'
+        );
+
+        await fs.writeFile(
+            path.join(testDir, 'searchable.docx'),
+            await createDocx(['Word context before', 'Word searchable needle', 'Word context after'])
+        );
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Search Data');
+        worksheet.addRow(['Excel context before']);
+        worksheet.addRow(['Excel searchable needle']);
+        worksheet.addRow(['Excel context after']);
+        await workbook.xlsx.writeFile(path.join(testDir, 'searchable.xlsx'));
+
+        await fs.writeFile(
+            path.join(testDir, 'searchable.pptx'),
+            await createPptx(['PowerPoint context before', 'PowerPoint searchable needle', 'PowerPoint context after'])
+        );
+
+        await fs.writeFile(
+            path.join(testDir, 'searchable.odt'),
+            await createOpenDocument('application/vnd.oasis.opendocument.text', ['OpenDocument Text context before', 'OpenDocument Text searchable needle', 'OpenDocument Text context after'])
+        );
+
+        await fs.writeFile(
+            path.join(testDir, 'searchable.ods'),
+            await createOpenDocument('application/vnd.oasis.opendocument.spreadsheet', ['OpenDocument Spreadsheet context before', 'OpenDocument Spreadsheet searchable needle', 'OpenDocument Spreadsheet context after'])
+        );
+
+        await fs.writeFile(
+            path.join(testDir, 'searchable.odp'),
+            await createOpenDocument('application/vnd.oasis.opendocument.presentation', ['OpenDocument Presentation context before', 'OpenDocument Presentation searchable needle', 'OpenDocument Presentation context after'])
+        );
     });
 
     afterAll(async () => {
@@ -71,6 +190,40 @@ describe('grepFiles', () => {
         expect(result.compiled).toContain('file3.txt');
         expect(result.compiled).toContain('Error occurred');
         expect(result.compiled).toContain('Error in processing');
+    });
+
+    test('should merge plaintext and extracted document matches', async () => {
+        const result = await grepFiles({
+            pattern: 'Shared searchable needle',
+            path: testDir,
+        });
+
+        expect(result.compiled).toContain('searchable.pdf');
+        expect(result.compiled).toContain('Shared searchable needle');
+        expect(result.compiled).toContain('shared.txt');
+    });
+
+    test.each([
+        { extension: 'pdf', term: 'PDF' },
+        { extension: 'docx', term: 'Word' },
+        { extension: 'xlsx', term: 'Excel' },
+        { extension: 'pptx', term: 'PowerPoint' },
+        { extension: 'odt', term: 'OpenDocument Text' },
+        { extension: 'ods', term: 'OpenDocument Spreadsheet' },
+        { extension: 'odp', term: 'OpenDocument Presentation' },
+    ])('should extract and search .$extension files with filters and context', async ({ extension, term }) => {
+        const result = await grepFiles({
+            pattern: `${term} searchable needle`,
+            path: testDir,
+            include: `*.${extension}`,
+            lines_before: 2,
+            lines_after: 2,
+        });
+
+        expect(result.compiled).toContain(`searchable.${extension}`);
+        expect(result.compiled).toContain(`${term} context before`);
+        expect(result.compiled).toContain(`${term} searchable needle`);
+        expect(result.compiled).toContain(`${term} context after`);
     });
 
     test('should handle case-sensitive searches', async () => {
