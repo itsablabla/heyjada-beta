@@ -56,13 +56,16 @@ export async function transcribeAudio(blob: Blob, opts?: { model?: string; langu
     return data.text ?? '';
 }
 
-/** Rephrase a final response into voice-conversation style via the app's voice route. */
-export async function summarizeForSpeech(text: string, opts?: { timeoutMs?: number }): Promise<string> {
+/**
+ * Summarize text for speech via the app's voice route: 'response' (default)
+ * rephrases a final answer, 'action' describes a pending edit/command.
+ */
+export async function summarizeForSpeech(text: string, opts?: { kind?: 'response' | 'action'; timeoutMs?: number }): Promise<string> {
     const res = await apiFetch('/api/voice/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // Slice instead of tripping the server cap — long responses just lose tail.
-        body: JSON.stringify({ text: text.slice(0, SUMMARIZE_TEXT_CAP) }),
+        body: JSON.stringify({ text: text.slice(0, SUMMARIZE_TEXT_CAP), ...(opts?.kind ? { kind: opts.kind } : {}) }),
         signal: AbortSignal.timeout(opts?.timeoutMs ?? 12_000),
     });
     if (!res.ok) throw await toVoiceError(res);

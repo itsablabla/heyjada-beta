@@ -160,17 +160,26 @@ const NATURAL_SPEECH_PROMPT = `You are Pipali's voice. Convert the written respo
 Keep it brief and easy to follow by ear: plain spoken sentences — no markdown, lists, code, or URLs.
 Reply with only the spoken text.`;
 
+// Prompt to describe an action awaiting user authorization. Faithfulness over
+// polish: the user approves or declines based on this sentence alone.
+const ACTION_SPEECH_PROMPT = `You are Pipali's voice. The text below is an action Pipali wants the user's permission to take — a file change or an external tool call.
+In one or two short spoken sentences, say what the action actually does in substance. Be faithful: never downplay deletions, overwrites, or anything destructive.
+Plain spoken language — no markdown, no code syntax; refer to files by name, never full paths. Reply with only the spoken text.`;
+
+export type SpeechSummaryKind = 'response' | 'action';
+
 /**
- * Rephrase response text into a natural, voice-conversation style using the
- * fast model. Throws on failure to let client's prefetch chain fall back to
- * its mechanical summary (see useVoiceCompanion prefetch).
+ * Summarize text into a natural spoken style using the fast model: 'response'
+ * rephrases a final answer, 'action' describes a pending edit/command for a
+ * confirmation readout. Throws on failure to let the client's prefetch chain
+ * fall back to its mechanical summary (see useVoiceCompanion prefetch).
  */
-export async function summarizeForSpeech(text: string): Promise<{ summary: string }> {
-    const result = await sendMessageToFastModel(text, NATURAL_SPEECH_PROMPT);
+export async function summarizeForSpeech(text: string, kind: SpeechSummaryKind = 'response'): Promise<{ summary: string }> {
+    const result = await sendMessageToFastModel(text, kind === 'action' ? ACTION_SPEECH_PROMPT : NATURAL_SPEECH_PROMPT);
 
     const summary = (result?.message ?? '').trim();
     if (!summary) throw new Error('Voice summary came back empty');
 
-    log.info({ inputChars: text.length, summaryChars: summary.length }, 'Summarized response for speech');
+    log.info({ kind, inputChars: text.length, summaryChars: summary.length }, 'Summarized for speech');
     return { summary };
 }

@@ -1021,11 +1021,14 @@ api.post('/voice/speech', zValidator('json', voiceSpeechSchema), async (c) => {
 });
 
 // Cap kept in sync with SUMMARIZE_TEXT_CAP in src/client/utils/voice-config.ts.
-const voiceSummarizeSchema = z.object({ text: z.string().min(1).max(50_000) });
+const voiceSummarizeSchema = z.object({
+    text: z.string().min(1).max(50_000),
+    kind: z.enum(['response', 'action']).optional(),
+});
 api.post('/voice/summarize', zValidator('json', voiceSummarizeSchema), async (c) => {
-    const { text } = c.req.valid('json');
+    const { text, kind } = c.req.valid('json');
     try {
-        return c.json(await summarizeForSpeech(text));
+        return c.json(await summarizeForSpeech(text, kind));
     } catch (error) {
         return voiceErrorResponse(c, error);
     }
