@@ -28,6 +28,13 @@ describe('isHallucination', () => {
         }
     });
 
+    test('the wake phrase itself is never treated as noise', () => {
+        // It was, which meant the one phrase the UI teaches did nothing.
+        for (const s of ['Hey Pipali', 'hey pipali', 'Hey Pipali!']) {
+            expect(isHallucination(s)).toBe(false);
+        }
+    });
+
     test('a prompt-echo segment does not pollute the turn transcript', () => {
         const turn = new TurnTranscript();
         turn.addSegment(0, 'Draft the launch email.');

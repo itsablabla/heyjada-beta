@@ -24,7 +24,10 @@ const HALLUCINATION_PATTERNS: RegExp[] = [
     /^\[?(blank[_ ]?audio|silence|music|inaudible)\]?[.!]?$/i,
     /^you[.!]?$/i,
     /^[.\s]*$/,
-    /^hey pipali$/i,
+    // "hey pipali" was here as a suspected prompt echo, but it is the documented
+    // wake phrase — blocking it meant the one thing the UI teaches did nothing.
+    // The min-speech gate already drops noise-only audio, and a bare address can
+    // only open a listening turn: visible, and destructive of nothing.
 ];
 
 // Whisper also echoes its conditioning text on noise-only audio. Derived from
