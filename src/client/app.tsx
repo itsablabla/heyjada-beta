@@ -53,6 +53,9 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 type PageType = 'home' | 'chat' | 'skills' | 'automations' | 'mcp-tools' | 'settings';
 type ConversationModelId = number | null;
 
+// Sidebar starts collapsed to an icon rail; the user's choice sticks across sessions
+const SIDEBAR_STORAGE_KEY = 'pipali-sidebar-open';
+
 const App = () => {
     const { t } = useTranslation();
 
@@ -87,7 +90,7 @@ const App = () => {
     // Core state
     const [input, setInput] = useState("");
     const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(() => localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true');
     const [copyingConversationId, setCopyingConversationId] = useState<string | null>(null);
     const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
     const [userName, setUserName] = useState<string | undefined>(undefined);
@@ -103,6 +106,11 @@ const App = () => {
         if (path === '/settings') return 'settings';
         return 'home';
     });
+
+    const updateSidebarOpen = useCallback((open: boolean) => {
+        setSidebarOpen(open);
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, String(open));
+    }, []);
 
     // Pending confirmations from automations
     const [automationConfirmations, setAutomationConfirmations] = useState<AutomationPendingConfirmation[]>([]);
@@ -1683,15 +1691,17 @@ const App = () => {
                     onGoToAutomations={goToAutomationsPage}
                     onGoToMcpTools={goToMcpToolsPage}
                     onGoToSettings={goToSettingsPage}
+                    onGoHome={goToHomePage}
                     onLogout={handleLogout}
-                    onClose={() => setSidebarOpen(false)}
+                    onClose={() => updateSidebarOpen(false)}
+                    onExpand={() => updateSidebarOpen(true)}
                     onDismissAllBillingAlerts={() => setBillingAlerts([])}
                 />
 
                 <div className="app-container">
                     <Header
                         sidebarOpen={sidebarOpen}
-                        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                        onToggleSidebar={() => updateSidebarOpen(!sidebarOpen)}
                         onGoHome={goToHomePage}
                     />
 

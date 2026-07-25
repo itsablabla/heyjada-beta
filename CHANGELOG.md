@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.0
+
+### 🎁 New
+- Search inside PDFs, Word, Excel, PowerPoint, and OpenDocument files
+- Connect Google Workspace MCP servers with OAuth
+
+### 🧪 Improve
+- Smarter MCP tool loading to keep responses fast with many servers connected
+- Full markdown rendering in the reasoning trajectory
+- App opens automatically after login in the browser
+
+### 🛠️ Fix
+- Inline math equations now render correctly from more AI models
+
 ## 0.6.0
 
 ### 🎁 New

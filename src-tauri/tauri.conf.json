@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Pipali",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "identifier": "ai.pipali",
   "build": {
     "beforeDevCommand": "cd src-tauri-frontend && bun run dev",
@@ -21,7 +21,8 @@
         "resizable": true,
         "fullscreen": false,
         "center": true,
-        "visible": false
+        "visible": false,
+        "zoomHotkeysEnabled": true
       },
       {
         "label": "splashscreen",

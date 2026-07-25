@@ -1,8 +1,8 @@
-// App header with sidebar toggle and logo
+// Mobile-only app header - on desktop the logo and sidebar toggle live in the sidebar
 
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getApiBaseUrl } from '../../utils/api';
+import { Logo } from './Logo';
 
 interface HeaderProps {
     sidebarOpen: boolean;
@@ -23,24 +23,12 @@ export function Header({
                     <button
                         className="sidebar-toggle"
                         onClick={onToggleSidebar}
+                        aria-label={sidebarOpen ? t('sidebar.collapseSidebar') : t('sidebar.expandSidebar')}
+                        aria-expanded={sidebarOpen}
                     >
                         {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
                     </button>
-                    <div
-                        className="logo clickable"
-                        onClick={onGoHome}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                onGoHome();
-                            }
-                        }}
-                    >
-                        <img src={`${getApiBaseUrl()}/icons/pipali_64.png`} alt={t('common.pipali')} className="logo-icon" />
-                        <span className="logo-text">{t('common.pipali')}</span>
-                    </div>
+                    <Logo onClick={onGoHome} />
                 </div>
             </div>
         </header>

@@ -3,8 +3,9 @@
  * Includes: header, logo
  */
 
-/* Header */
+/* Header - mobile only. On desktop the logo and toggle live in the sidebar. */
 .header {
+    display: none;
     flex-shrink: 0;
     padding: 12px 20px;
     border-bottom: 1px solid var(--color-border-subtle);

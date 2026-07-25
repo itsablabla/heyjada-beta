@@ -21,7 +21,24 @@
 
   /* Layout */
   --sidebar-width: 260px;
+  /* Sized so rail icons land on the same centers as their expanded counterparts */
+  --sidebar-rail-width: 64px;
   --max-width-content: 720px;
   --max-width-wide: 960px;
+  /* Conversation column: messages, composer and confirmations share this cap */
+  --max-width-conversation: 1000px;
+  --conversation-inset: 24px;
   --header-height: 52px;
+}
+
+/*
+ * The message navigator is viewport-fixed and occupies the rightmost 52px
+ * (24px offset + 28px button). Once the column is wide enough to reach the
+ * viewport edge it would sit on top of the text, so widen the inset to clear
+ * it. Below 960px the navigator is hidden and the space is given back.
+ */
+@media (min-width: 961px) {
+  :root {
+    --conversation-inset: 56px;
+  }
 }

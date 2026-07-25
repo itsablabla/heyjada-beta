@@ -1,11 +1,12 @@
-// Sidebar with conversation list
+// Sidebar with conversation list, collapsible to an icon rail
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, MessageSquare, AlertCircle, CheckCircle, Plus, MoreVertical, Trash2, ChevronRight, Search, X, Zap, Clock, Hammer, Settings, LogOut, Shield, Sun, Moon, Monitor, Pencil, Pin, PinOff, Copy, Link, FileText, Gift } from 'lucide-react';
+import { Loader2, MessageSquare, AlertCircle, CheckCircle, Plus, MoreVertical, Trash2, ChevronRight, Search, X, ScrollText, Clock, Hammer, Settings, LogOut, Shield, Sun, Moon, Monitor, Pencil, Pin, PinOff, Copy, Link, FileText, Gift, PanelLeft, PanelLeftClose } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { ConversationSummary, ConversationState, ConfirmationRequest, AuthStatus, BillingAlert } from '../../types';
 import { useTheme } from '../../hooks';
 import { BillingAlertBanner } from '../billing';
+import { Logo } from './Logo';
 import { apiFetch } from '../../utils/api';
 
 import { MOD_KEY } from '../../utils/platform';
@@ -66,8 +67,10 @@ interface SidebarProps {
     onGoToAutomations?: () => void;
     onGoToMcpTools?: () => void;
     onGoToSettings?: () => void;
+    onGoHome: () => void;
     onLogout?: () => void;
     onClose?: () => void;
+    onExpand?: () => void;
     onDismissAllBillingAlerts?: () => void;
 }
 
@@ -95,8 +98,10 @@ export function Sidebar({
     onGoToAutomations,
     onGoToMcpTools,
     onGoToSettings,
+    onGoHome,
     onLogout,
     onClose,
+    onExpand,
     onDismissAllBillingAlerts,
 }: SidebarProps) {
     const [openConversationMenuId, setOpenConversationMenuId] = useState<string | null>(null);
@@ -582,6 +587,10 @@ export function Sidebar({
         );
     };
 
+    // Collapsed rail buttons are icon-only, so their label moves to tooltip + accessible name
+    const iconOnly = (label: string) => (isOpen ? {} : { title: label, 'aria-label': label });
+    const toggleLabel = isOpen ? t('sidebar.collapseSidebar') : t('sidebar.expandSidebar');
+
     return (
         <>
             {/* Mobile backdrop overlay */}
@@ -592,12 +601,18 @@ export function Sidebar({
                     aria-hidden="true"
                 />
             )}
-            <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
+            <aside className={`sidebar ${isOpen ? 'open' : 'collapsed'}`}>
                 <div className="sidebar-header">
                     <div className="sidebar-header-row">
-                        <button className="new-chat-btn" onClick={onNewChat}>
-                            <Plus size={18} />
-                            <span>{t('sidebar.newChat')}</span>
+                        <Logo onClick={onGoHome} />
+                        <button
+                            className="sidebar-collapse-btn"
+                            onClick={isOpen ? onClose : onExpand}
+                            title={toggleLabel}
+                            aria-label={toggleLabel}
+                            aria-expanded={isOpen}
+                        >
+                            {isOpen ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
                         </button>
                         <button
                             className="sidebar-close-btn"
@@ -610,16 +625,34 @@ export function Sidebar({
                 </div>
 
                 <div className="sidebar-nav">
+                    <button className="sidebar-nav-btn new-chat-btn" onClick={onNewChat} {...iconOnly(t('sidebar.newChat'))}>
+                        <Plus size={16} />
+                        <span>{t('sidebar.newChat')}</span>
+                    </button>
+
+                    {/* The conversation list is hidden in the rail, so surface the all-chats modal here instead */}
+                    {!isOpen && (
+                        <button
+                            className="sidebar-nav-btn"
+                            onClick={() => setShowAllChatsModal(true)}
+                            {...iconOnly(t('sidebar.allChats'))}
+                        >
+                            <Search size={16} />
+                            <span>{t('sidebar.allChats')}</span>
+                        </button>
+                    )}
                     <button
                         className={`sidebar-nav-btn ${currentPage === 'skills' ? 'active' : ''}`}
                         onClick={onGoToSkills}
+                        {...iconOnly(t('sidebar.skills'))}
                     >
-                        <Zap size={16} />
+                        <ScrollText size={16} />
                         <span>{t('sidebar.skills')}</span>
                     </button>
                     <button
                         className={`sidebar-nav-btn ${currentPage === 'automations' ? 'active' : ''}`}
                         onClick={onGoToAutomations}
+                        {...iconOnly(t('sidebar.routines'))}
                     >
                         <Clock size={16} />
                         <span>{t('sidebar.routines')}</span>
@@ -627,6 +660,7 @@ export function Sidebar({
                     <button
                         className={`sidebar-nav-btn ${currentPage === 'mcp-tools' ? 'active' : ''}`}
                         onClick={onGoToMcpTools}
+                        {...iconOnly(t('sidebar.tools'))}
                     >
                         <Hammer size={16} />
                         <span>{t('sidebar.tools')}</span>
@@ -634,6 +668,7 @@ export function Sidebar({
                     <button
                         className={`sidebar-nav-btn ${currentPage === 'settings' ? 'active' : ''}`}
                         onClick={onGoToSettings}
+                        {...iconOnly(t('sidebar.settings'))}
                     >
                         <Settings size={16} />
                         <span>{t('sidebar.settings')}</span>
@@ -658,14 +693,25 @@ export function Sidebar({
                     )}
                 </div>
 
-                {/* Billing Alert Banner */}
+                {/* Billing Alert Banner - too wide for the rail, so collapse it to a nudge that expands the sidebar */}
                 {billingAlerts && billingAlerts.length > 0 && platformFrontendUrl && onDismissAllBillingAlerts && (
                     <div className="sidebar-billing-section">
-                        <BillingAlertBanner
-                            alerts={billingAlerts}
-                            platformFrontendUrl={platformFrontendUrl}
-                            onDismissAll={onDismissAllBillingAlerts}
-                        />
+                        {isOpen ? (
+                            <BillingAlertBanner
+                                alerts={billingAlerts}
+                                platformFrontendUrl={platformFrontendUrl}
+                                onDismissAll={onDismissAllBillingAlerts}
+                            />
+                        ) : (
+                            <button
+                                className="sidebar-nav-btn billing-alert-rail-btn"
+                                onClick={onExpand}
+                                {...iconOnly(t('sidebar.billingAlert'))}
+                            >
+                                <AlertCircle size={16} />
+                                <span>{t('sidebar.billingAlert')}</span>
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -677,6 +723,7 @@ export function Sidebar({
                                 className="user-profile-btn"
                                 onClick={() => setShowUserMenu(prev => !prev)}
                                 aria-label={t('sidebar.userMenu')}
+                                title={isOpen ? undefined : (authStatus.anonMode ? t('sidebar.anonymousMode') : displayName || authStatus.user?.email)}
                             >
                                 <div className="user-avatar">
                                     {authStatus.anonMode ? (

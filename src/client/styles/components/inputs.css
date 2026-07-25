@@ -6,12 +6,12 @@
 /* Input Area */
 .input-area {
     flex-shrink: 0;
-    padding: 16px 24px 24px;
+    padding: 16px var(--conversation-inset) 24px;
     background: var(--color-bg-elevated);
 }
 
 .input-container {
-    max-width: 800px;
+    max-width: var(--max-width-conversation);
     margin: 0 auto;
 }
 

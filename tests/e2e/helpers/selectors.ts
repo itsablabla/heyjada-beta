@@ -68,7 +68,8 @@ export const Selectors = {
 
     // Header
     header: 'header',
-    logo: '.logo.clickable',
+    // Rendered in both the sidebar (desktop) and the header (mobile) - target the shown one
+    logo: '.logo.clickable:visible',
 
     // Streaming
     streamingIndicator: '.message-content.streaming',

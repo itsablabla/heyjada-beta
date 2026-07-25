@@ -14,7 +14,7 @@
     min-height: 100%;
     display: flex;
     flex-direction: column;
-    max-width: 800px;
+    max-width: var(--max-width-conversation);
     margin: 0 auto;
     width: 100%;
 }

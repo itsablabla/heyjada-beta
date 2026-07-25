@@ -5,7 +5,7 @@
 
 /* Messages */
 .messages {
-    padding: 24px;
+    padding: 24px var(--conversation-inset);
     display: flex;
     flex-direction: column;
     gap: 32px;
@@ -398,10 +398,10 @@
     background: var(--color-bg-muted);
 }
 
+/* Width-led: fill the column, with a viewport cap so tall images don't take over the scroll */
 .message-inline-image {
     max-width: 100%;
-    max-height: 400px;
-    object-fit: contain;
+    max-height: 80vh;
     border-radius: var(--radius-sm);
     margin: 8px 0;
 }
