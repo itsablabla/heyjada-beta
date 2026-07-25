@@ -7,6 +7,7 @@
     "core:default",
     "core:window:default",
     "core:webview:default",
+    "core:webview:allow-set-webview-zoom",
     {
       "identifier": "shell:allow-spawn",
       "allow": [
