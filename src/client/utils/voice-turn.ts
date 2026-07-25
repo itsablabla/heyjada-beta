@@ -9,8 +9,8 @@
  * Pure: strings in, actions out. No audio or network.
  */
 
-import { normalizeUtterance } from './voice-intent';
-import { END_PHRASES, DISCARD_PHRASES, CANCEL_PHRASES, STT_BIAS_PROMPT } from './voice-config';
+import { normalizeUtterance, parseAddressing } from './voice-intent';
+import { END_PHRASES, DISCARD_PHRASES, CANCEL_PHRASES, STT_BIAS_PROMPT, VOICE_TUNABLES } from './voice-config';
 
 // Whisper-family models hallucinate fixed phrases on noise-only audio.
 // Conservative full-string matches only — never drop real dictation.
@@ -48,10 +48,39 @@ export function isHallucination(text: string): boolean {
     return isPromptEcho(t) || HALLUCINATION_PATTERNS.some((p) => p.test(t));
 }
 
+function tokenize(text: string): string[] {
+    return normalizeUtterance(text).split(' ').filter(Boolean);
+}
+
+/**
+ * Is this transcript just Pipali hearing itself? The backstop behind the
+ * acoustic echo guard, for the moments it leaks — the start of a readout,
+ * before the echo-return estimate has converged.
+ *
+ * The rule: an utterance made entirely of words Pipali is saying right now
+ * cannot be told apart from its own echo, so it is ignored. Multi-word
+ * utterances match on adjacent pairs (STT echoes arrive as contiguous
+ * fragments); addressed speech is the user by construction and never echo.
+ * Failing safe matters most for "yes" — a false barge-in that resolved a
+ * confirmation would approve an action nobody asked for.
+ */
+export function isSelfEcho(heard: string, spoken: string): boolean {
+    const h = tokenize(heard);
+    const s = tokenize(spoken);
+    if (!h.length || !s.length) return false;
+    if (parseAddressing(heard).addressed) return false;
+    if (h.length === 1) return s.includes(h[0]!);
+
+    const spokenPairs = new Set(s.slice(1).map((w, i) => `${s[i]} ${w}`));
+    const heardPairs = h.slice(1).map((w, i) => `${h[i]} ${w}`);
+    const shared = heardPairs.filter((pair) => spokenPairs.has(pair)).length;
+    return shared / heardPairs.length >= VOICE_TUNABLES.selfEchoBigramRatio;
+}
+
 /** Do the last tokens of `text` (normalized) spell out `phrase`? */
 export function endsWithPhrase(text: string, phrase: string): boolean {
-    const tokens = normalizeUtterance(text).split(' ').filter(Boolean);
-    const phraseTokens = normalizeUtterance(phrase).split(' ').filter(Boolean);
+    const tokens = tokenize(text);
+    const phraseTokens = tokenize(phrase);
     if (phraseTokens.length === 0 || phraseTokens.length > tokens.length) return false;
     const tail = tokens.slice(tokens.length - phraseTokens.length);
     return phraseTokens.every((w, i) => tail[i] === w);
@@ -64,7 +93,7 @@ export function endsWithPhrase(text: string, phrase: string): boolean {
  */
 export function stripTailPhrase(text: string, phrase: string): string {
     const rawTokens = text.split(/\s+/).filter(Boolean);
-    const phraseTokens = normalizeUtterance(phrase).split(' ').filter(Boolean);
+    const phraseTokens = tokenize(phrase);
     const isFiller = (token: string) => normalizeUtterance(token) === '';
 
     let i = rawTokens.length;

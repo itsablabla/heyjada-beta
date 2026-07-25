@@ -1,5 +1,24 @@
 import { test, expect, describe } from 'bun:test';
-import { parseConfirmationIntent, parseGoAhead, parseAddressing, normalizeUtterance } from '../../src/client/utils/voice-intent';
+import { parseConfirmationIntent, parseGoAhead, parseAddressing, parseStopWork, normalizeUtterance } from '../../src/client/utils/voice-intent';
+
+describe('parseStopWork', () => {
+    test('recognizes the stop vocabulary', () => {
+        for (const s of ['stop', 'Stop.', 'stop it', 'hold on', 'wait', 'never mind', 'that’s enough', 'please stop']) {
+            expect(parseStopWork(s)).toBe(true);
+        }
+    });
+
+    test('a sentence merely containing one does not abandon work in flight', () => {
+        for (const s of ['wait for the build to finish', 'stop the server after deploying', 'do not stop']) {
+            expect(parseStopWork(s)).toBe(false);
+        }
+    });
+
+    test('stopping work is distinct from stopping the voice session', () => {
+        expect(parseStopWork('stop listening')).toBe(false);
+        expect(parseConfirmationIntent('stop listening', { isQuestion: false }).type).toBe('stop_listening');
+    });
+});
 
 describe('normalizeUtterance', () => {
     test('lowercases, strips punctuation/apostrophes, and drops filler', () => {

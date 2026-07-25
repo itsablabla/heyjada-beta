@@ -7,6 +7,12 @@
  * where the address lives), and applies hysteresis + a minimum voiced duration
  * so keyboard clatter doesn't produce segments.
  *
+ * While Pipali is speaking the voiced threshold is raised, so its own residual
+ * echo does not open a segment. Closed segments are stamped with whether they
+ * caught any of that speech, since the transcript-level self-echo check needs to
+ * know and cannot ask afterwards — a segment closes ~900ms after the voice in it
+ * stops, by which time playback has usually ended.
+ *
  * Pure: frames in, events out. No audio APIs — unit-tested with synthetic PCM.
  * The VAD is pluggable so the energy heuristic can be swapped for a model
  * (e.g. Silero via onnxruntime-web) without touching the state machine.
@@ -15,16 +21,24 @@
 import { VOICE_TUNABLES } from './voice-config';
 
 export interface VadEngine {
-    isVoiced(frame: Float32Array): boolean;
+    /** `overSpeech` raises the bar: Pipali is audible, so quiet energy is likely its echo. */
+    isVoiced(frame: Float32Array, overSpeech?: boolean): boolean;
+}
+
+function rms(frame: Float32Array): number {
+    let sum = 0;
+    for (let i = 0; i < frame.length; i++) sum += frame[i]! * frame[i]!;
+    return Math.sqrt(sum / (frame.length || 1));
 }
 
 export class EnergyVad implements VadEngine {
-    constructor(private readonly threshold: number = VOICE_TUNABLES.energyThreshold) {}
+    constructor(
+        private readonly threshold: number = VOICE_TUNABLES.energyThreshold,
+        private readonly speakingThreshold: number = VOICE_TUNABLES.speakingEnergyThreshold,
+    ) {}
 
-    isVoiced(frame: Float32Array): boolean {
-        let sum = 0;
-        for (let i = 0; i < frame.length; i++) sum += frame[i]! * frame[i]!;
-        return Math.sqrt(sum / (frame.length || 1)) >= this.threshold;
+    isVoiced(frame: Float32Array, overSpeech = false): boolean {
+        return rms(frame) >= (overSpeech ? this.speakingThreshold : this.threshold);
     }
 }
 
@@ -43,7 +57,14 @@ export interface SegmenterConfig {
 
 export type SegmenterEvent =
     | { type: 'speech_start' }
-    | { type: 'segment'; samples: Float32Array }
+    /**
+     * `overlappedPlayback` marks audio captured while Pipali was sounding. A
+     * segment closes ~900ms after the voice in it stops, so one that caught the
+     * tail of a readout arrives well after playback ended — by then "is Pipali
+     * speaking?" reads false, and the echo check would be skipped exactly when
+     * it is needed. The flag travels with the audio instead.
+     */
+    | { type: 'segment'; samples: Float32Array; overlappedPlayback: boolean }
     | { type: 'segment_rejected'; reason: 'too_short' };
 
 export function defaultSegmenterConfig(sampleRate: number): SegmenterConfig {
@@ -72,6 +93,8 @@ export class SpeechSegmenter {
     private recentVoiced: boolean[] = [];
     private silenceRun = 0;
     private voicedFrames = 0;
+    private speaking = false;
+    private framesSinceSpeech = Number.MAX_SAFE_INTEGER;
 
     constructor(private readonly config: SegmenterConfig, private readonly vad: VadEngine) {
         this.frameMs = (config.frameSamples / config.sampleRate) * 1000;
@@ -81,8 +104,14 @@ export class SpeechSegmenter {
         this.maxSegmentFrames = Math.max(1, Math.ceil(config.maxSegmentMs / this.frameMs));
     }
 
+    /** Told by the caller, which knows when a readout starts and ends. */
+    setSpeaking(speaking: boolean): void {
+        this.speaking = speaking;
+    }
+
     pushFrame(frame: Float32Array): SegmenterEvent[] {
-        const voiced = this.vad.isVoiced(frame);
+        this.framesSinceSpeech = this.speaking ? 0 : this.framesSinceSpeech + 1;
+        const voiced = this.vad.isVoiced(frame, this.speaking);
 
         if (!this.collecting) {
             this.preRoll.push(frame.slice());
@@ -155,6 +184,9 @@ export class SpeechSegmenter {
             samples.set(f, offset);
             offset += f.length;
         }
-        return { type: 'segment', samples };
+        // `frames` spans the pre-roll too, so this asks whether Pipali spoke at
+        // any point in the audio being handed over — not whether it is speaking
+        // now, which by here it usually is not.
+        return { type: 'segment', samples, overlappedPlayback: this.framesSinceSpeech <= frames.length };
     }
 }

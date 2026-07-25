@@ -28,6 +28,20 @@ export const VOICE_TUNABLES = {
     maxSegmentMs: 30_000,
     /** Sample rate segments are downsampled to before WAV-encoding for STT. */
     sttSampleRate: 16_000,
+    // --- Full duplex: the mic stays open while Pipali speaks ---
+    /**
+     * Voiced threshold while Pipali is audible. The platform's own echo
+     * cancellation does the real work here — measured on macOS, it drops
+     * Pipali's voice at the mic to ~0.4% of what was played, far under the plain
+     * threshold. This is the modest second line for whatever residual gets
+     * through, chosen to sit above that and below ordinary speech (~0.05-0.15),
+     * so talking over a readout still just works.
+     */
+    speakingEnergyThreshold: 0.04,
+    /** Gain Pipali's speech ducks to while a suspected barge-in is transcribed. */
+    duckGain: 0.15,
+    /** Share of an utterance's word pairs Pipali must be saying for it to read as echo. */
+    selfEchoBigramRatio: 0.6,
     /** How long after Pipali finishes speaking that bare speech counts as the reply. */
     replyInvitationMs: 10_000,
     /** Session ends (dormant) after this long without addressed speech. */
@@ -58,6 +72,16 @@ export const DISCARD_PHRASES = ['scratch that', 'clear that'];
 /** Tail-position phrases that abandon the turn and stop listening. */
 export const CANCEL_PHRASES = ['stop listening', 'cancel that'];
 
+/**
+ * Whole-utterance phrases that stop what Pipali is doing — the run in flight,
+ * or a readout the user has heard enough of. Distinct from CANCEL_PHRASES
+ * (which end the user's own turn) and from stopping the voice session.
+ */
+export const STOP_WORK_PHRASES = [
+    'stop', 'stop that', 'stop it', 'stop working', 'hold on', 'wait', 'hang on',
+    'abort', 'cancel', 'cancel that', 'never mind', 'nevermind', 'thats enough', 'enough',
+];
+
 /** Max text length accepted by /api/voice/summarize (keep in sync with the server schema). */
 export const SUMMARIZE_TEXT_CAP = 50_000;
 
@@ -72,4 +96,4 @@ export const ADDRESS_LEAD_INS = ['hey', 'ok', 'okay', 'hi'];
  * to make them transcribe reliably for the given context.
  */
 export const STT_BIAS_PROMPT =
-    `A voice message snippet by the user to Pipali, an AI co-worker on their computer. Key Phrases: Pipali, Hey Pipali, ${[...END_PHRASES, ...DISCARD_PHRASES, ...CANCEL_PHRASES, ...SPEAK_FREELY_PHRASES, ...ASK_FIRST_PHRASES].join(', ')}, go ahead.`;
+    `A voice message snippet by the user to Pipali, an AI co-worker on their computer. Key Phrases: Pipali, Hey Pipali, ${[...END_PHRASES, ...DISCARD_PHRASES, ...CANCEL_PHRASES, ...STOP_WORK_PHRASES, ...SPEAK_FREELY_PHRASES, ...ASK_FIRST_PHRASES].join(', ')}, go ahead.`;

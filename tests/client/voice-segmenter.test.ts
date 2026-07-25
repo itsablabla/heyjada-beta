@@ -110,6 +110,39 @@ describe('SpeechSegmenter', () => {
     });
 });
 
+describe('listening through Pipali speaking', () => {
+    const quiet = () => new Float32Array(480).fill(0.025);   // between the two thresholds
+
+    test('a raised bar applies while Pipali speaks', () => {
+        const vad = new EnergyVad();
+        expect(vad.isVoiced(quiet())).toBe(true);            // ordinary listening
+        expect(vad.isVoiced(quiet(), true)).toBe(false);     // could be its own echo
+        expect(vad.isVoiced(voiced(), true)).toBe(true);     // ordinary speech still carries
+    });
+
+    test('a segment that caught the tail of a readout is flagged', () => {
+        // The flag has to travel with the audio: a segment closes ~900ms after
+        // the voice in it stops, so by the time it is handed over the readout
+        // has usually ended and "is Pipali speaking?" reads false.
+        const s = makeSegmenter();
+        s.setSpeaking(true);
+        feed(s, [voiced(), voiced(), voiced()]);
+        s.setSpeaking(false);
+        const events = feed(s, [silent(), silent(), silent()]);
+        const seg = events.find((e) => e.type === 'segment');
+        if (!seg || seg.type !== 'segment') throw new Error('no segment');
+        expect(seg.overlappedPlayback).toBe(true);
+    });
+
+    test('a segment captured in silence is not flagged', () => {
+        const s = makeSegmenter();
+        const events = feed(s, [voiced(), voiced(), voiced(), silent(), silent(), silent()]);
+        const seg = events.find((e) => e.type === 'segment');
+        if (!seg || seg.type !== 'segment') throw new Error('no segment');
+        expect(seg.overlappedPlayback).toBe(false);
+    });
+});
+
 describe('voice-pcm', () => {
     test('downsample 48k to 16k yields a third of the samples', () => {
         const input = new Float32Array(4800).fill(0.5);

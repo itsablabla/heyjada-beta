@@ -332,11 +332,14 @@ const App = () => {
         sendMessageRef.current?.(undefined, { text });
     }, []);
 
+    // Late-bound: stopResearch is defined below, and voice only calls it on speech.
+    const stopResearchRef = useRef<() => void>(() => {});
     const voice = useVoiceCompanion({
         mode: voiceMode,
         activeConversationId: conversationId,
         sendMessage: sendVoiceMessage,
         respondToConfirmation,
+        stopRun: () => stopResearchRef.current(),
         onError: (msg) => console.warn('[voice]', msg),
         onModeChange: setVoiceMode,
     });
@@ -666,6 +669,7 @@ const App = () => {
 
         stop(conversationId, activeRunIdRef.current, { optimistic: true, reason: 'user_stop' });
     }, [isConnected, isProcessing, conversationId, stop]);
+    stopResearchRef.current = stopResearch;
 
     // Global Escape key listener for stopping research
     useEffect(() => {

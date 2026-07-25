@@ -9,7 +9,7 @@
  * Pure module — no DOM, no I/O — so it's cheap to unit-test exhaustively.
  */
 
-import { ADDRESS_NAME, ADDRESS_LEAD_INS, SPEAK_FREELY_PHRASES, ASK_FIRST_PHRASES } from './voice-config';
+import { ADDRESS_NAME, ADDRESS_LEAD_INS, SPEAK_FREELY_PHRASES, ASK_FIRST_PHRASES, STOP_WORK_PHRASES } from './voice-config';
 
 export type VoiceIntent =
     | { type: 'approve' }
@@ -81,6 +81,17 @@ export function parseGoAhead(text: string): boolean {
     const n = normalizeUtterance(text);
     if (!n) return false;
     return APPROVE.has(n) || DETAILS.has(n) || GO_AHEAD_EXTRA.has(n);
+}
+
+/**
+ * Is this utterance "stop what you're doing" — a run to abandon, or a readout
+ * the user has heard enough of? Whole-utterance only, on the same reasoning as
+ * the other destructive commands: a sentence merely containing "wait" must not
+ * throw away work in flight.
+ */
+export function parseStopWork(text: string): boolean {
+    const n = normalizeUtterance(text);
+    return !!n && STOP_WORK_PHRASES.includes(n);
 }
 
 /** Small-string edit distance via classic DP — inputs are single words. */

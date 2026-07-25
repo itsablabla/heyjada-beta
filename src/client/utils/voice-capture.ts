@@ -6,6 +6,12 @@
  * WAV-encoded. AudioWorklet (not MediaRecorder) because segments need pre-roll
  * spliced from a ring buffer and mid-stream MediaRecorder chunks lack container
  * headers; WKWebView supports worklets (Safari 14.1+).
+ *
+ * Capture keeps running while Pipali speaks (full duplex). The platform's own
+ * echo cancellation is what makes that possible — measured on macOS, it drops
+ * Pipali's voice at the mic to well under the voiced threshold. `setSpeaking`
+ * tells the segmenter when a readout is on so it can raise that threshold for
+ * the residual, and mark the segments that caught any of it.
  */
 
 import { VOICE_TUNABLES } from './voice-config';
@@ -26,9 +32,15 @@ registerProcessor('pipali-pcm-tap', PipaliPcmTap);
 `;
 
 export interface SegmentedCaptureHandlers {
-    /** A speech segment closed: WAV-encoded audio at the STT sample rate. */
-    onSegment: (wav: Blob, seq: number) => void;
+    /**
+     * A speech segment closed: WAV-encoded audio at the STT sample rate.
+     * `overlappedPlayback` marks audio that caught Pipali's own voice, which
+     * stays true after playback has ended — see SegmenterEvent.
+     */
+    onSegment: (wav: Blob, seq: number, overlappedPlayback: boolean) => void;
     onSpeechStart?: () => void;
+    /** Onset was a blip — nothing to transcribe, so anything onset triggered can unwind. */
+    onSpeechRejected?: () => void;
 }
 
 export class SegmentedCapture {
@@ -41,7 +53,6 @@ export class SegmentedCapture {
     private frameBuf?: Float32Array;
     private frameFill = 0;
     private seq = 0;
-    private suppressed = false;
     private stopped = false;
 
     constructor(private readonly handlers: SegmentedCaptureHandlers) {}
@@ -49,6 +60,13 @@ export class SegmentedCapture {
     async start(): Promise<void> {
         this.stream = await navigator.mediaDevices.getUserMedia({
             audio: { echoCancellation: true, noiseSuppression: true },
+        });
+        // The constraint is advisory, and full duplex leans on it being honoured
+        // — so log what the engine actually applied, not what we asked for.
+        const settings = this.stream.getAudioTracks()[0]?.getSettings();
+        console.info('[voice] capture:', {
+            echoCancellation: settings?.echoCancellation ?? 'unreported',
+            noiseSuppression: settings?.noiseSuppression ?? 'unreported',
         });
         this.ctx = new AudioContext();
         if (this.ctx.state === 'suspended') await this.ctx.resume();
@@ -77,9 +95,9 @@ export class SegmentedCapture {
         this.sink.connect(this.ctx.destination);
     }
 
-    /** Half-duplex: ignore mic frames while Pipali plays audio. */
-    setSuppressed(suppressed: boolean): void {
-        this.suppressed = suppressed;
+    /** A readout is on: raise the voiced bar, and mark segments that catch it. */
+    setSpeaking(speaking: boolean): void {
+        this.segmenter?.setSpeaking(speaking);
     }
 
     /** Force-close any open segment (tap-to-end). */
@@ -102,7 +120,7 @@ export class SegmentedCapture {
     }
 
     private ingest(chunk: Float32Array): void {
-        if (this.stopped || this.suppressed || !this.segmenter || !this.frameBuf) return;
+        if (this.stopped || !this.segmenter || !this.frameBuf) return;
         let offset = 0;
         while (offset < chunk.length) {
             const take = Math.min(chunk.length - offset, this.frameBuf.length - this.frameFill);
@@ -123,8 +141,9 @@ export class SegmentedCapture {
             const rate = this.ctx?.sampleRate ?? VOICE_TUNABLES.sttSampleRate;
             const ds = downsample(event.samples, rate, Math.min(rate, VOICE_TUNABLES.sttSampleRate));
             const wav = encodeWavPcm16(ds, Math.min(rate, VOICE_TUNABLES.sttSampleRate));
-            this.handlers.onSegment(new Blob([wav], { type: 'audio/wav' }), this.seq++);
+            this.handlers.onSegment(new Blob([wav], { type: 'audio/wav' }), this.seq++, event.overlappedPlayback);
+        } else {
+            this.handlers.onSpeechRejected?.();   // blip: no audio to transcribe
         }
-        // segment_rejected: blip — intentionally dropped.
     }
 }

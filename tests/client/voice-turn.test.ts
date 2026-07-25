@@ -1,6 +1,42 @@
 import { test, expect, describe } from 'bun:test';
-import { TurnTranscript, isHallucination, endsWithPhrase, stripTailPhrase } from '../../src/client/utils/voice-turn';
+import { TurnTranscript, isHallucination, isSelfEcho, endsWithPhrase, stripTailPhrase } from '../../src/client/utils/voice-turn';
 import { STT_BIAS_PROMPT } from '../../src/client/utils/voice-config';
+
+describe('isSelfEcho', () => {
+    const readout = 'Pipali wants to edit Tasks.org under the Documents folder. Say yes to continue.';
+
+    test('flags a fragment of what Pipali is saying right now', () => {
+        for (const s of ['under the Documents folder', 'wants to edit Tasks.org']) {
+            expect(isSelfEcho(s, readout)).toBe(true);
+        }
+    });
+
+    test('flags a single word Pipali is saying — including a decisive one', () => {
+        // A bare "yes" that Pipali itself just said cannot be told from an echo,
+        // and acting on it would approve an operation nobody asked for.
+        expect(isSelfEcho('yes', readout)).toBe(true);
+        expect(isSelfEcho('Documents', readout)).toBe(true);
+    });
+
+    test('passes a real interruption through', () => {
+        for (const s of ['stop', 'no, use the other file', 'wait, what about the backup']) {
+            expect(isSelfEcho(s, readout)).toBe(false);
+        }
+    });
+
+    test('addressed speech is the user by construction', () => {
+        expect(isSelfEcho('Pipali, the Documents folder', readout)).toBe(false);
+    });
+
+    test('words in common are not enough without the phrasing', () => {
+        expect(isSelfEcho('edit the folder yes', readout)).toBe(false);
+    });
+
+    test('nothing being spoken means nothing to echo', () => {
+        expect(isSelfEcho('yes', '')).toBe(false);
+        expect(isSelfEcho('', readout)).toBe(false);
+    });
+});
 
 describe('isHallucination', () => {
     test('flags known Whisper noise hallucinations', () => {

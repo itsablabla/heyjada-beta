@@ -8,47 +8,46 @@ import { isTauri } from './tauri';
 import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
 import i18n from '../i18n';
 import { VOICE_EARCONS, TRANSCRIPT_TICK, clampTickCount, tickBurstDurationMs, type EarconNote, type VoiceCueProfile } from './voice-earcons';
+import { VOICE_TUNABLES } from './voice-config';
 
 let notificationPermissionGranted: boolean | null = null;
 
 // Shared AudioContext for notification sounds (created lazily)
 let audioCtx: AudioContext | null = null;
 
+// Speech sits behind its own gain so a suspected barge-in can duck it without
+// touching the cue vocabulary, which stays at full level.
+let speechGain: GainNode | null = null;
+
 /**
  * Play a short two-tone chime for notifications using the Web Audio API.
  * No audio file required — synthesizes a brief ping sound.
  */
 function playNotificationSound(): void {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
     try {
-        if (!audioCtx) {
-            audioCtx = new AudioContext();
-        }
-        // Resume context if suspended (browsers require user gesture)
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-
-        const now = audioCtx.currentTime;
+        const now = ctx.currentTime;
 
         // First tone — higher pitch
-        const osc1 = audioCtx.createOscillator();
-        const gain1 = audioCtx.createGain();
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
         osc1.type = 'sine';
         osc1.frequency.value = 830;
         gain1.gain.setValueAtTime(0.3, now);
         gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-        osc1.connect(gain1).connect(audioCtx.destination);
+        osc1.connect(gain1).connect(ctx.destination);
         osc1.start(now);
         osc1.stop(now + 0.15);
 
         // Second tone — slightly higher, delayed
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
         osc2.type = 'sine';
         osc2.frequency.value = 1050;
         gain2.gain.setValueAtTime(0.3, now + 0.12);
         gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        osc2.connect(gain2).connect(audioCtx.destination);
+        osc2.connect(gain2).connect(ctx.destination);
         osc2.start(now + 0.12);
         osc2.stop(now + 0.3);
     } catch {
@@ -69,6 +68,27 @@ function ensureAudioContext(): AudioContext | null {
     } catch {
         return null;
     }
+}
+
+function ensureSpeechGain(ctx: AudioContext): GainNode {
+    if (!speechGain) {
+        speechGain = ctx.createGain();
+        speechGain.connect(ctx.destination);
+    }
+    return speechGain;
+}
+
+/**
+ * Duck Pipali's speech the moment someone starts talking over it, before the
+ * words have been transcribed. Quieting down is the recoverable move: it costs
+ * nothing if the sound turns out to be Pipali's own echo, and it makes the
+ * response to a real interruption immediate instead of a transcription away.
+ */
+export function duckSpeech(ducked: boolean): void {
+    if (!audioCtx || !speechGain) return;
+    const target = ducked ? VOICE_TUNABLES.duckGain : 1;
+    speechGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    speechGain.gain.setTargetAtTime(target, audioCtx.currentTime, 0.02);
 }
 
 // Earcon vocabulary (pure data + duration math) lives in voice-earcons.ts so
@@ -135,7 +155,7 @@ function playDecodedBuffer(ctx: AudioContext, data: ArrayBuffer): Promise<void> 
             .then((audioBuffer) => {
                 const source = ctx.createBufferSource();
                 source.buffer = audioBuffer;
-                source.connect(ctx.destination);
+                source.connect(ensureSpeechGain(ctx));
                 speechSource = source;
                 source.onended = () => {
                     if (speechSource === source) speechSource = null;
@@ -163,6 +183,7 @@ export function stopSpeaking(): void {
         speechSource = null;
     }
     speechChain = Promise.resolve();
+    duckSpeech(false);
 }
 
 /** Resume the AudioContext and play a brief tick — call from a user gesture to satisfy autoplay policy. */
