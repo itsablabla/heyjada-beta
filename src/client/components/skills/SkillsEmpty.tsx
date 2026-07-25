@@ -1,14 +1,14 @@
 // Empty state when no skills are available
 
 import React from 'react';
-import { Zap } from 'lucide-react';
+import { ScrollText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export function SkillsEmpty() {
     const { t } = useTranslation();
     return (
         <div className="empty-state skills-empty">
-            <Zap className="empty-icon" size={32} strokeWidth={1.5} />
+            <ScrollText className="empty-icon" size={32} strokeWidth={1.5} />
             <h2>{t('skills.noSkillsTitle')}</h2>
             <p>{t('skills.noSkillsDescription')}</p>
             <p className="empty-hint">

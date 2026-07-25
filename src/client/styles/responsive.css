@@ -29,14 +29,33 @@
         width: min(var(--sidebar-width), 85vw);
     }
 
-    .sidebar.closed {
-        margin-left: 0;
+    /* No room for an icon rail on mobile - slide the whole sidebar off-canvas */
+    .sidebar.collapsed {
+        width: min(var(--sidebar-width), 85vw);
         transform: translateX(-100%);
+        overflow: hidden;
     }
 
-    /* Show close button on mobile */
+    /*
+     * The sidebar is fully off-canvas here, so its own logo and collapse toggle
+     * would be unreachable. Fall back to the standard drawer pattern: a header
+     * carries the logo and the toggle that opens the drawer, and a close button
+     * inside the drawer dismisses it.
+     */
+    .header {
+        display: block;
+    }
+
+    .sidebar-header-row .logo {
+        display: none;
+    }
+
     .sidebar-close-btn {
         display: flex;
+    }
+
+    .sidebar-collapse-btn {
+        display: none;
     }
 
     .input-toolbar .model-name {

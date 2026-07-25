@@ -36,6 +36,17 @@ export default defineConfig({
 
     use: {
         baseURL: BASE_URL,
+
+        // The app ships with the sidebar collapsed to an icon rail; expand it so
+        // specs can assert against the conversation list it contains.
+        storageState: {
+            cookies: [],
+            origins: [{
+                origin: BASE_URL,
+                localStorage: [{ name: 'pipali-sidebar-open', value: 'true' }],
+            }],
+        },
+
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',

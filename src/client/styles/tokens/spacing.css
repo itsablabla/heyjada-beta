@@ -21,6 +21,8 @@
 
   /* Layout */
   --sidebar-width: 260px;
+  /* Sized so rail icons land on the same centers as their expanded counterparts */
+  --sidebar-rail-width: 64px;
   --max-width-content: 720px;
   --max-width-wide: 960px;
   /* Conversation column: messages, composer and confirmations share this cap */

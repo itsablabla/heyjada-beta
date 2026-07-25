@@ -17,10 +17,74 @@
     overflow: hidden;
 }
 
-.sidebar.closed {
-    width: 0;
-    transform: translateX(-100%);
-    border-right: none;
+/*
+ * Collapsed rail: same markup as the expanded sidebar, with labels and the
+ * conversation list dropped so only the navigation icons remain.
+ * Overflow must stay visible so the user menu can escape the narrow rail.
+ */
+.sidebar.collapsed {
+    width: var(--sidebar-rail-width);
+    overflow: visible;
+}
+
+.sidebar.collapsed .conversations-list {
+    display: none;
+}
+
+/*
+ * The rail is too narrow for the wordmark or for logo and toggle side by side,
+ * so stack them. Both stay visible: the logo is the only route to the home page.
+ */
+.sidebar.collapsed .sidebar-header-row {
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sidebar.collapsed .logo-text {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-collapse-btn {
+    width: 100%;
+    margin-left: 0;
+}
+
+.sidebar.collapsed .sidebar-nav-btn span,
+.sidebar.collapsed .user-info {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-nav,
+.sidebar.collapsed .sidebar-billing-section,
+.sidebar.collapsed .sidebar-user-section {
+    padding: 8px;
+}
+
+/*
+ * Deliberately taller than the 8px above: expanded, the logo is centred against
+ * the 36px toggle beside it, which lands it 20px down. Matching that here keeps
+ * the logo from hopping vertically as the sidebar collapses.
+ */
+.sidebar.collapsed .sidebar-header {
+    padding: 20px 8px 8px;
+}
+
+.sidebar.collapsed .sidebar-nav-btn,
+.sidebar.collapsed .user-profile-btn {
+    justify-content: center;
+    gap: 0;
+    padding: 9px 0;
+}
+
+/* Anchor the menu to the rail's edge instead of squeezing it to the rail width */
+.sidebar.collapsed .user-menu {
+    left: 0;
+    right: auto;
+    min-width: 220px;
+}
+
+.billing-alert-rail-btn {
+    color: var(--color-warning);
 }
 
 /* Mobile backdrop - hidden on desktop */
@@ -39,13 +103,18 @@
     gap: 8px;
 }
 
-.sidebar-header-row .new-chat-btn {
-    flex: 1;
+/* Line the wordmark up with the nav icons below it, which sit inside button padding */
+.sidebar.open .sidebar-header-row .logo {
+    padding-left: 12px;
 }
 
-/* Close button - hidden on desktop, shown on mobile */
-.sidebar-close-btn {
-    display: none;
+/*
+ * Sidebar header icon buttons. On desktop the collapse button toggles the rail;
+ * on mobile the sidebar slides away entirely, so the header toggle opens it and
+ * this close button dismisses it instead.
+ */
+.sidebar-close-btn,
+.sidebar-collapse-btn {
     align-items: center;
     justify-content: center;
     width: 36px;
@@ -59,36 +128,39 @@
     flex-shrink: 0;
 }
 
-.sidebar-close-btn:hover {
+.sidebar-close-btn:hover,
+.sidebar-collapse-btn:hover {
     background: var(--color-bg-muted);
     color: var(--color-text);
 }
 
-.new-chat-btn {
+.sidebar-close-btn {
+    display: none;
+    margin-left: auto;
+}
+
+.sidebar-collapse-btn {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 10px 12px;
-    background: var(--color-bg-elevated);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--color-text);
-    cursor: pointer;
-    transition: all var(--transition);
-}
-
-.new-chat-btn:hover {
-    background: var(--color-bg-muted);
-    border-color: var(--color-text-muted);
+    margin-left: auto;
 }
 
 /* Sidebar Navigation */
 .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     padding: 8px 12px;
     border-bottom: 1px solid var(--color-border-subtle);
+}
+
+/*
+ * A plus is mostly empty space, so it is drawn 19px to look the same size as
+ * the denser 16px glyphs beside it. Scaling rather than resizing leaves its
+ * layout box at 16px, so row height, glyph and label stay aligned with every
+ * other nav row.
+ */
+.new-chat-btn svg {
+    transform: scale(1.1875);
 }
 
 .sidebar-nav-btn {
