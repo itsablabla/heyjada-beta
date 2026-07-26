@@ -77,10 +77,34 @@ describe('isHallucination', () => {
         }
     });
 
+    test('flags the command list read back, addressed or not', () => {
+        expect(isHallucination(RECITED_COMMANDS)).toBe(true);
+        expect(isHallucination(RECITED_COMMANDS_UNADDRESSED)).toBe(true);
+    });
+
+    test('flags a partial echo too short for the speech-rate check to see', () => {
+        // A 9-16 word fragment fits its clip honestly, so only the wording
+        // check stands between it and the transcript.
+        expect(isHallucination('A voice message snippet by the user to Pipali')).toBe(true);
+        expect(isHallucination('Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.')).toBe(true);
+    });
+
+    test('leaves a real utterance built around a command alone', () => {
+        for (const s of [
+            'Hey Pipali, over to you',
+            'Pipali, hold on, wait',
+            'stop working on the report and send it over to you',
+            'Ask first before speaking to the vendor about the delay',
+        ]) {
+            expect(isHallucination(s)).toBe(false);
+        }
+    });
+
     test('a prompt-echo segment does not pollute the turn transcript', () => {
         const turn = new TurnTranscript();
         turn.addSegment(0, 'Draft the launch email.');
         turn.addSegment(1, STT_BIAS_PROMPT);
+        turn.addSegment(2, RECITED_COMMANDS);
         expect(turn.text).toBe('Draft the launch email.');
     });
 });

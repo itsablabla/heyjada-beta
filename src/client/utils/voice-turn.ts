@@ -12,6 +12,16 @@
 import { normalizeUtterance, parseAddressing } from './voice-intent';
 import { END_PHRASES, DISCARD_PHRASES, CANCEL_PHRASES, STT_BIAS_PROMPT, VOICE_TUNABLES } from './voice-config';
 
+function tokenize(text: string): string[] {
+    return normalizeUtterance(text).split(' ').filter(Boolean);
+}
+
+function ngrams(tokens: string[], n: number): string[] {
+    const out: string[] = [];
+    for (let i = 0; i + n <= tokens.length; i++) out.push(tokens.slice(i, i + n).join(' '));
+    return out;
+}
+
 // Whisper-family models hallucinate fixed phrases on noise-only audio.
 // Conservative full-string matches only — never drop real dictation.
 const HALLUCINATION_PATTERNS: RegExp[] = [
@@ -30,16 +40,23 @@ const HALLUCINATION_PATTERNS: RegExp[] = [
     // only open a listening turn: visible, and destructive of nothing.
 ];
 
-// Whisper also echoes its conditioning text on noise-only audio. Derived from
-// the live prompt so rewording can't drift; the token floor keeps short
-// utterances that appear in the prompt ("send it") usable as commands.
-const NORMALIZED_BIAS_PROMPT = normalizeUtterance(STT_BIAS_PROMPT);
-const PROMPT_ECHO_MIN_TOKENS = 5;
+// The model also reads its own conditioning text back when the audio holds no
+// speech. Trigram containment rather than substring equality: one word of drift
+// ("never mind" for the prompt's "nevermind", "Pipli" for "Pipali") was enough
+// for an exact match to miss a fifty-word echo entirely. Matching the prompt
+// text — not just the commands in it — is what catches an echo of the framing
+// prose, which is 30% of the prompt and carries no command phrases at all.
+// Derived from the live prompt, so rewording can't leave this behind; the token
+// floor keeps short utterances that live in it ("send it", "hey Pipali") usable.
+const PROMPT_TRIGRAMS = new Set(ngrams(tokenize(STT_BIAS_PROMPT), 3));
+const PROMPT_ECHO_MIN_TOKENS = 6;
+const PROMPT_ECHO_MIN_CONTAINMENT = 0.8;
 
 function isPromptEcho(text: string): boolean {
-    const normalized = normalizeUtterance(text);
-    if (!normalized || normalized.split(' ').length < PROMPT_ECHO_MIN_TOKENS) return false;
-    return NORMALIZED_BIAS_PROMPT.includes(normalized);
+    const tokens = tokenize(text);
+    if (tokens.length < PROMPT_ECHO_MIN_TOKENS) return false;
+    const grams = ngrams(tokens, 3);
+    return grams.filter((g) => PROMPT_TRIGRAMS.has(g)).length / grams.length >= PROMPT_ECHO_MIN_CONTAINMENT;
 }
 
 export function isHallucination(text: string): boolean {
@@ -58,10 +75,6 @@ export function isHallucination(text: string): boolean {
 export function isImplausibleSpeechRate(text: string, durationMs: number): boolean {
     if (durationMs <= 0) return false;
     return tokenize(text).length / (durationMs / 1000) > VOICE_TUNABLES.maxWordsPerSecond;
-}
-
-function tokenize(text: string): string[] {
-    return normalizeUtterance(text).split(' ').filter(Boolean);
 }
 
 /**
