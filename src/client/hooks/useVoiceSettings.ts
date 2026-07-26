@@ -1,5 +1,5 @@
 import { useSyncExternalStore, useCallback } from 'react';
-import type { VoiceMode } from '../utils/voice-config';
+import type { VoiceMode } from '../utils/voice/voice-config';
 
 /**
  * Per-device voice settings. `enabled` is the beta feature flag: while off, no

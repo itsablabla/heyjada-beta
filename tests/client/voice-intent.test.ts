@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'bun:test';
-import { parseConfirmationIntent, parseGoAhead, parseAddressing, parseStopWork, normalizeUtterance } from '../../src/client/utils/voice-intent';
+import { parseConfirmationIntent, parseGoAhead, parseAddressing, parseStopWork, normalizeUtterance } from '../../src/client/utils/voice/voice-intent';
 
 describe('parseStopWork', () => {
     test('recognizes the stop vocabulary', () => {

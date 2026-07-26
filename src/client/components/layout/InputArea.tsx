@@ -3,8 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Square, Upload, X, FileText, FileSpreadsheet, File, Paperclip, ChevronDown, Circle, Headphones, Mic, MicOff, Volume2, Bell, Check, Loader2 } from 'lucide-react';
 import type { ConfirmationRequest, ChatModelInfo } from '../../types';
-import type { VoiceMode, VoiceStatus } from '../../utils/voice-config';
-import { voiceCoachKey } from '../../utils/voice-coach';
+import type { VoiceMode, VoiceStatus } from '../../utils/voice/voice-config';
+import { voiceCoachKey } from '../../utils/voice/voice-coach';
 import type { StagedFile } from '../../hooks/useFileDrop';
 import { ConfirmationDialog } from '../confirmation/ConfirmationDialog';
 import { formatFileSize } from '../../utils/formatting';

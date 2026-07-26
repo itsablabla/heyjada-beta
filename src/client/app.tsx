@@ -31,7 +31,7 @@ import { generateUUID, generateDeterministicId, getToolCategory, type ToolCatego
 import { initNotifications, notifyConfirmationRequest, notifyTaskComplete, setNotificationClickHandler, setupNotificationClickListener, warmAudioContext } from "./utils/notifications";
 import { useVoiceSettings } from "./hooks/useVoiceSettings";
 import { useVoiceCompanion } from "./hooks/useVoiceCompanion";
-import type { VoiceMode } from "./utils/voice-config";
+import type { VoiceMode } from "./utils/voice/voice-config";
 import { isTauri, onWindowShown, onSidecarReady, listenForDeepLinks } from "./utils/tauri";
 
 // Components

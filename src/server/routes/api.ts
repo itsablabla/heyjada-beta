@@ -1020,7 +1020,7 @@ api.post('/voice/speech', zValidator('json', voiceSpeechSchema), async (c) => {
     }
 });
 
-// Cap kept in sync with SUMMARIZE_TEXT_CAP in src/client/utils/voice-config.ts.
+// Cap kept in sync with SUMMARIZE_TEXT_CAP in src/client/utils/voice/voice-config.ts.
 const voiceSummarizeSchema = z.object({
     text: z.string().min(1).max(50_000),
     kind: z.enum(['response', 'action']).optional(),

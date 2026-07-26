@@ -1,6 +1,6 @@
 import { test, expect, describe } from 'bun:test';
-import { SpeechSegmenter, EnergyVad, type SegmenterConfig, type SegmenterEvent } from '../../src/client/utils/voice-segmenter';
-import { downsample, encodeWavPcm16 } from '../../src/client/utils/voice-pcm';
+import { SpeechSegmenter, EnergyVad, type SegmenterConfig, type SegmenterEvent } from '../../src/client/utils/voice/voice-segmenter';
+import { downsample, encodeWavPcm16 } from '../../src/client/utils/voice/voice-pcm';
 
 // 16kHz, 30ms frames = 480 samples. Thresholds in whole frames for easy math.
 const CONFIG: SegmenterConfig = {

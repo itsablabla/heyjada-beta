@@ -7,7 +7,7 @@ import {
     clampTickCount,
     tickBurstDurationMs,
     type VoiceCueProfile,
-} from '../../src/client/utils/voice-earcons';
+} from '../../src/client/utils/voice/voice-earcons';
 
 const profiles = Object.keys(VOICE_EARCONS) as VoiceCueProfile[];
 const background = new Set<VoiceCueProfile>(BACKGROUND_EARCONS);

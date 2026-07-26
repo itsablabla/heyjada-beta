@@ -4,7 +4,7 @@
  * playback lives in notifications.ts so it can share the AudioContext and queue.
  */
 
-import { apiFetch } from './api';
+import { apiFetch } from '../api';
 import { SUMMARIZE_TEXT_CAP } from './voice-config';
 
 /** Segmented capture needs getUserMedia + AudioWorklet (Safari/WKWebView 14.1+, Chromium, Firefox). */

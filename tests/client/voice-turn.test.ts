@@ -1,6 +1,6 @@
 import { test, expect, describe } from 'bun:test';
-import { TurnTranscript, isHallucination, isSelfEcho, isImplausibleSpeechRate, endsWithPhrase, stripTailPhrase } from '../../src/client/utils/voice-turn';
-import { STT_BIAS_PROMPT } from '../../src/client/utils/voice-config';
+import { TurnTranscript, isHallucination, isSelfEcho, isImplausibleSpeechRate, endsWithPhrase, stripTailPhrase } from '../../src/client/utils/voice/voice-turn';
+import { STT_BIAS_PROMPT } from '../../src/client/utils/voice/voice-config';
 
 // Verbatim from dogfooding: what STT returned for segments where nothing was
 // said. Both are the prompt's command list read back, and neither matched it

@@ -5,7 +5,7 @@
  * Spoken prompts stay in English by design (LLM/voice-facing text, not UI).
  */
 
-import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
+import type { ConfirmationRequest } from '../../../server/processor/confirmation/confirmation.types';
 
 export const COMPLETION_SPEAK_CAP = 1000;
 

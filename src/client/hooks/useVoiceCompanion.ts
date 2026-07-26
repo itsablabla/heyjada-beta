@@ -41,13 +41,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
 import { CONFIRMATION_OPTIONS } from '../../server/processor/confirmation/confirmation.types';
-import { isVoiceCaptureSupported, transcribeAudio, synthesizeSpeech, summarizeForSpeech } from '../utils/voice-audio';
-import { SegmentedCapture, type CapturedSegment } from '../utils/voice-capture';
-import { TurnTranscript, isHallucination, isSelfEcho, isImplausibleSpeechRate } from '../utils/voice-turn';
-import { VOICE_TUNABLES, STT_BIAS_PROMPT, type VoiceMode, type VoiceStatus } from '../utils/voice-config';
+import { isVoiceCaptureSupported, transcribeAudio, synthesizeSpeech, summarizeForSpeech } from '../utils/voice/voice-audio';
+import { SegmentedCapture, type CapturedSegment } from '../utils/voice/voice-capture';
+import { TurnTranscript, isHallucination, isSelfEcho, isImplausibleSpeechRate } from '../utils/voice/voice-turn';
+import { VOICE_TUNABLES, STT_BIAS_PROMPT, type VoiceMode, type VoiceStatus } from '../utils/voice/voice-config';
 import { playVoiceCue, playTranscriptTicks, speakAudio, stopSpeaking, duckSpeech, voiceCueDurationMs, type VoiceCueProfile } from '../utils/notifications';
-import { parseConfirmationIntent, parseGoAhead, parseAddressing, parseStopWork } from '../utils/voice-intent';
-import { buildConfirmationSummary, buildConfirmationDetail, buildCompletionSummary } from '../utils/voice-summary';
+import { parseConfirmationIntent, parseGoAhead, parseAddressing, parseStopWork } from '../utils/voice/voice-intent';
+import { buildConfirmationSummary, buildConfirmationDetail, buildCompletionSummary } from '../utils/voice/voice-summary';
 
 interface PendingConfirmation {
     kind: 'confirmation';

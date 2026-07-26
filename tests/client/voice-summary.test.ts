@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'bun:test';
-import { buildConfirmationSummary, buildConfirmationDetail, buildCompletionSummary, speakablePath, COMPLETION_SPEAK_CAP } from '../../src/client/utils/voice-summary';
+import { buildConfirmationSummary, buildConfirmationDetail, buildCompletionSummary, speakablePath, COMPLETION_SPEAK_CAP } from '../../src/client/utils/voice/voice-summary';
 import type { ConfirmationRequest } from '../../src/server/processor/confirmation/confirmation.types';
 
 // Defaults mirror a real shell confirmation: the runtime operation is
@@ -80,8 +80,8 @@ describe('speakablePath', () => {
     });
 
     test('caps deep paths at the nearest folders', () => {
-        expect(speakablePath('/home/alex/Code/khoj/pipali/src/client/utils/voice-summary.ts'))
-            .toBe('voice-summary.ts under the src/client/utils folder');
+        expect(speakablePath('/home/alex/code/pipali/src/client/utils/voice/voice-summary.ts'))
+            .toBe('voice-summary.ts under the client/utils/voice folder');
     });
 
     test('bare and root-level files are just the name', () => {

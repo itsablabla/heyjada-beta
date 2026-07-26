@@ -7,8 +7,8 @@
 import { isTauri } from './tauri';
 import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
 import i18n from '../i18n';
-import { VOICE_EARCONS, TRANSCRIPT_TICK, clampTickCount, tickBurstDurationMs, type EarconNote, type VoiceCueProfile } from './voice-earcons';
-import { VOICE_TUNABLES } from './voice-config';
+import { VOICE_EARCONS, TRANSCRIPT_TICK, clampTickCount, tickBurstDurationMs, type EarconNote, type VoiceCueProfile } from './voice/voice-earcons';
+import { VOICE_TUNABLES } from './voice/voice-config';
 
 let notificationPermissionGranted: boolean | null = null;
 
@@ -93,7 +93,7 @@ export function duckSpeech(ducked: boolean): void {
 
 // Earcon vocabulary (pure data + duration math) lives in voice-earcons.ts so
 // it's testable without an AudioContext; this module owns the players.
-export { voiceCueDurationMs, type VoiceCueProfile } from './voice-earcons';
+export { voiceCueDurationMs, type VoiceCueProfile } from './voice/voice-earcons';
 
 function scheduleNote(ctx: AudioContext, base: number, note: EarconNote): void {
     const osc = ctx.createOscillator();
