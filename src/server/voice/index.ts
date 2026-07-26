@@ -19,9 +19,13 @@ import { createChildLogger } from '../logger';
 
 const log = createChildLogger({ component: 'voice' });
 
+// Local-mode defaults for a directly-configured OpenAI provider. When
+// authenticated, the model is left unset so the platform picks its most
+// recently created public STT/TTS model.
 export const DEFAULT_STT_MODEL = 'gpt-4o-mini-transcribe';
 export const DEFAULT_TTS_MODEL = 'gpt-4o-mini-tts';
-export const DEFAULT_TTS_VOICE = 'alloy';
+// Voice for OpenAI's gpt-4o TTS models; other TTS models use their provider default.
+export const DEFAULT_TTS_VOICE = 'cedar';
 
 type SpeechFormat = 'mp3' | 'opus' | 'aac' | 'flac' | 'wav' | 'pcm';
 export const SPEECH_FORMAT_CONTENT_TYPES: Record<SpeechFormat, string> = {
@@ -75,21 +79,20 @@ export async function transcribeAudio(params: {
     /** Vocabulary-bias prompt (e.g. "Pipali" + command phrases) for reliable proper-noun transcription. */
     prompt?: string;
 }): Promise<TranscribeResult> {
-    const model = params.model || DEFAULT_STT_MODEL;
-
     if (await isAuthenticated()) {
         const form = new FormData();
         form.append('file', params.file);
-        form.append('model', model);
+        if (params.model) form.append('model', params.model);
         if (params.language) form.append('language', params.language);
         if (params.prompt) form.append('prompt', params.prompt);
         const result = await platformFetch<{ text: string; model: string }>(
             `${getPlatformUrl()}/voice/transcribe`,
             { method: 'POST', body: form },
         );
-        return { text: result.data.text ?? '', model: result.data.model ?? model };
+        return { text: result.data.text ?? '', model: result.data.model ?? params.model ?? '' };
     }
 
+    const model = params.model || DEFAULT_STT_MODEL;
     const client = await getLocalOpenAi();
     const transcription = await client.audio.transcriptions.create({
         file: params.file,
@@ -114,7 +117,6 @@ export async function synthesizeSpeech(params: {
     model?: string;
     format?: string;
 }): Promise<SpeechResult> {
-    const model = params.model || DEFAULT_TTS_MODEL;
     const format: SpeechFormat = params.format && params.format in SPEECH_FORMAT_CONTENT_TYPES
         ? (params.format as SpeechFormat)
         : 'mp3';
@@ -130,7 +132,7 @@ export async function synthesizeSpeech(params: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ text: params.text, voice: params.voice, model, format }),
+                body: JSON.stringify({ text: params.text, voice: params.voice, model: params.model, format }),
             });
             if (!res.ok) {
                 const errText = await res.text();
@@ -140,16 +142,19 @@ export async function synthesizeSpeech(params: {
             }
             return new Uint8Array(await res.arrayBuffer());
         });
-        return { audio: toArrayBufferBacked(bytes), contentType, model };
+        return { audio: toArrayBufferBacked(bytes), contentType, model: params.model ?? 'platform-default' };
     }
 
+    const model = params.model || DEFAULT_TTS_MODEL;
+    // Default voice is an OpenAI gpt-4o TTS name; other models keep their provider default.
+    const voice = params.voice || (model.startsWith('gpt-4o') ? DEFAULT_TTS_VOICE : undefined);
     const client = await getLocalOpenAi();
     const response = await client.audio.speech.create({
         model,
-        voice: params.voice || DEFAULT_TTS_VOICE,
         input: params.text,
         response_format: format,
-    });
+        ...(voice ? { voice } : {}),
+    } as Parameters<typeof client.audio.speech.create>[0]);
     const bytes = new Uint8Array(await response.arrayBuffer());
     log.info({ model, chars: params.text.length, bytes: bytes.length }, 'Synthesized speech (local)');
     return { audio: toArrayBufferBacked(bytes), contentType, model };
