@@ -247,6 +247,47 @@
         "taskComplete": "任务完成",
         "taskFinished": "你的任务已完成"
     },
+    "voice": {
+        "beta": "测试版",
+        "betaHint": "开启后，消息输入框旁会显示语音控制按钮。",
+        "enable": "启用语音模式",
+        "title": "语音",
+        "description": "用语音与 Pipali 交流——解放双手、双眼，离开书桌也能工作。",
+        "mode": {
+            "speak_freely": "有话直说",
+            "ask_first": "先问一声",
+            "off": "关闭"
+        },
+        "modeHint": {
+            "speak_freely": "一有结果就直接朗读",
+            "ask_first": "先发提示音，等你示意后再朗读",
+            "off": "关闭麦克风"
+        },
+        "modeMenu": {
+            "title": "语音模式",
+            "spokenHint": "随时可以说 \"Pipali, speak freely\" 或 \"Pipali, ask first\""
+        },
+        "enabledHint": "语音模式开启期间，设备附近的语音会被转写，以判断你是否在呼唤 Pipali；未呼唤 Pipali 的语音会被丢弃，绝不存储。",
+        "status": {
+            "idle": "等待 \"Pipali…\" 唤醒——点按说话",
+            "dormant": "语音已休眠——点按唤醒",
+            "announced": "Pipali 有话要说——说 \"Pipali, go ahead\" 或点按",
+            "speaking": "正在朗读——点按回复",
+            "listening": "正在聆听——点按发送",
+            "transcribing": "转写中…"
+        },
+        "coach": {
+            "idle": "说 \"Pipali…\" 开始说话——也可以直接输入",
+            "idleWorking": "正在处理——说 \"Pipali…\" 可调整方向，说 \"Pipali, stop\" 可中止",
+            "dormant": "语音已休眠——点击麦克风唤醒",
+            "goAheadPending": "Pipali 有事要告诉你——说 \"Pipali, go ahead\"",
+            "goAheadResult": "结果已就绪——说 \"Pipali, go ahead\" 收听",
+            "speaking": "直接说话即可打断——或说 \"stop\" 让它安静",
+            "listening": "说完后说 \"send it\"，想重说就说 \"scratch that\"",
+            "listeningDecision": "说 \"yes\"、\"no\"，或给出你自己的指示",
+            "listeningQuestion": "直接说出答案——说完后说 \"send it\""
+        }
+    },
     "settings": {
         "title": "设置",
         "loading": "正在加载设置...",

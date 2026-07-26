@@ -49,6 +49,11 @@
     color: var(--color-text-muted);
 }
 
+/* Voice coaching is instruction, not ghost text, so it reads a shade stronger. */
+.input-form textarea.voice-coached::placeholder {
+    color: var(--color-text-secondary);
+}
+
 .input-form textarea::selection {
     background: var(--color-selection-bg);
     color: var(--color-selection-text);
@@ -102,6 +107,109 @@
 .toolbar-button:hover {
     color: var(--color-text);
     background: var(--bg-hover);
+}
+
+/* Voice companion control — reflects the companion state. */
+.voice-button[aria-pressed="true"] {
+    color: var(--color-text);
+}
+.voice-button.voice-announced {
+    color: var(--color-text);
+    animation: pulse-attention 1.5s ease-in-out infinite;
+}
+.voice-button.voice-speaking {
+    color: var(--color-text);
+}
+.voice-button.voice-listening {
+    color: #ef4444;
+    animation: pulse 1.2s ease-in-out infinite;
+}
+.voice-button.voice-transcribing {
+    color: var(--color-text-muted);
+}
+.voice-button .spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Split control: status button + always-reachable mode menu */
+.voice-control {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.voice-control .voice-mode-trigger {
+    width: 14px;
+    margin-left: -6px;
+}
+
+.voice-mode-menu {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    right: 0;
+    min-width: 260px;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    z-index: var(--z-dropdown);
+    padding: 4px;
+}
+
+.voice-mode-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--color-text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.voice-mode-option:hover {
+    background: var(--bg-hover);
+}
+
+.voice-mode-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    flex: 1;
+    min-width: 0;
+}
+
+.voice-mode-option-label {
+    font-size: 13px;
+}
+
+.voice-mode-option-hint {
+    font-size: 11px;
+    color: var(--color-text-muted);
+}
+
+.voice-mode-menu-footer {
+    padding: 6px 10px 4px;
+    border-top: 1px solid var(--color-border);
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--color-text-muted);
+}
+
+/* Live transcript shown while a hands-free voice turn is open */
+.voice-live-transcript {
+    padding: 4px 8px 6px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--border-color, rgba(128, 128, 128, 0.15));
+}
+
+.voice-live-text {
+    color: var(--color-text);
+    white-space: pre-wrap;
 }
 
 .hidden-file-input {

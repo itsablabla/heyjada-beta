@@ -7,51 +7,202 @@
 import { isTauri } from './tauri';
 import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
 import i18n from '../i18n';
+import { VOICE_EARCONS, TRANSCRIPT_TICK, clampTickCount, tickBurstDurationMs, type EarconNote, type VoiceCueProfile } from './voice/voice-earcons';
+import { VOICE_TUNABLES } from './voice/voice-config';
 
 let notificationPermissionGranted: boolean | null = null;
 
 // Shared AudioContext for notification sounds (created lazily)
 let audioCtx: AudioContext | null = null;
 
+// Speech sits behind its own gain so a suspected barge-in can duck it without
+// touching the cue vocabulary, which stays at full level.
+let speechGain: GainNode | null = null;
+
 /**
  * Play a short two-tone chime for notifications using the Web Audio API.
  * No audio file required — synthesizes a brief ping sound.
  */
 function playNotificationSound(): void {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
     try {
-        if (!audioCtx) {
-            audioCtx = new AudioContext();
-        }
-        // Resume context if suspended (browsers require user gesture)
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-
-        const now = audioCtx.currentTime;
+        const now = ctx.currentTime;
 
         // First tone — higher pitch
-        const osc1 = audioCtx.createOscillator();
-        const gain1 = audioCtx.createGain();
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
         osc1.type = 'sine';
         osc1.frequency.value = 830;
         gain1.gain.setValueAtTime(0.3, now);
         gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-        osc1.connect(gain1).connect(audioCtx.destination);
+        osc1.connect(gain1).connect(ctx.destination);
         osc1.start(now);
         osc1.stop(now + 0.15);
 
         // Second tone — slightly higher, delayed
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
         osc2.type = 'sine';
         osc2.frequency.value = 1050;
         gain2.gain.setValueAtTime(0.3, now + 0.12);
         gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        osc2.connect(gain2).connect(audioCtx.destination);
+        osc2.connect(gain2).connect(ctx.destination);
         osc2.start(now + 0.12);
         osc2.stop(now + 0.3);
     } catch {
         // Audio not available — silently ignore
+    }
+}
+
+// ============================================================================
+// Voice companion audio: distinct attention cues + a TTS playback queue
+// ============================================================================
+
+/** Lazily create (and resume) the shared AudioContext. */
+function ensureAudioContext(): AudioContext | null {
+    try {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') void audioCtx.resume();
+        return audioCtx;
+    } catch {
+        return null;
+    }
+}
+
+function ensureSpeechGain(ctx: AudioContext): GainNode {
+    if (!speechGain) {
+        speechGain = ctx.createGain();
+        speechGain.connect(ctx.destination);
+    }
+    return speechGain;
+}
+
+/**
+ * Duck Pipali's speech the moment someone starts talking over it, before the
+ * words have been transcribed. Quieting down is the recoverable move: it costs
+ * nothing if the sound turns out to be Pipali's own echo, and it makes the
+ * response to a real interruption immediate instead of a transcription away.
+ */
+export function duckSpeech(ducked: boolean): void {
+    if (!audioCtx || !speechGain) return;
+    const target = ducked ? VOICE_TUNABLES.duckGain : 1;
+    speechGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    speechGain.gain.setTargetAtTime(target, audioCtx.currentTime, 0.02);
+}
+
+// Earcon vocabulary (pure data + duration math) lives in voice-earcons.ts so
+// it's testable without an AudioContext; this module owns the players.
+export { voiceCueDurationMs, type VoiceCueProfile } from './voice/voice-earcons';
+
+function scheduleNote(ctx: AudioContext, base: number, note: EarconNote): void {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = note.freq;
+    gain.gain.setValueAtTime(note.gain, base + note.at);
+    gain.gain.exponentialRampToValueAtTime(0.001, base + note.at + note.dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(base + note.at);
+    osc.stop(base + note.at + note.dur);
+}
+
+/** Play a voice earcon (does not speak). */
+export function playVoiceCue(profile: VoiceCueProfile): void {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    try {
+        const now = ctx.currentTime;
+        for (const note of VOICE_EARCONS[profile]) scheduleNote(ctx, now, note);
+    } catch {
+        // ignore
+    }
+}
+
+/**
+ * Typewriter burst: one soft tick per transcribed word (capped), alternating
+ * between two pitches — eyes-free verification that words are landing.
+ * Returns the burst duration in ms so callers can suppress capture around it.
+ */
+export function playTranscriptTicks(wordCount: number): number {
+    const ctx = ensureAudioContext();
+    if (!ctx) return 0;
+    try {
+        const now = ctx.currentTime;
+        const ticks = clampTickCount(wordCount);
+        for (let i = 0; i < ticks; i++) {
+            scheduleNote(ctx, now, {
+                freq: TRANSCRIPT_TICK.freqs[i % 2]!,
+                at: i * TRANSCRIPT_TICK.spacing,
+                dur: TRANSCRIPT_TICK.dur,
+                gain: TRANSCRIPT_TICK.gain,
+            });
+        }
+    } catch {
+        // ignore
+    }
+    return tickBurstDurationMs(wordCount);
+}
+
+// Serialized TTS playback so a completion summary never overlaps a confirmation readback.
+let speechSource: AudioBufferSourceNode | null = null;
+let speechChain: Promise<void> = Promise.resolve();
+
+function playDecodedBuffer(ctx: AudioContext, data: ArrayBuffer): Promise<void> {
+    return new Promise<void>((resolve) => {
+        // decodeAudioData detaches its input, so decode a copy.
+        ctx.decodeAudioData(data.slice(0))
+            .then((audioBuffer) => {
+                const source = ctx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(ensureSpeechGain(ctx));
+                speechSource = source;
+                source.onended = () => {
+                    if (speechSource === source) speechSource = null;
+                    resolve();
+                };
+                source.start();
+            })
+            .catch(() => resolve());
+    });
+}
+
+/** Queue TTS audio for playback; resolves when it finishes. Never overlaps prior speech. */
+export function speakAudio(data: ArrayBuffer): Promise<void> {
+    const ctx = ensureAudioContext();
+    if (!ctx) return Promise.resolve();
+    const play = speechChain.catch(() => {}).then(() => playDecodedBuffer(ctx, data));
+    speechChain = play.catch(() => {});
+    return play;
+}
+
+/** Stop current playback and clear the queue (barge-in). */
+export function stopSpeaking(): void {
+    if (speechSource) {
+        try { speechSource.stop(); } catch { /* already stopped */ }
+        speechSource = null;
+    }
+    speechChain = Promise.resolve();
+    duckSpeech(false);
+}
+
+/** Resume the AudioContext and play a brief tick — call from a user gesture to satisfy autoplay policy. */
+export async function warmAudioContext(): Promise<void> {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    try {
+        if (ctx.state === 'suspended') await ctx.resume();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 660;
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+    } catch {
+        // ignore
     }
 }
 

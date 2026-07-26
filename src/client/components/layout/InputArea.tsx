@@ -1,8 +1,10 @@
 // Message input area with model selector, file attachment, connection status, and send/stop controls
 
-import React, { useEffect, useRef } from 'react';
-import { ArrowUp, Square, Upload, X, FileText, FileSpreadsheet, File, Paperclip, ChevronDown, Circle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowUp, Square, Upload, X, FileText, FileSpreadsheet, File, Paperclip, ChevronDown, Circle, Headphones, Mic, MicOff, Volume2, Bell, Check, Loader2 } from 'lucide-react';
 import type { ConfirmationRequest, ChatModelInfo } from '../../types';
+import type { VoiceMode, VoiceStatus } from '../../utils/voice/voice-config';
+import { voiceCoachKey } from '../../utils/voice/voice-coach';
 import type { StagedFile } from '../../hooks/useFileDrop';
 import { ConfirmationDialog } from '../confirmation/ConfirmationDialog';
 import { formatFileSize } from '../../utils/formatting';
@@ -30,6 +32,13 @@ interface InputAreaProps {
     onRemoveFile?: (id: string) => void;
     onPasteFiles?: (files: File[]) => void;
     onPickFiles?: (browserFiles?: File[]) => void;
+    voiceSupported?: boolean;
+    voiceMode?: VoiceMode;
+    voiceStatus?: VoiceStatus;
+    voiceTranscript?: string;
+    onVoiceEnable?: () => void;
+    onVoiceModeChange?: (mode: VoiceMode) => void;
+    onVoiceTap?: () => void;
     models: ChatModelInfo[];
     selectedModel: ChatModelInfo | null;
     showModelDropdown: boolean;
@@ -70,6 +79,13 @@ export function InputArea({
     onRemoveFile,
     onPasteFiles,
     onPickFiles,
+    voiceSupported = false,
+    voiceMode = 'off',
+    voiceStatus = 'idle',
+    voiceTranscript = '',
+    onVoiceEnable,
+    onVoiceModeChange,
+    onVoiceTap,
     models,
     selectedModel,
     showModelDropdown,
@@ -81,6 +97,10 @@ export function InputArea({
     const canSend = input.trim() || hasFiles;
     const fileInputRef = useRef<HTMLInputElement>(null);
     const modelDropdownRef = useRef<HTMLDivElement>(null);
+    const voiceMenuRef = useRef<HTMLDivElement>(null);
+    const [showVoiceMenu, setShowVoiceMenu] = useState(false);
+    const voiceEnabled = voiceMode !== 'off';
+    const voiceTitle = voiceEnabled ? t(`voice.status.${voiceStatus}`) : t('voice.enable');
     const showHint = useRef(Math.random() < 0.05).current;
     const placeholder = !showHint
         ? t('inputArea.askAnything')
@@ -88,11 +108,26 @@ export function InputArea({
             ? t('inputArea.tipForkConversation', { modKey: MOD_KEY })
             : t('inputArea.tipBackgroundTask', { modKey: MOD_KEY });
 
-    // Close model dropdown when clicking outside
+    // With voice on, the placeholder coaches the spoken command for the next
+    // step; it outranks the typed-input placeholders below, which advise on the
+    // wrong modality. The mic tooltip stays on tap affordances.
+    const coachKey = voiceCoachKey({
+        mode: voiceMode,
+        status: voiceStatus,
+        pending: pendingConfirmation
+            ? (pendingConfirmation.operation === 'ask_user' ? 'question' : 'confirmation')
+            : null,
+        isProcessing,
+    });
+
+    // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
                 setShowModelDropdown(false);
+            }
+            if (voiceMenuRef.current && !voiceMenuRef.current.contains(e.target as Node)) {
+                setShowVoiceMenu(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -170,6 +205,13 @@ export function InputArea({
                         </div>
                     )}
 
+                    {/* Live voice transcript while a hands-free turn is open */}
+                    {(voiceStatus === 'listening' || voiceStatus === 'transcribing' || !!voiceTranscript) && voiceEnabled && (
+                        <div className="voice-live-transcript" aria-live="polite">
+                            <span className="voice-live-text">{voiceTranscript || '…'}</span>
+                        </div>
+                    )}
+
                     <textarea
                         ref={textareaRef}
                         value={input}
@@ -198,18 +240,21 @@ export function InputArea({
                             // Pass through to parent handler for other cases
                             onKeyDown(e);
                         }}
+                        className={coachKey ? 'voice-coached' : undefined}
                         placeholder={
-                            pendingConfirmation
-                                ? (showHint && pendingConfirmation.options[0]
-                                    ? t('inputArea.tipConfirmation', { altKey: ALT_KEY, label: pendingConfirmation.options[0].label })
-                                    : pendingConfirmation.operation === 'ask_user'
-                                        ? t('inputArea.customResponse')
-                                        : t('inputArea.alternativeInstructions'))
-                                : isStopped
-                                    ? t('inputArea.stopped')
-                                    : isProcessing
-                                        ? t('inputArea.processing')
-                                        : placeholder
+                            coachKey
+                                ? t(coachKey)
+                                : pendingConfirmation
+                                    ? (showHint && pendingConfirmation.options[0]
+                                        ? t('inputArea.tipConfirmation', { altKey: ALT_KEY, label: pendingConfirmation.options[0].label })
+                                        : pendingConfirmation.operation === 'ask_user'
+                                            ? t('inputArea.customResponse')
+                                            : t('inputArea.alternativeInstructions'))
+                                    : isStopped
+                                        ? t('inputArea.stopped')
+                                        : isProcessing
+                                            ? t('inputArea.processing')
+                                            : placeholder
                         }
                         rows={1}
                         disabled={!isConnected}
@@ -323,6 +368,57 @@ export function InputArea({
                             >
                                 <Paperclip size={16} />
                             </button>
+                            {voiceSupported && (
+                                <div className="voice-control" ref={voiceMenuRef}>
+                                    <button
+                                        type="button"
+                                        className={`toolbar-button voice-button ${voiceEnabled ? `voice-${voiceStatus}` : 'voice-disabled'}`}
+                                        onClick={() => (voiceEnabled ? onVoiceTap?.() : onVoiceEnable?.())}
+                                        title={voiceTitle}
+                                        aria-label={voiceTitle}
+                                        aria-pressed={voiceEnabled}
+                                    >
+                                        {!voiceEnabled ? <Headphones size={16} />
+                                            : voiceStatus === 'transcribing' ? <Loader2 size={16} className="spin" />
+                                            : voiceStatus === 'dormant' ? <MicOff size={16} />
+                                            : voiceStatus === 'speaking' || voiceStatus === 'announced' ? <Volume2 size={16} />
+                                            : <Mic size={16} />}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="toolbar-button voice-mode-trigger"
+                                        onClick={() => setShowVoiceMenu((v) => !v)}
+                                        title={t('voice.modeMenu.title')}
+                                        aria-label={t('voice.modeMenu.title')}
+                                        aria-haspopup="menu"
+                                        aria-expanded={showVoiceMenu}
+                                    >
+                                        <ChevronDown size={12} />
+                                    </button>
+                                    {showVoiceMenu && (
+                                        <div className="voice-mode-menu" role="menu" aria-label={t('voice.modeMenu.title')}>
+                                            {(['speak_freely', 'ask_first', 'off'] as const).map((m) => (
+                                                <button
+                                                    key={m}
+                                                    type="button"
+                                                    role="menuitemradio"
+                                                    aria-checked={voiceMode === m}
+                                                    className={`voice-mode-option ${voiceMode === m ? 'selected' : ''}`}
+                                                    onClick={() => { setShowVoiceMenu(false); onVoiceModeChange?.(m); }}
+                                                >
+                                                    {m === 'speak_freely' ? <Volume2 size={14} /> : m === 'ask_first' ? <Bell size={14} /> : <Headphones size={14} />}
+                                                    <span className="voice-mode-option-text">
+                                                        <span className="voice-mode-option-label">{t(`voice.mode.${m}`)}</span>
+                                                        <span className="voice-mode-option-hint">{t(`voice.modeHint.${m}`)}</span>
+                                                    </span>
+                                                    {voiceMode === m && <Check size={14} className="voice-mode-option-check" />}
+                                                </button>
+                                            ))}
+                                            <div className="voice-mode-menu-footer">{t('voice.modeMenu.spokenHint')}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             {isProcessing ? (
                                 canSend ? (
                                     <button

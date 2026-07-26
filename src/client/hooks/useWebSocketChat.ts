@@ -1365,6 +1365,7 @@ export interface UseWebSocketChatOptions {
     onConversationCreated?: (conversationId: string, history?: any[]) => void;
     onConfirmationRequest?: (request: ConfirmationRequest, conversationId: string, runId: string) => void;
     onTaskComplete?: (request: string | undefined, response: string, conversationId: string) => void;
+    onStepStart?: (conversationId: string, runId: string) => void;
     onBillingError?: (error: BillingError, conversationId?: string) => void;
     onAuthError?: (error: AuthError, conversationId?: string) => void;
     onError?: (error: string, conversationId?: string) => void;
@@ -1377,6 +1378,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
         onConversationCreated,
         onConfirmationRequest,
         onTaskComplete,
+        onStepStart,
         onBillingError,
         onAuthError,
         onError,
@@ -1406,6 +1408,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
         | 'onConversationCreated'
         | 'onConfirmationRequest'
         | 'onTaskComplete'
+        | 'onStepStart'
         | 'onBillingError'
         | 'onAuthError'
         | 'onError'
@@ -1414,6 +1417,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
         onConversationCreated,
         onConfirmationRequest,
         onTaskComplete,
+        onStepStart,
         onBillingError,
         onAuthError,
         onError,
@@ -1425,6 +1429,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
             onConversationCreated,
             onConfirmationRequest,
             onTaskComplete,
+            onStepStart,
             onBillingError,
             onAuthError,
             onError,
@@ -1434,6 +1439,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
         onConversationCreated,
         onConfirmationRequest,
         onTaskComplete,
+        onStepStart,
         onBillingError,
         onAuthError,
         onError,
@@ -1461,6 +1467,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
             onConversationCreated: onConversationCreatedCb,
             onConfirmationRequest: onConfirmationRequestCb,
             onTaskComplete: onTaskCompleteCb,
+            onStepStart: onStepStartCb,
             onBillingError: onBillingErrorCb,
             onAuthError: onAuthErrorCb,
             onError: onErrorCb,
@@ -1539,6 +1546,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
                     message: message.data.message,
                     toolCalls: message.data.toolCalls || [],
                 });
+                onStepStartCb?.(convId, runId);
                 break;
 
             case 'step_end':

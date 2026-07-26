@@ -247,6 +247,47 @@
         "taskComplete": "T\u00e2che termin\u00e9e",
         "taskFinished": "Ta t\u00e2che est termin\u00e9e"
     },
+    "voice": {
+        "beta": "Bêta",
+        "betaHint": "En l'activant, les commandes vocales apparaissent à côté de la zone de message.",
+        "enable": "Activer le mode vocal",
+        "title": "Voix",
+        "description": "Interagis avec Pipali par la voix. Travaille sans attache, loin de ton bureau.",
+        "mode": {
+            "speak_freely": "Parler librement",
+            "ask_first": "Demander d'abord",
+            "off": "Désactivé"
+        },
+        "modeHint": {
+            "speak_freely": "Parle dès qu'il a du nouveau pour toi",
+            "ask_first": "Émet un son, puis attend ton feu vert",
+            "off": "Micro désactivé"
+        },
+        "modeMenu": {
+            "title": "Mode vocal",
+            "spokenHint": "Dis \"Pipali, speak freely\" ou \"Pipali, ask first\" à tout moment"
+        },
+        "enabledHint": "Quand le mode vocal est actif, la parole captée près de cet appareil est transcrite pour vérifier si tu t'adresses à Pipali ; la parole non adressée est ignorée et jamais conservée.",
+        "status": {
+            "idle": "À l'écoute de \"Pipali…\" — appuie pour parler",
+            "dormant": "Mode vocal en veille — appuie pour le réveiller",
+            "announced": "Pipali a quelque chose à dire — dis \"Pipali, go ahead\" ou appuie",
+            "speaking": "Lecture en cours — appuie pour répondre",
+            "listening": "À l'écoute — appuie pour envoyer",
+            "transcribing": "Transcription…"
+        },
+        "coach": {
+            "idle": "Dis \"Pipali…\" pour parler — ou écris ici",
+            "idleWorking": "En cours — dis \"Pipali…\" pour réorienter, \"Pipali, stop\" pour tout arrêter",
+            "dormant": "Le mode vocal dort — touche le micro pour le réveiller",
+            "goAheadPending": "Pipali a quelque chose pour toi — dis \"Pipali, go ahead\"",
+            "goAheadResult": "Tes résultats sont prêts — dis \"Pipali, go ahead\" pour les entendre",
+            "speaking": "Parle pour interrompre — ou dis \"stop\" pour le silence",
+            "listening": "Dis \"send it\" quand tu as fini, \"scratch that\" pour recommencer",
+            "listeningDecision": "Dis \"yes\", \"no\", ou donne tes propres instructions",
+            "listeningQuestion": "Réponds à voix haute — dis \"send it\" quand tu as fini"
+        }
+    },
     "settings": {
         "title": "Param\u00e8tres",
         "loading": "Chargement des param\u00e8tres...",

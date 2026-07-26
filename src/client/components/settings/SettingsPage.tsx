@@ -1,11 +1,12 @@
 // Settings page component
 
 import React, { useState, useEffect } from 'react';
-import { Save, Loader2, Check, AlertCircle, Shield, User, FolderLock } from 'lucide-react';
+import { Save, Loader2, Check, AlertCircle, Shield, User, FolderLock, Headphones } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../utils/api';
 import { SUPPORTED_LANGUAGES } from '../../i18n';
 import { PathListEditor } from './PathListEditor';
+import { useVoiceSettings } from '../../hooks/useVoiceSettings';
 
 type SettingsTab = 'profile' | 'permissions';
 
@@ -61,6 +62,9 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
     const [error, setError] = useState<string | null>(null);
+
+    // Voice feature flag (beta, per-device). Session mode lives in the chat-input menu.
+    const { enabled: voiceFeatureEnabled, setEnabled: setVoiceEnabled } = useVoiceSettings();
 
     // Sandbox state
     const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus | null>(null);
@@ -253,6 +257,7 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                     )}
 
                     {activeTab === 'profile' && (
+                      <>
                         <div className="settings-section">
                             <h3 className="settings-section-title">
                                 <User size={18} />
@@ -353,6 +358,7 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                                 </div>
                             </div>
                         </div>
+                      </>
                     )}
 
                     {activeTab === 'permissions' && (
@@ -363,6 +369,33 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                                 <span>{sandboxError}</span>
                             </div>
                         )}
+
+                        {/* Voice mode (beta) — gates all voice UI and the mic session */}
+                        <div className="settings-section">
+                            <div className="settings-section-header">
+                                <div>
+                                    <h3 className="settings-section-title">
+                                        <Headphones size={18} />
+                                        {t('voice.title')}
+                                        <span className="settings-beta-badge">{t('voice.beta')}</span>
+                                    </h3>
+                                    <p className="settings-section-description">
+                                        {t('voice.description')}
+                                    </p>
+                                </div>
+                                <label className="toggle-switch">
+                                    <input
+                                        id="voice-enabled"
+                                        type="checkbox"
+                                        checked={voiceFeatureEnabled}
+                                        onChange={(e) => setVoiceEnabled(e.target.checked)}
+                                    />
+                                    <span className="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <p className="settings-field-hint">{t('voice.betaHint')}</p>
+                            <p className="settings-field-hint">{t('voice.enabledHint')}</p>
+                        </div>
 
                         {/* Sandbox toggle */}
                         <div className="settings-section">

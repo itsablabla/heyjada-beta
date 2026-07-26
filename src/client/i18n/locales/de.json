@@ -247,6 +247,47 @@
         "taskComplete": "Task abgeschlossen",
         "taskFinished": "Dein Task wurde abgeschlossen"
     },
+    "voice": {
+        "beta": "Beta",
+        "betaHint": "Wenn aktiviert, erscheinen die Sprachsteuerungen neben dem Eingabefeld.",
+        "enable": "Sprachmodus aktivieren",
+        "title": "Sprache",
+        "description": "Interagiere mit Pipali per Sprache. Arbeite, ohne an deinen Schreibtisch gefesselt zu sein.",
+        "mode": {
+            "speak_freely": "Frei sprechen",
+            "ask_first": "Erst fragen",
+            "off": "Aus"
+        },
+        "modeHint": {
+            "speak_freely": "Spricht, sobald es etwas für dich hat",
+            "ask_first": "Meldet sich per Ton und wartet auf dein Okay",
+            "off": "Mikrofon aus"
+        },
+        "modeMenu": {
+            "title": "Sprachmodus",
+            "spokenHint": "Sage jederzeit \"Pipali, speak freely\" oder \"Pipali, ask first\""
+        },
+        "enabledHint": "Solange der Sprachmodus aktiv ist, wird Sprache in der Nähe dieses Geräts transkribiert, um zu prüfen, ob du Pipali ansprichst; nicht adressierte Sprache wird verworfen und nie gespeichert.",
+        "status": {
+            "idle": "Wartet auf \"Pipali…\" – zum Sprechen tippen",
+            "dormant": "Sprachmodus schläft – zum Aufwecken tippen",
+            "announced": "Pipali möchte etwas sagen – sage \"Pipali, go ahead\" oder tippe",
+            "speaking": "Spricht – zum Antworten tippen",
+            "listening": "Hört zu – zum Senden tippen",
+            "transcribing": "Transkribiert…"
+        },
+        "coach": {
+            "idle": "Sage \"Pipali…\" zum Sprechen – oder tippe hier",
+            "idleWorking": "Arbeitet – sage \"Pipali…\" zum Umlenken, \"Pipali, stop\" zum Abbrechen",
+            "dormant": "Sprachmodus schläft – tippe auf das Mikrofon zum Aufwecken",
+            "goAheadPending": "Pipali hat etwas für dich – sage \"Pipali, go ahead\"",
+            "goAheadResult": "Deine Ergebnisse sind fertig – sage \"Pipali, go ahead\" zum Anhören",
+            "speaking": "Sprich einfach los, um zu unterbrechen – oder sage \"stop\" für Ruhe",
+            "listening": "Sage \"send it\", wenn du fertig bist, \"scratch that\" zum Neuanfangen",
+            "listeningDecision": "Sage \"yes\", \"no\" oder gib eigene Anweisungen",
+            "listeningQuestion": "Antworte laut – sage \"send it\", wenn du fertig bist"
+        }
+    },
     "settings": {
         "title": "Einstellungen",
         "loading": "Einstellungen werden geladen...",
