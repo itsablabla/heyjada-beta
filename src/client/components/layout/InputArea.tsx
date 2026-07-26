@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowUp, Square, Upload, X, FileText, FileSpreadsheet, File, Paperclip, ChevronDown, Circle, Headphones, Mic, MicOff, Volume2, Bell, Check, Loader2 } from 'lucide-react';
 import type { ConfirmationRequest, ChatModelInfo } from '../../types';
-import type { VoiceMode } from '../../utils/voice-config';
+import type { VoiceMode, VoiceStatus } from '../../utils/voice-config';
+import { voiceCoachKey } from '../../utils/voice-coach';
 import type { StagedFile } from '../../hooks/useFileDrop';
 import { ConfirmationDialog } from '../confirmation/ConfirmationDialog';
 import { formatFileSize } from '../../utils/formatting';
@@ -33,7 +34,7 @@ interface InputAreaProps {
     onPickFiles?: (browserFiles?: File[]) => void;
     voiceSupported?: boolean;
     voiceMode?: VoiceMode;
-    voiceStatus?: 'idle' | 'dormant' | 'announced' | 'speaking' | 'listening' | 'transcribing';
+    voiceStatus?: VoiceStatus;
     voiceTranscript?: string;
     onVoiceEnable?: () => void;
     onVoiceModeChange?: (mode: VoiceMode) => void;
@@ -113,6 +114,18 @@ export function InputArea({
         : conversationId
             ? t('inputArea.tipForkConversation', { modKey: MOD_KEY })
             : t('inputArea.tipBackgroundTask', { modKey: MOD_KEY });
+
+    // With voice on, the placeholder coaches the spoken command for the next
+    // step; it outranks the typed-input placeholders below, which advise on the
+    // wrong modality. The mic tooltip stays on tap affordances.
+    const coachKey = voiceCoachKey({
+        mode: voiceMode,
+        status: voiceStatus,
+        pending: pendingConfirmation
+            ? (pendingConfirmation.operation === 'ask_user' ? 'question' : 'confirmation')
+            : null,
+        isProcessing,
+    });
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -203,7 +216,6 @@ export function InputArea({
                     {(voiceStatus === 'listening' || voiceStatus === 'transcribing' || !!voiceTranscript) && voiceEnabled && (
                         <div className="voice-live-transcript" aria-live="polite">
                             <span className="voice-live-text">{voiceTranscript || '…'}</span>
-                            <span className="voice-live-hint">{t('voice.liveHint')}</span>
                         </div>
                     )}
 
@@ -235,18 +247,21 @@ export function InputArea({
                             // Pass through to parent handler for other cases
                             onKeyDown(e);
                         }}
+                        className={coachKey ? 'voice-coached' : undefined}
                         placeholder={
-                            pendingConfirmation
-                                ? (showHint && pendingConfirmation.options[0]
-                                    ? t('inputArea.tipConfirmation', { altKey: ALT_KEY, label: pendingConfirmation.options[0].label })
-                                    : pendingConfirmation.operation === 'ask_user'
-                                        ? t('inputArea.customResponse')
-                                        : t('inputArea.alternativeInstructions'))
-                                : isStopped
-                                    ? t('inputArea.stopped')
-                                    : isProcessing
-                                        ? t('inputArea.processing')
-                                        : placeholder
+                            coachKey
+                                ? t(coachKey)
+                                : pendingConfirmation
+                                    ? (showHint && pendingConfirmation.options[0]
+                                        ? t('inputArea.tipConfirmation', { altKey: ALT_KEY, label: pendingConfirmation.options[0].label })
+                                        : pendingConfirmation.operation === 'ask_user'
+                                            ? t('inputArea.customResponse')
+                                            : t('inputArea.alternativeInstructions'))
+                                    : isStopped
+                                        ? t('inputArea.stopped')
+                                        : isProcessing
+                                            ? t('inputArea.processing')
+                                            : placeholder
                         }
                         rows={1}
                         disabled={!isConnected}

@@ -90,7 +90,6 @@
         "beta": "Beta",
         "betaHint": "Turning this on adds the voice controls next to the message box.",
         "enable": "Enable voice mode",
-        "liveHint": "Pause anytime — say \"send it\" or \"over to you\" to send, \"scratch that\" to discard",
         "title": "Voice",
         "description": "Use voice to interact with Pipali. Experience working hands, eyes and desk free.",
         "mode": {
@@ -115,6 +114,17 @@
             "speaking": "Speaking — tap to reply",
             "listening": "Listening — tap to send",
             "transcribing": "Transcribing…"
+        },
+        "coach": {
+            "idle": "Say \"Pipali…\" to talk — or type here",
+            "idleWorking": "Working — say \"Pipali…\" to redirect, \"Pipali, stop\" to call it off",
+            "dormant": "Voice is asleep — tap the mic to wake it",
+            "goAheadPending": "Pipali has something for you — say \"Pipali, go ahead\"",
+            "goAheadResult": "Your results are ready — say \"Pipali, go ahead\" to hear them",
+            "speaking": "Just talk to cut in — or say \"stop\" for quiet",
+            "listening": "Say \"send it\" when you're done, \"scratch that\" to redo",
+            "listeningDecision": "Say \"yes\", \"no\", or give your own instructions",
+            "listeningQuestion": "Answer out loud — say \"send it\" when you're done"
         }
     },
     "home": {

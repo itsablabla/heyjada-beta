@@ -251,7 +251,6 @@
         "beta": "Beta",
         "betaHint": "Wenn aktiviert, erscheinen die Sprachsteuerungen neben dem Eingabefeld.",
         "enable": "Sprachmodus aktivieren",
-        "liveHint": "Pausen sind jederzeit okay – sage \"send it\" oder \"over to you\" zum Senden, \"scratch that\" zum Verwerfen",
         "title": "Sprache",
         "description": "Interagiere mit Pipali per Sprache. Arbeite, ohne Hände, Augen oder Schreibtisch zu brauchen.",
         "mode": {
@@ -276,6 +275,17 @@
             "speaking": "Spricht – zum Antworten tippen",
             "listening": "Hört zu – zum Senden tippen",
             "transcribing": "Transkribiert…"
+        },
+        "coach": {
+            "idle": "Sage \"Pipali…\" zum Sprechen – oder tippe hier",
+            "idleWorking": "Arbeitet – sage \"Pipali…\" zum Umlenken, \"Pipali, stop\" zum Abbrechen",
+            "dormant": "Sprachmodus schläft – tippe auf das Mikrofon zum Aufwecken",
+            "goAheadPending": "Pipali hat etwas für dich – sage \"Pipali, go ahead\"",
+            "goAheadResult": "Deine Ergebnisse sind fertig – sage \"Pipali, go ahead\" zum Anhören",
+            "speaking": "Sprich einfach los, um zu unterbrechen – oder sage \"stop\" für Ruhe",
+            "listening": "Sage \"send it\", wenn du fertig bist, \"scratch that\" für neu",
+            "listeningDecision": "Sage \"yes\", \"no\" oder gib eigene Anweisungen",
+            "listeningQuestion": "Antworte laut – sage \"send it\", wenn du fertig bist"
         }
     },
     "settings": {

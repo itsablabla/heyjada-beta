@@ -64,6 +64,13 @@ export const VOICE_TUNABLES = {
  */
 export type VoiceMode = 'off' | 'ask_first' | 'speak_freely';
 
+/**
+ * Where a live voice session is in its cycle. `dormant` is the mic off after an
+ * idle timeout; `announced` is Pipali holding something back until the user
+ * gives a go-ahead. Drives both the mic button and the composer's coaching.
+ */
+export type VoiceStatus = 'idle' | 'dormant' | 'announced' | 'speaking' | 'listening' | 'transcribing';
+
 /** Whole-utterance phrases that switch Pipali to speaking without a go-ahead. */
 export const SPEAK_FREELY_PHRASES = ['speak freely', 'talk freely'];
 

@@ -49,6 +49,11 @@
     color: var(--color-text-muted);
 }
 
+/* Voice coaching is instruction, not ghost text, so it reads a shade stronger. */
+.input-form textarea.voice-coached::placeholder {
+    color: var(--color-text-secondary);
+}
+
 .input-form textarea::selection {
     background: var(--color-selection-bg);
     color: var(--color-selection-text);
@@ -196,9 +201,6 @@
 
 /* Live transcript shown while a hands-free voice turn is open */
 .voice-live-transcript {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
     padding: 4px 8px 6px;
     font-size: 12px;
     color: var(--color-text-muted);
@@ -208,11 +210,6 @@
 .voice-live-text {
     color: var(--color-text);
     white-space: pre-wrap;
-}
-
-.voice-live-hint {
-    opacity: 0.7;
-    font-size: 11px;
 }
 
 .hidden-file-input {

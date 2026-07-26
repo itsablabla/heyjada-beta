@@ -251,7 +251,6 @@
         "beta": "Bêta",
         "betaHint": "En l'activant, les commandes vocales apparaissent à côté de la zone de message.",
         "enable": "Activer le mode vocal",
-        "liveHint": "Fais des pauses librement — dis \"send it\" ou \"over to you\" pour envoyer, \"scratch that\" pour annuler",
         "title": "Voix",
         "description": "Interagis avec Pipali par la voix. Travaille sans les mains, sans les yeux et sans bureau.",
         "mode": {
@@ -276,6 +275,17 @@
             "speaking": "Lecture en cours — appuie pour répondre",
             "listening": "À l'écoute — appuie pour envoyer",
             "transcribing": "Transcription…"
+        },
+        "coach": {
+            "idle": "Dis \"Pipali…\" pour parler — ou écris ici",
+            "idleWorking": "En cours — dis \"Pipali…\" pour réorienter, \"Pipali, stop\" pour tout arrêter",
+            "dormant": "Le mode vocal dort — touche le micro pour le réveiller",
+            "goAheadPending": "Pipali a quelque chose pour toi — dis \"Pipali, go ahead\"",
+            "goAheadResult": "Tes résultats sont prêts — dis \"Pipali, go ahead\" pour les entendre",
+            "speaking": "Parle pour interrompre — ou dis \"stop\" pour le silence",
+            "listening": "Dis \"send it\" quand tu as fini, \"scratch that\" pour recommencer",
+            "listeningDecision": "Dis \"yes\", \"no\", ou donne tes propres instructions",
+            "listeningQuestion": "Réponds à voix haute — dis \"send it\" quand tu as fini"
         }
     },
     "settings": {
