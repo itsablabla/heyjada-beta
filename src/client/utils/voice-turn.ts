@@ -31,7 +31,10 @@ const HALLUCINATION_PATTERNS: RegExp[] = [
     /^thank you for watching[\s\S]*$/i,
     /^please (like and )?subscribe[\s\S]*$/i,
     /^subtitles? by[\s\S]*$/i,
-    /^\[?(blank[_ ]?audio|silence|music|inaudible)\]?[.!]?$/i,
+    /^(blank[_ ]?audio|silence|music|inaudible)[.!]?$/i,
+    // Any wholly-bracketed transcript is a tag, never speech: "[MUSIC PLAYING]",
+    // "[Applause]", "[SOUND]" — the enumerated list kept missing the variants.
+    /^\[[^\]]*\]$/,
     /^you[.!]?$/i,
     /^[.\s]*$/,
     // "hey pipali" was here as a suspected prompt echo, but it is the documented

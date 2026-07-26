@@ -51,8 +51,14 @@ describe('isHallucination', () => {
         }
     });
 
+    test('flags any wholly-bracketed tag, not just the enumerated ones', () => {
+        for (const s of ['[MUSIC PLAYING]', '[Applause]', '[SOUND]', '[ Silence ]']) {
+            expect(isHallucination(s)).toBe(true);
+        }
+    });
+
     test('passes real dictation through', () => {
-        for (const s of ['Thank the team in the email', 'Research the market for me', 'yes']) {
+        for (const s of ['Thank the team in the email', 'Research the market for me', 'yes', 'Add [TODO] markers to the file']) {
             expect(isHallucination(s)).toBe(false);
         }
     });
