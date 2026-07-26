@@ -1,7 +1,7 @@
 /**
  * Voice companion: the brain of hands and eyes-free interaction.
  *
- * Layered over the existing chat/run/confirmation flow — no new agent loop.
+ * Layered over the existing chat run flow — no new agent loop.
  * While voice is enabled, a continuous VAD-gated session listens: the mic stays open,
  * local VAD detects speech, each detected segment is transcribed, and the current parser
  * context decides what acts. Unaddressed ambient speech is discarded.
@@ -89,10 +89,10 @@ export interface UseVoiceCompanionParams {
     activeConversationId: string | undefined;
     sendMessage: (text: string, conversationId?: string) => void;
     respondToConfirmation: (conversationId: string, runId: string, requestId: string, optionId: string, guidance?: string) => void;
-    /** Abandon the run in flight — what "Pipali, stop" means while it works. */
+    /** Stop in flight run via voice command ("Pipali, stop"), equivalent of clicking stop button. */
     stopRun?: () => void;
     onError?: (message: string) => void;
-    /** Persist a mode change (spoken switches route through here too). */
+    /** Persist a mode change via voice commands. */
     onModeChange?: (mode: VoiceMode) => void;
 }
 

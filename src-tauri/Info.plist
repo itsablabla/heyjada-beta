@@ -5,6 +5,6 @@
     <!-- Required for voice mode: getUserMedia in the webview triggers the macOS
          microphone permission prompt; without this key TCC terminates the app. -->
     <key>NSMicrophoneUsageDescription</key>
-    <string>Pipali uses the microphone for voice chat: dictating messages and replying to confirmations hands-free.</string>
+    <string>Pipali uses your microphone in voice mode, so you can talk with it hands-free.</string>
 </dict>
 </plist>

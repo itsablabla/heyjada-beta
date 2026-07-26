@@ -91,7 +91,7 @@
         "betaHint": "Turning this on adds the voice controls next to the message box.",
         "enable": "Enable voice mode",
         "title": "Voice",
-        "description": "Use voice to interact with Pipali. Experience working hands, eyes and desk free.",
+        "description": "Use voice to interact with Pipali. Work without being tethered to your desk.",
         "mode": {
             "speak_freely": "Speak freely",
             "ask_first": "Ask first",

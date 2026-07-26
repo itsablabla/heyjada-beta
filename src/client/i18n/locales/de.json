@@ -252,7 +252,7 @@
         "betaHint": "Wenn aktiviert, erscheinen die Sprachsteuerungen neben dem Eingabefeld.",
         "enable": "Sprachmodus aktivieren",
         "title": "Sprache",
-        "description": "Interagiere mit Pipali per Sprache. Arbeite, ohne Hände, Augen oder Schreibtisch zu brauchen.",
+        "description": "Interagiere mit Pipali per Sprache. Arbeite, ohne an deinen Schreibtisch gefesselt zu sein.",
         "mode": {
             "speak_freely": "Frei sprechen",
             "ask_first": "Erst fragen",
@@ -283,7 +283,7 @@
             "goAheadPending": "Pipali hat etwas für dich – sage \"Pipali, go ahead\"",
             "goAheadResult": "Deine Ergebnisse sind fertig – sage \"Pipali, go ahead\" zum Anhören",
             "speaking": "Sprich einfach los, um zu unterbrechen – oder sage \"stop\" für Ruhe",
-            "listening": "Sage \"send it\", wenn du fertig bist, \"scratch that\" für neu",
+            "listening": "Sage \"send it\", wenn du fertig bist, \"scratch that\" zum Neuanfangen",
             "listeningDecision": "Sage \"yes\", \"no\" oder gib eigene Anweisungen",
             "listeningQuestion": "Antworte laut – sage \"send it\", wenn du fertig bist"
         }

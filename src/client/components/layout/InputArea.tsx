@@ -100,14 +100,7 @@ export function InputArea({
     const voiceMenuRef = useRef<HTMLDivElement>(null);
     const [showVoiceMenu, setShowVoiceMenu] = useState(false);
     const voiceEnabled = voiceMode !== 'off';
-    const voiceTitle = !voiceEnabled
-        ? t('voice.enable')
-        : voiceStatus === 'announced' ? t('voice.status.announced')
-            : voiceStatus === 'speaking' ? t('voice.status.speaking')
-                : voiceStatus === 'listening' ? t('voice.status.listening')
-                    : voiceStatus === 'transcribing' ? t('voice.status.transcribing')
-                        : voiceStatus === 'dormant' ? t('voice.status.dormant')
-                            : t('voice.status.idle');
+    const voiceTitle = voiceEnabled ? t(`voice.status.${voiceStatus}`) : t('voice.enable');
     const showHint = useRef(Math.random() < 0.05).current;
     const placeholder = !showHint
         ? t('inputArea.askAnything')

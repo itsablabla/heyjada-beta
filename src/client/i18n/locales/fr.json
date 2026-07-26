@@ -252,7 +252,7 @@
         "betaHint": "En l'activant, les commandes vocales apparaissent à côté de la zone de message.",
         "enable": "Activer le mode vocal",
         "title": "Voix",
-        "description": "Interagis avec Pipali par la voix. Travaille sans les mains, sans les yeux et sans bureau.",
+        "description": "Interagis avec Pipali par la voix. Travaille sans attache, loin de ton bureau.",
         "mode": {
             "speak_freely": "Parler librement",
             "ask_first": "Demander d'abord",

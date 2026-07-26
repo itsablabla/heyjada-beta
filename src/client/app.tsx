@@ -322,18 +322,18 @@ const App = () => {
         },
     });
 
-    // Voice companion — hands-free layer over the chat/run/confirmation flow.
-    // `enabled` is the beta feature flag: while off, no voice UI renders and
-    // the store guarantees mode is 'off', so no session can start.
+    // Voice companion — hands-free layer over the chat run flow.
+    // While feature flag off, no voice UI renders and voice mode is 'off', so no session can start.
     const { enabled: voiceFeatureEnabled, mode: voiceMode, lastActiveMode: lastVoiceMode, setMode: setVoiceMode } = useVoiceSettings();
+
+    // Late-bound: stopResearch is defined below, and voice only calls it on speech.
+    const stopResearchRef = useRef<() => void>(() => {});
 
     // Route spoken messages through the standard send pipeline.
     const sendVoiceMessage = useCallback((text: string) => {
         sendMessageRef.current?.(undefined, { text });
     }, []);
 
-    // Late-bound: stopResearch is defined below, and voice only calls it on speech.
-    const stopResearchRef = useRef<() => void>(() => {});
     const voice = useVoiceCompanion({
         mode: voiceMode,
         activeConversationId: conversationId,

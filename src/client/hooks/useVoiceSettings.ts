@@ -2,12 +2,12 @@ import { useSyncExternalStore, useCallback } from 'react';
 import type { VoiceMode } from '../utils/voice/voice-config';
 
 /**
- * Per-device voice settings. `enabled` is the beta feature flag: while off, no
- * voice UI renders and no session can start. `mode` is the tri-state session
- * control (off, or one of the two speaking etiquettes), owned by the chat-input
- * voice menu; `lastActiveMode` remembers the on-mode a plain "voice on" tap
- * returns to. Invariant: feature off ⇒ mode off, so re-enabling the feature
- * never surprise-starts the microphone. Distinct from OS microphone permission
+ * Per-device voice settings. While feature flag is off, no voice UI renders and
+ * no session can start. `mode` is the tri-state session control (off, or one of
+ * the two speaking etiquettes), owned by the chat-input voice menu;
+ * `lastActiveMode` remembers the on-mode a plain "voice on" tap returns to.
+ * Invariant: feature off ⇒ mode off, so re-enabling the feature never
+ * surprise-starts the microphone. Distinct from OS microphone permission
  * (which only grants capture) and persisted so the "enable and walk away" flow
  * survives reloads/reconnects while the user is away from the screen.
  *
