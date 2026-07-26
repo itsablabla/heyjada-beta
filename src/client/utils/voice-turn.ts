@@ -48,6 +48,18 @@ export function isHallucination(text: string): boolean {
     return isPromptEcho(t) || HALLUCINATION_PATTERNS.some((p) => p.test(t));
 }
 
+/**
+ * Could this many words have been spoken in this much audio? The signal the
+ * wording checks can't see: invented text has no relation to the clip's length,
+ * and noise padded into speech routinely runs past what the clip could hold.
+ * Catches hallucinations of any wording — but only long ones, since a short
+ * invention fits the clip honestly. The wording checks cover that end.
+ */
+export function isImplausibleSpeechRate(text: string, durationMs: number): boolean {
+    if (durationMs <= 0) return false;
+    return tokenize(text).length / (durationMs / 1000) > VOICE_TUNABLES.maxWordsPerSecond;
+}
+
 function tokenize(text: string): string[] {
     return normalizeUtterance(text).split(' ').filter(Boolean);
 }

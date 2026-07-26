@@ -42,8 +42,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
 import { CONFIRMATION_OPTIONS } from '../../server/processor/confirmation/confirmation.types';
 import { isVoiceCaptureSupported, transcribeAudio, synthesizeSpeech, summarizeForSpeech } from '../utils/voice-audio';
-import { SegmentedCapture } from '../utils/voice-capture';
-import { TurnTranscript, isHallucination, isSelfEcho } from '../utils/voice-turn';
+import { SegmentedCapture, type CapturedSegment } from '../utils/voice-capture';
+import { TurnTranscript, isHallucination, isSelfEcho, isImplausibleSpeechRate } from '../utils/voice-turn';
 import { VOICE_TUNABLES, STT_BIAS_PROMPT, type VoiceMode } from '../utils/voice-config';
 import { playVoiceCue, playTranscriptTicks, speakAudio, stopSpeaking, duckSpeech, voiceCueDurationMs, type VoiceCueProfile } from '../utils/notifications';
 import { parseConfirmationIntent, parseGoAhead, parseAddressing, parseStopWork } from '../utils/voice-intent';
@@ -174,7 +174,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     const busyRef = useRef(false);
     // Late-bound functions, breaking cycles like segment → route → speak → listen → segment.
     const routeRef = useRef<(kind: TurnKind, text: string) => void>(() => {});
-    const handleSegmentRef = useRef<(wav: Blob, seq: number, overlappedPlayback: boolean) => void>(() => {});
+    const handleSegmentRef = useRef<(segment: CapturedSegment) => void>(() => {});
     const goDormantRef = useRef<() => void>(() => {});
     const settleRef = useRef<() => void>(() => {});
 
@@ -260,7 +260,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         if (captureRef.current || !supported) return;
         const token = ++sessionTokenRef.current;
         const capture = new SegmentedCapture({
-            onSegment: (wav, seq, overlapped) => handleSegmentRef.current(wav, seq, overlapped),
+            onSegment: (segment) => handleSegmentRef.current(segment),
             onSpeechStart: () => {
                 // Speech inside a reply turn cancels the invitation lapse.
                 if (turnRef.current) clearInviteTimer();
@@ -694,7 +694,22 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         applyTurnText(turn, seq, text);
     }, [applyTurnText]);
 
-    const handleTurnSegment = useCallback((turn: ActiveTurn, wav: Blob, seq: number, overlappedPlayback: boolean) => {
+    /**
+     * Transcribe a segment, dropping text the clip cannot have held. STT pads
+     * noise with invented speech — most visibly its own prompt — and that text
+     * arrives at a word rate no speaker could produce. Wording-based checks run
+     * downstream on whatever survives this.
+     */
+    const transcribeSegment = useCallback((segment: CapturedSegment) => (
+        transcribeAudio(segment.wav, { prompt: STT_BIAS_PROMPT }).then((text) => {
+            if (!isImplausibleSpeechRate(text, segment.durationMs)) return text;
+            console.warn('[voice] dropped transcript denser than its audio:', text);
+            return '';
+        })
+    ), []);
+
+    const handleTurnSegment = useCallback((turn: ActiveTurn, segment: CapturedSegment) => {
+        const { seq, overlappedPlayback } = segment;
         // Claimed at dispatch, not on resolution: segments transcribe concurrently
         // and may land out of order, and the base fixes the transcript's origin.
         if (turn.baseSeq === null) turn.baseSeq = seq;
@@ -704,7 +719,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         // readout ends), so an open turn is not on its own proof the mic is
         // hearing the user. Echo lands as an empty segment rather than a
         // dropped one, so the sequence bookkeeping still closes the turn.
-        transcribeAudio(wav, { prompt: STT_BIAS_PROMPT })
+        transcribeSegment(segment)
             .catch((err) => {
                 reportError(err instanceof Error ? err.message : 'Transcription failed');
                 return '';
@@ -717,10 +732,11 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 markAddressed();
                 applyTurnText(turn, seq, overlappedPlayback && isSelfEcho(text, spokenTextRef.current) ? '' : text);
             });
-    }, [reportError, markAddressed, applyTurnText]);
+    }, [transcribeSegment, reportError, markAddressed, applyTurnText]);
 
-    const handleOpenSegment = useCallback((wav: Blob, seq: number) => {
-        transcribeAudio(wav, { prompt: STT_BIAS_PROMPT })
+    const handleOpenSegment = useCallback((segment: CapturedSegment) => {
+        const { seq } = segment;
+        transcribeSegment(segment)
             .catch(() => '')
             .then((text) => {
                 if (!captureRef.current || turnRef.current) return;
@@ -752,7 +768,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 // (decision/guidance/follow-up); otherwise a composed message turn.
                 beginTurn(pending ? 'reply' : 'composed', payload, seq);
             });
-    }, [markAddressed, runSpokenCommand, speakPendingAndListen, openComposedTurn, beginTurn]);
+    }, [transcribeSegment, markAddressed, runSpokenCommand, speakPendingAndListen, openComposedTurn, beginTurn]);
 
     /**
      * Speech captured while Pipali is talking (full duplex only). Playback has
@@ -760,8 +776,9 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
      * floor — in which case Pipali stops and the utterance opens a reply — or
      * Pipali's own voice leaking past the echo guard, and it resumes.
      */
-    const handleBargeInSegment = useCallback((wav: Blob, seq: number) => {
-        transcribeAudio(wav, { prompt: STT_BIAS_PROMPT })
+    const handleBargeInSegment = useCallback((segment: CapturedSegment) => {
+        const { seq } = segment;
+        transcribeSegment(segment)
             .catch(() => '')
             .then((text) => {
                 if (!captureRef.current) return;   // session ended while this transcribed
@@ -792,13 +809,13 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 }
                 beginTurn(pending ? 'reply' : 'composed', payload, seq);
             });
-    }, [markAddressed, applyTurnText, runSpokenCommand, openReplyTurn, beginTurn]);
+    }, [transcribeSegment, markAddressed, applyTurnText, runSpokenCommand, openReplyTurn, beginTurn]);
 
-    const handleSegment = useCallback((wav: Blob, seq: number, overlappedPlayback: boolean) => {
+    const handleSegment = useCallback((segment: CapturedSegment) => {
         const turn = turnRef.current;
-        if (turn) handleTurnSegment(turn, wav, seq, overlappedPlayback);
-        else if (speakingRef.current > 0) handleBargeInSegment(wav, seq);
-        else handleOpenSegment(wav, seq);
+        if (turn) handleTurnSegment(turn, segment);
+        else if (speakingRef.current > 0) handleBargeInSegment(segment);
+        else handleOpenSegment(segment);
     }, [handleTurnSegment, handleBargeInSegment, handleOpenSegment]);
     useEffect(() => { handleSegmentRef.current = handleSegment; }, [handleSegment]);
 

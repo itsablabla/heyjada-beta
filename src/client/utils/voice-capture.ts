@@ -31,13 +31,25 @@ class PipaliPcmTap extends AudioWorkletProcessor {
 registerProcessor('pipali-pcm-tap', PipaliPcmTap);
 `;
 
-export interface SegmentedCaptureHandlers {
+export interface CapturedSegment {
+    /** WAV-encoded audio at the STT sample rate. */
+    wav: Blob;
+    seq: number;
     /**
-     * A speech segment closed: WAV-encoded audio at the STT sample rate.
-     * `overlappedPlayback` marks audio that caught Pipali's own voice, which
-     * stays true after playback has ended — see SegmenterEvent.
+     * Audio that caught Pipali's own voice, which stays true after playback
+     * has ended — see SegmenterEvent.
      */
-    onSegment: (wav: Blob, seq: number, overlappedPlayback: boolean) => void;
+    overlappedPlayback: boolean;
+    /**
+     * Clip length, pre-roll and trailing silence included — the ceiling on how
+     * much speech the transcript can honestly claim was in it.
+     */
+    durationMs: number;
+}
+
+export interface SegmentedCaptureHandlers {
+    /** A speech segment closed. */
+    onSegment: (segment: CapturedSegment) => void;
     onSpeechStart?: () => void;
     /** Onset was a blip — nothing to transcribe, so anything onset triggered can unwind. */
     onSpeechRejected?: () => void;
@@ -139,9 +151,15 @@ export class SegmentedCapture {
             this.handlers.onSpeechStart?.();
         } else if (event.type === 'segment') {
             const rate = this.ctx?.sampleRate ?? VOICE_TUNABLES.sttSampleRate;
-            const ds = downsample(event.samples, rate, Math.min(rate, VOICE_TUNABLES.sttSampleRate));
-            const wav = encodeWavPcm16(ds, Math.min(rate, VOICE_TUNABLES.sttSampleRate));
-            this.handlers.onSegment(new Blob([wav], { type: 'audio/wav' }), this.seq++, event.overlappedPlayback);
+            const outRate = Math.min(rate, VOICE_TUNABLES.sttSampleRate);
+            const ds = downsample(event.samples, rate, outRate);
+            const wav = encodeWavPcm16(ds, outRate);
+            this.handlers.onSegment({
+                wav: new Blob([wav], { type: 'audio/wav' }),
+                seq: this.seq++,
+                overlappedPlayback: event.overlappedPlayback,
+                durationMs: (ds.length / outRate) * 1000,
+            });
         } else {
             this.handlers.onSpeechRejected?.();   // blip: no audio to transcribe
         }

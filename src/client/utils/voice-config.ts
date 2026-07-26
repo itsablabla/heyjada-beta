@@ -48,6 +48,13 @@ export const VOICE_TUNABLES = {
     idleTimeoutMs: 900_000,
     /** Minimum gap between work heartbeat pulses (steps can fire in bursts). */
     workPulseMinIntervalMs: 1_000,
+    /**
+     * Words per second above which a transcript cannot be speech that was in
+     * the clip. Fast human delivery peaks near 5 (~300 wpm), and every segment
+     * carries pre-roll plus trailing silence, so a real one measures well under
+     * this. Only text the model invented over noise reaches it.
+     */
+    maxWordsPerSecond: 8,
 } as const;
 
 /**

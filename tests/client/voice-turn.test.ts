@@ -1,6 +1,12 @@
 import { test, expect, describe } from 'bun:test';
-import { TurnTranscript, isHallucination, isSelfEcho, endsWithPhrase, stripTailPhrase } from '../../src/client/utils/voice-turn';
+import { TurnTranscript, isHallucination, isSelfEcho, isImplausibleSpeechRate, endsWithPhrase, stripTailPhrase } from '../../src/client/utils/voice-turn';
 import { STT_BIAS_PROMPT } from '../../src/client/utils/voice-config';
+
+// Verbatim from dogfooding: what STT returned for segments where nothing was
+// said. Both are the prompt's command list read back, and neither matched it
+// exactly — "nevermind" came back as "Never mind", "Pipali" as "Pipli".
+const RECITED_COMMANDS = 'Hey Pipli. Hey Pipali, over to you. Send it. Scratch that. Clear that. Stop listening. Cancel that. Stop. Stop that. Stop it. Stop working. Hold on. Wait. Hang on. Abort. Cancel. Cancel that. Never mind. Never mind. That\'s enough. Enough. Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.';
+const RECITED_COMMANDS_UNADDRESSED = 'over to you. Send it. Scratch that. Clear that. Stop listening. Cancel that. Stop. Stop that. Stop it. Stop working. Hold on. Wait. Hang on. Abort. Cancel. Cancel that. Never mind. Never mind. That\'s enough. Enough. Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.';
 
 describe('isSelfEcho', () => {
     const readout = 'Pipali wants to edit Tasks.org under the Documents folder. Say yes to continue.';
@@ -76,6 +82,26 @@ describe('isHallucination', () => {
         turn.addSegment(0, 'Draft the launch email.');
         turn.addSegment(1, STT_BIAS_PROMPT);
         expect(turn.text).toBe('Draft the launch email.');
+    });
+});
+
+describe('isImplausibleSpeechRate', () => {
+    test('flags text no clip that short could hold', () => {
+        // The reported recitation: ~50 words out of a segment whose audio is
+        // mostly pre-roll and trailing silence.
+        expect(isImplausibleSpeechRate(RECITED_COMMANDS, 1_500)).toBe(true);
+        expect(isImplausibleSpeechRate('Thanks for watching, and see you in the next video everyone', 900)).toBe(true);
+    });
+
+    test('passes speech at any human pace', () => {
+        expect(isImplausibleSpeechRate('yes', 1_400)).toBe(false);   // one word, shortest segment
+        expect(isImplausibleSpeechRate('Draft the launch email and send it to the team', 3_000)).toBe(false);
+        // Rushed delivery: 10 words in 2s of audio is ~5 words/s, near the human ceiling.
+        expect(isImplausibleSpeechRate('cancel that and check the logs on the build server', 2_000)).toBe(false);
+    });
+
+    test('unknown duration never drops a transcript', () => {
+        expect(isImplausibleSpeechRate(RECITED_COMMANDS, 0)).toBe(false);
     });
 });
 
