@@ -41,11 +41,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
 import { CONFIRMATION_OPTIONS } from '../../server/processor/confirmation/confirmation.types';
-import { isVoiceCaptureSupported, transcribeAudio, synthesizeSpeech, summarizeForSpeech } from '../utils/voice/voice-audio';
+import { isVoiceCaptureSupported, transcribeAudio, startSpeech, summarizeForSpeech, type SpeechHandle } from '../utils/voice/voice-audio';
 import { SegmentedCapture, type CapturedSegment } from '../utils/voice/voice-capture';
 import { TurnTranscript, isHallucination, isSelfEcho, isImplausibleSpeechRate } from '../utils/voice/voice-turn';
 import { VOICE_TUNABLES, STT_BIAS_PROMPT, type VoiceMode, type VoiceStatus } from '../utils/voice/voice-config';
-import { playVoiceCue, playTranscriptTicks, speakAudio, stopSpeaking, duckSpeech, voiceCueDurationMs, type VoiceCueProfile } from '../utils/notifications';
+import { playVoiceCue, playTranscriptTicks, speakPcm, stopSpeaking, duckSpeech, voiceCueDurationMs, type VoiceCueProfile } from '../utils/notifications';
 import { parseConfirmationIntent, parseGoAhead, parseAddressing, parseStopWork } from '../utils/voice/voice-intent';
 import { buildConfirmationSummary, buildConfirmationDetail, buildCompletionSummary } from '../utils/voice/voice-summary';
 
@@ -159,7 +159,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     useEffect(() => { activeConvRef.current = activeConversationId; }, [activeConversationId]);
 
     const pendingRef = useRef<Pending | null>(null);
-    const prefetchRef = useRef<Map<string, Promise<ArrayBuffer>>>(new Map());
+    const prefetchRef = useRef<Map<string, SpeechHandle>>(new Map());
     const spokenKeysRef = useRef<Set<string>>(new Set());
     const turnRef = useRef<ActiveTurn | null>(null);
     const captureRef = useRef<SegmentedCapture | null>(null);
@@ -195,6 +195,12 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     const reportError = useCallback((message: string) => {
         playVoiceCue('error');
         cbRef.current.onError?.(message);
+    }, []);
+
+    /** Abort and forget a prefetched readout that will never be played. */
+    const dropPrefetch = useCallback((key: string) => {
+        prefetchRef.current.get(key)?.cancel();
+        prefetchRef.current.delete(key);
     }, []);
 
     // ------------------------------------------------------------------
@@ -245,6 +251,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         spokenTextRef.current = '';
         duckSpeech(false);
         // A pending that survives dormancy re-synthesizes from its summary on cache miss.
+        for (const handle of prefetchRef.current.values()) handle.cancel();
         prefetchRef.current.clear();
         const turn = turnRef.current;
         if (turn) releaseTurn(turn);
@@ -322,10 +329,10 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         const pending = pendingRef.current;
         if (pending?.kind === 'completion' && pending.heard) {
             pendingRef.current = null;               // summary was heard; nothing more owed
-            prefetchRef.current.delete(pending.key);
+            dropPrefetch(pending.key);
         }
         settleRef.current();
-    }, [releaseTurn]);
+    }, [releaseTurn, dropPrefetch]);
 
     const openReplyTurn = useCallback(() => {
         const turn: ActiveTurn = { kind: 'reply', transcript: new TurnTranscript(), baseSeq: null, inFlight: 0, finishing: false };
@@ -353,12 +360,12 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     // ------------------------------------------------------------------
     // Speaking (always followed by a reply invitation)
     // ------------------------------------------------------------------
-    const speakThenListen = useCallback(async (text: string, getAudio: () => Promise<ArrayBuffer>) => {
+    const speakThenListen = useCallback(async (text: string, getSpeech: () => SpeechHandle) => {
         if (!captureRef.current) await startSession();
         setStatus('speaking');
         beginSpeaking(text);
         try {
-            await speakAudio(await getAudio());
+            await speakPcm(getSpeech().stream);
         } catch {
             // Synthesis/playback failed — fall through to listening anyway.
         } finally {
@@ -376,7 +383,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         await speakThenListen(pending.summary, () => {
             const cached = prefetchRef.current.get(pending.key);
             prefetchRef.current.delete(pending.key);
-            return cached ?? synthesizeSpeech(pending.summary);
+            return cached ?? startSpeech(pending.summary);
         });
     }, [speakThenListen]);
 
@@ -401,7 +408,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         setStatus('speaking');
         beginSpeaking(text);
         try {
-            await speakAudio(await synthesizeSpeech(text));
+            await speakPcm(startSpeech(text).stream);
         } catch {
             // best-effort; the mode switch itself already took effect
         } finally {
@@ -438,14 +445,14 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             case 'dismiss_readout': {
                 // "That's enough" — the summary was the whole point; drop it.
                 const pending = pendingRef.current;
-                if (pending) prefetchRef.current.delete(pending.key);
+                if (pending) dropPrefetch(pending.key);
                 pendingRef.current = null;
                 playVoiceCue('cancel');
                 settleRef.current();
                 break;
             }
         }
-    }, [reset, applyMode]);
+    }, [reset, applyMode, dropPrefetch]);
 
     // A UI switch to speak_freely while an announcement waits unheard reads it
     // immediately — the "okay, just tell me" gesture. Spoken switches land here
@@ -461,8 +468,10 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     // ------------------------------------------------------------------
     // Announcements (cues are background notes; they wait to be acknowledged)
     // ------------------------------------------------------------------
-    const prefetch = useCallback((pending: Pending): Promise<ArrayBuffer> => {
-        const p = (async () => {
+    const prefetch = useCallback((pending: Pending): SpeechHandle => {
+        // Synthesis starts as soon as the enrichment promise resolves; the
+        // handle is cacheable (and cancellable) from the first moment.
+        const handle = startSpeech((async () => {
             // Enrich via the fast model; the mechanical summary already in
             // pending.summary is the fallback. Updating the pending keeps
             // "repeat"/"details" re-reads consistent with what was played.
@@ -483,27 +492,29 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                     } catch { /* keep the mechanical summary */ }
                 }
             }
-            return synthesizeSpeech(pending.summary);
-        })();
-        p.catch((err) => {
+            return pending.summary;
+        })());
+        handle.ready.catch((err: unknown) => {
+            // A cancelled prefetch (superseded, dismissed, session end) is not a failure.
+            if ((err as { name?: string })?.name === 'AbortError') return;
             reportError(err instanceof Error ? err.message : 'Voice synthesis failed');
         });
-        prefetchRef.current.set(pending.key, p);
-        return p;
+        prefetchRef.current.set(pending.key, handle);
+        return handle;
     }, [reportError]);
 
     const announce = useCallback((pending: Pending, cue: VoiceCueProfile) => {
         // Drop the superseded announcement's prefetched audio.
         const replaced = pendingRef.current;
-        if (replaced && replaced.key !== pending.key) prefetchRef.current.delete(replaced.key);
-        const audio = prefetch(pending);
+        if (replaced && replaced.key !== pending.key) dropPrefetch(replaced.key);
+        const speech = prefetch(pending);
         pendingRef.current = pending;
-        // The cue marks the readout as *ready*, not the text as complete —
-        // summarize + TTS take seconds, and a cue at text-completion invites a
-        // go-ahead into dead air (or, in speak_freely, opens a confusing gap
-        // between chime and speech). Synthesis failure surfaces via the error
-        // cue in prefetch instead.
-        audio.then(() => {
+        // The cue marks the readout as *ready* — audio is flowing and playback
+        // can start — not the text as complete: summarize + TTS take seconds,
+        // and a cue at text-completion invites a go-ahead into dead air (or,
+        // in speak_freely, opens a confusing gap between chime and speech).
+        // Synthesis failure surfaces via the error cue in prefetch instead.
+        speech.ready.then(() => {
             if (pendingRef.current !== pending || pending.heard) return;   // superseded, reset, or already being read
             pending.ready = true;
             playVoiceCue(cue);
@@ -519,7 +530,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         // Don't disturb an open turn or active speech; the pending state is
         // picked up when the current exchange settles.
         setStatus((s) => (s === 'idle' || s === 'announced' ? 'announced' : s));
-    }, [prefetch, speakPendingAndListen]);
+    }, [prefetch, speakPendingAndListen, dropPrefetch]);
 
     // Bounded, never cleared: dedup must survive session cycles so reconnect
     // replays stay silent after a voice off/on.
@@ -590,7 +601,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         if (intent.type === 'stop_listening') { cbRef.current.onModeChange?.('off'); reset(); return; }
         if (intent.type === 'set_mode') {
             pendingRef.current = null;               // heard already; the ack ends the exchange
-            prefetchRef.current.delete(pending.key);
+            dropPrefetch(pending.key);
             applyMode(intent.mode);
             return;
         }
@@ -603,7 +614,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         }
         pendingRef.current = null;
         setStatus('idle');
-    }, [speakPendingAndListen, reset, applyMode]);
+    }, [speakPendingAndListen, reset, applyMode, dropPrefetch]);
 
     const routeTurn = useCallback((kind: TurnKind, text: string) => {
         const trimmed = text.trim();

@@ -1011,9 +1011,9 @@ api.post('/voice/speech', zValidator('json', voiceSpeechSchema), async (c) => {
     const { text, voice, model, format } = c.req.valid('json');
     try {
         const result = await synthesizeSpeech({ text, voice, model, format });
-        return new Response(result.audio, {
+        return new Response(result.stream, {
             status: 200,
-            headers: { 'Content-Type': result.contentType, 'Content-Length': String(result.audio.length) },
+            headers: { 'Content-Type': result.contentType },
         });
     } catch (error) {
         return voiceErrorResponse(c, error);
