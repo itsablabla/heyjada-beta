@@ -609,7 +609,7 @@ async function pickNextTool(
         const warningStep = {
             step_id: -1, // Ephemeral, not persisted
             timestamp: now.toISOString(),
-            source: 'user' as const,
+            source: 'system' as const,
             message: iterationWarning,
         };
 

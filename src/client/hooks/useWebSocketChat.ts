@@ -494,7 +494,10 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
             if (history && Array.isArray(history)) {
                 messages = history
                     // Filter out compaction steps (they're rendered as agent thoughts, not messages)
-                    .filter(step => !(step.extra?.is_compaction === true))
+                    .filter(step =>
+                        (step.source === 'user' || step.source === 'agent')
+                        && !(step.extra?.is_compaction === true)
+                    )
                     .map(step => ({
                         id: String(step.step_id || generateUUID()),
                         stableId: String(step.step_id || generateUUID()),

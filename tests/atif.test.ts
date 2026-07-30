@@ -557,6 +557,34 @@ describe('ATIF Agent Message Removal', () => {
     expect(trajectory.steps).toHaveLength(1);
     expect(trajectory.steps[0]?.source).toBe('user');
   });
+
+  test('should remove system steps interleaved with an agent response', () => {
+    const trajectory = createEmptyATIFTrajectory('session-123', 'test-agent', '1.0.0', 'gpt-4');
+
+    addStepToTrajectory(trajectory, 'user', 'Question');
+    addStepToTrajectory(trajectory, 'agent', 'Working');
+    addStepToTrajectory(trajectory, 'system', 'Updated constraint');
+    addStepToTrajectory(trajectory, 'agent', 'Answer');
+
+    const removedCount = removeAgentMessageFromTrajectory(trajectory, 4);
+
+    expect(removedCount).toBe(3);
+    expect(trajectory.steps.map(step => step.step_id)).toEqual([1]);
+  });
+
+  test('should remove a system step immediately preceding the agent response', () => {
+    const trajectory = createEmptyATIFTrajectory('session-123', 'test-agent', '1.0.0', 'gpt-4');
+
+    addStepToTrajectory(trajectory, 'user', 'Question');
+    addStepToTrajectory(trajectory, 'system', 'Updated constraint');
+    addStepToTrajectory(trajectory, 'agent', 'Answer');
+    addStepToTrajectory(trajectory, 'user', 'Follow-up');
+
+    const removedCount = removeAgentMessageFromTrajectory(trajectory, 3);
+
+    expect(removedCount).toBe(2);
+    expect(trajectory.steps.map(step => step.step_id)).toEqual([1, 4]);
+  });
 });
 
 describe('ATIF User Message Removal', () => {
@@ -734,6 +762,20 @@ describe('ATIF User Message Removal', () => {
     expect(trajectory.steps).toHaveLength(1);
     expect(trajectory.steps[0]?.source).toBe('user');
     expect(trajectory.steps[0]?.message).toBe('Follow-up');
+  });
+
+  test('should remove system steps when deleting the surrounding user turn', () => {
+    const trajectory = createEmptyATIFTrajectory('session-123', 'test-agent', '1.0.0', 'gpt-4');
+
+    addStepToTrajectory(trajectory, 'user', 'Question');
+    addStepToTrajectory(trajectory, 'system', 'Updated constraint');
+    addStepToTrajectory(trajectory, 'agent', 'Answer');
+    addStepToTrajectory(trajectory, 'user', 'Follow-up');
+
+    const removedCount = removeTurnFromTrajectory(trajectory, 1);
+
+    expect(removedCount).toBe(3);
+    expect(trajectory.steps.map(step => step.step_id)).toEqual([4]);
   });
 });
 

@@ -200,8 +200,8 @@ export function removeStepFromTrajectory(
 
 /**
  * Removes a user message and the following assistant message (all agent steps until the
- * next user message) from the trajectory. Also removes any intermediate user messages
- * between the deleted user message and the following assistant message's end.
+ * next user message) from the trajectory. Also removes inline system steps and any
+ * intermediate user messages within the deleted turn.
  * Returns the number of steps removed.
  */
 export function removeTurnFromTrajectory(
@@ -235,10 +235,11 @@ export function removeTurnFromTrajectory(
       }
       // Include intermediate user messages before any agent response
       endIndex = i;
+    } else if (step?.source === 'system') {
+      endIndex = i;
     }
   }
 
-  // Remove all steps from startIndex to endIndex (inclusive)
   const removeCount = endIndex - startIndex + 1;
   trajectory.steps.splice(startIndex, removeCount);
 
@@ -249,10 +250,10 @@ export function removeTurnFromTrajectory(
 }
 
 /**
- * Removes an agent message and all associated steps (reasoning, tool calls, tool results)
- * from the trajectory. Deletes all consecutive 'agent' steps starting from the step
- * that contains the given step_id, going backwards to find the first agent step after
- * the previous user message, and forwards until the next user message.
+ * Removes an agent message and all associated steps (reasoning, tool calls, tool results,
+ * and inline system steps) from the trajectory. Deletes the response starting from the
+ * step that contains the given step_id, going backwards to the previous user message
+ * and forwards until the next user message.
  * Returns the number of steps removed.
  */
 export function removeAgentMessageFromTrajectory(
@@ -272,7 +273,7 @@ export function removeAgentMessageFromTrajectory(
     if (trajectory.steps[i]?.source === 'user') {
       break; // Stop at user message
     }
-    if (trajectory.steps[i]?.source === 'agent') {
+    if (trajectory.steps[i]?.source === 'agent' || trajectory.steps[i]?.source === 'system') {
       firstAgentIndex = i;
     }
   }
@@ -283,12 +284,11 @@ export function removeAgentMessageFromTrajectory(
     if (trajectory.steps[i]?.source === 'user') {
       break; // Stop at next user message
     }
-    if (trajectory.steps[i]?.source === 'agent') {
+    if (trajectory.steps[i]?.source === 'agent' || trajectory.steps[i]?.source === 'system') {
       lastAgentIndex = i;
     }
   }
 
-  // Remove all steps from firstAgentIndex to lastAgentIndex (inclusive)
   const removeCount = lastAgentIndex - firstAgentIndex + 1;
   trajectory.steps.splice(firstAgentIndex, removeCount);
 
@@ -297,5 +297,3 @@ export function removeAgentMessageFromTrajectory(
 
   return removeCount;
 }
-
-
