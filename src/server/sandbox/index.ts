@@ -17,6 +17,7 @@ import { createChildLogger } from '../logger';
 
 import {
     type SandboxConfig,
+    DEFAULT_ALLOWED_READ_PATHS,
     getDefaultConfig,
     buildRuntimeConfig,
 } from './config';
@@ -265,6 +266,13 @@ export function isPathWithinAllowedWrite(absolutePath: string): boolean {
 export function isPathDeniedForRead(absolutePath: string): boolean {
     // Normalize the path
     const normalizedPath = path.normalize(absolutePath);
+
+    // Carve-outs take precedence over the deny list, matching the sandbox profile
+    for (const allowedPath of DEFAULT_ALLOWED_READ_PATHS) {
+        if (isPathWithinDirectory(normalizedPath, expandPath(allowedPath))) {
+            return false;
+        }
+    }
 
     for (const deniedPath of currentConfig.deniedReadPaths) {
         // Handle **/ prefix - match directory anywhere in path

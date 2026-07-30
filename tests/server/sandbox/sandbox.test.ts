@@ -15,7 +15,7 @@ import {
     DEFAULT_ALLOWED_DOMAINS,
     type SandboxConfig,
 } from '../../../src/server/sandbox/config';
-import { getSandboxEnvOverrides, SANDBOX_TEMP_DIR } from '../../../src/server/sandbox';
+import { getSandboxEnvOverrides, isPathDeniedForRead, SANDBOX_TEMP_DIR } from '../../../src/server/sandbox';
 import { expandPath, expandPaths } from '../../../src/server/utils';
 
 describe('Sandbox Config', () => {
@@ -157,6 +157,16 @@ describe('Sandbox Config', () => {
             expect(runtimeConfig.filesystem.denyWrite[0]).toBe(path.join(homeDir, '.ssh'));
             expect(runtimeConfig.filesystem.denyWrite[1]).toBe(path.join(homeDir, '.gnupg'));
             expect(runtimeConfig.filesystem.denyRead[0]).toBe(path.join(homeDir, '.aws'));
+        });
+    });
+
+    describe('isPathDeniedForRead', () => {
+        test('should scope the /etc/ssl carve-out to that directory alone', () => {
+            expect(isPathDeniedForRead('/etc/ssl/cert.pem')).toBe(false);
+            expect(isPathDeniedForRead('/private/etc/ssl/openssl.cnf')).toBe(false);
+            // Neighbours and prefix look-alikes stay denied
+            expect(isPathDeniedForRead('/etc/sslkeys/private.key')).toBe(true);
+            expect(isPathDeniedForRead('/private/etc/sudoers')).toBe(true);
         });
     });
 
