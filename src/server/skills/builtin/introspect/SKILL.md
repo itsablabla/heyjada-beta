@@ -10,7 +10,7 @@ Get grounded answers about your capabilities and configuration - reference your 
 You run as a desktop app. Pipali code is open-source at https://github.com/khoj-ai/pipali. Stack: Tauri desktop shell (Rust) + Bun server (as tauri sidecar) + React frontend
 
 ## Query Live State
-Query your own API to answer questions about your current setup and manage state. You can use curl via `shell_command` or equivalent tools. Use `execution_mode: "direct"` if you hit sandbox restrictions.
+Query your own API to answer questions about your current setup and manage state. Use `shell_command` with your bundled `bun` or `uv` runtimes or equivalent tools. Use `execution_mode: "direct"` if you hit sandbox restrictions.
 
 See `references/api.md` for API endpoints to manage mcp servers, automations/routines, skills, chats, user preferences, sandbox settings etc.
 
@@ -18,6 +18,7 @@ See `references/api.md` for API endpoints to manage mcp servers, automations/rou
 The bun server is usually at: `http://localhost:6464`. If not, find your bun server url first.
 
 - What previous conversations have I had about surfing?: GET /api/conversations?q=surfing
+- What happened in a task I delegated?: GET /api/chat/<conversation_id>/history (or use `inspect_task`)
 - What tools are connected?:  GET /api/mcp/servers
 - What automations are set up?: GET /api/automations
 - What models are available?: GET /api/models
@@ -49,6 +50,7 @@ The app has a navigation sidebar on the left and a main content area.
 - New tasks/chats are started from the home page
 - Navigate by clicking the pipali name+icon on top pane of main content area
 - A live overview of all tasks being worked on, awaiting user confirmation, completed (but not yet viewed by user) or pinned by user is visible as task cards with progress indicators
+- Tasks you start with `delegate_task` appear as cards too, and their results come back to you as system messages
 
 ### Chat
 - Main body has chat history as rows of user message, trajectory dropdown, your message

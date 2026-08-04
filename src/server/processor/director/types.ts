@@ -3,6 +3,7 @@
 import type { Responses } from 'openai/resources/responses/responses';
 import type { ATIFMetrics, ATIFObservationResult, ATIFToolCall } from "../conversation/atif/atif.types";
 import type { ConfirmationContext } from "../confirmation";
+import type { User } from "../../db/schema";
 
 export interface ToolCall {
     name: string;
@@ -66,4 +67,8 @@ export interface ToolExecutionContext {
     shownReminders?: Set<string>;
     /** MCP tools whose full schemas are advertised to the model; search_tools and direct calls add to it */
     loadedMcpTools?: Set<string>;
+    /** Owner of this run, for tools that create or read other conversations */
+    user?: typeof User.$inferSelect;
+    /** Aborted when the run is stopped, so long-waiting tools can release and clean up */
+    abortSignal?: AbortSignal;
 }

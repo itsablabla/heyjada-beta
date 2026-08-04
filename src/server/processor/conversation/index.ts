@@ -10,10 +10,12 @@ import { createChildLogger } from '../../logger';
 
 const log = createChildLogger({ component: 'llm' });
 
-// Test mock interface - set by E2E test preload scripts via globalThis
+// Test mock interface - set by E2E test preload scripts via globalThis.
+// `history` lets a scenario react to earlier tool results, e.g. feeding an id returned
+// by one tool call into the next.
 declare global {
     var __pipaliMockLLM:
-        | ((query: string, ctx?: { sessionId?: string }) => ResponseWithThought | Promise<ResponseWithThought>)
+        | ((query: string, ctx?: { sessionId?: string; history?: ATIFTrajectory }) => ResponseWithThought | Promise<ResponseWithThought>)
         | undefined;
 }
 
@@ -36,7 +38,7 @@ export async function sendMessageToModel(
     if (globalThis.__pipaliMockLLM) {
         const actualQuery = query || history?.steps?.findLast(s => s.source === 'user')?.message || '';
         log.debug({ query: actualQuery.substring(0, 50) }, 'Using mock LLM');
-        return globalThis.__pipaliMockLLM(actualQuery, { sessionId: history?.session_id });
+        return globalThis.__pipaliMockLLM(actualQuery, { sessionId: history?.session_id, history });
     }
 
     // Resolve model: use conversation's chatModelId if provided, otherwise user's default

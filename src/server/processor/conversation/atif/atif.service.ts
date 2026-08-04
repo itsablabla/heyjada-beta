@@ -5,7 +5,7 @@
 
 import { asc, eq, and, inArray, isNull, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '../../../db';
+import { db, getDefaultChatModel } from '../../../db';
 import { Conversation, ConversationStep, User } from '../../../db/schema';
 import { createEmptyATIFTrajectory } from './atif.types';
 import {
@@ -29,6 +29,8 @@ import {
 import { createChildLogger } from '../../../logger';
 
 const log = createChildLogger({ component: 'atif' });
+
+export type ConversationRole = 'manual' | 'delegated';
 
 export interface ConversationWithTrajectory {
   id: string;
@@ -200,6 +202,21 @@ export class ATIFConversationService {
     return withTrajectory(conversation, steps);
   }
 
+  /**
+   * Whether a conversation was delegated by an agent. Derived from the parent link
+   * rather than stored, so it can never disagree with its source.
+   */
+  async getConversationRole(
+    conversationId: string,
+    _user: typeof User.$inferSelect,
+  ): Promise<ConversationRole> {
+    const [conversation] = await db
+      .select({ parentConversationId: Conversation.parentConversationId })
+      .from(Conversation)
+      .where(eq(Conversation.id, conversationId));
+
+    return conversation?.parentConversationId ? 'delegated' : 'manual';
+  }
 
   /**
    * Adds a step to a conversation

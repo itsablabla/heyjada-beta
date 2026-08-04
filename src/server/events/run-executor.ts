@@ -12,7 +12,7 @@ import { type ConversationEventBus, type RunHandle, createRunHandle } from './co
 import { runResearchWithConversation, ResearchPausedError } from '../processor/research-runner';
 import { PlatformBillingError } from '../http/billing-errors';
 import { PlatformAuthError } from '../http/platform-fetch';
-import { atifConversationService } from '../processor/conversation/atif/atif.service';
+import { atifConversationService, type ConversationRole } from '../processor/conversation/atif/atif.service';
 import { buildSystemPrompt } from '../processor/director';
 import { loadUserContext } from '../user-context';
 import { isFirstRunEasterEgg, maxIterations as defaultMaxIterations } from '../utils';
@@ -168,6 +168,12 @@ export async function executeRun(options: ExecuteRunOptions): Promise<void> {
 
         setSessionActive(conversationId);
 
+        // Resolved per run rather than once, so a conversation that becomes Home or a
+        // delegated task picks up the right framing on its next run.
+        const conversationRole = await atifConversationService
+            .getConversationRole(conversationId, user)
+            .catch(() => 'manual' as ConversationRole);
+
         let systemPromptOverride: string | undefined;
         try {
             systemPromptOverride = await ensureSystemPromptPersisted(conversationId, user.id, userMessage);
@@ -198,6 +204,7 @@ export async function executeRun(options: ExecuteRunOptions): Promise<void> {
                 confirmationContext,
                 systemPrompt: systemPromptOverride,
                 chatModelId: currentChatModelId,
+                conversationRole,
                 runId: runIdAuthoritative,
                 onTextDelta: (delta) => {
                     bus.publish({

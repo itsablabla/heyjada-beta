@@ -579,6 +579,155 @@ export function pubSubReloadReproScenario(): MockScenario {
 }
 
 /**
+ * Hands work to a separate conversation via delegate_task.
+ *
+ * The mock supplies only the tool call, so the real tool runs and a real delegated
+ * conversation is created. The delegated brief deliberately matches nothing but the
+ * catch-all, so the child finishes immediately.
+ */
+export function delegationScenario(): MockScenario {
+    return {
+        name: 'delegation',
+        queryPattern: '^delegate a task',
+        iterations: [
+            {
+                thought: 'This is self-contained, so I will hand it off and stay responsive.',
+                toolCalls: [
+                    {
+                        function_name: 'delegate_task',
+                        arguments: {
+                            title: 'Delegated task',
+                            message: 'Handle the sub-task and report back what you found.',
+                        },
+                        tool_call_id: 'tc-delegate-1',
+                    },
+                ],
+            },
+        ],
+        finalResponse: 'I started that in the background and will report back.',
+    };
+}
+
+/**
+ * Delegates work that keeps running, and holds its own final response open, so a test
+ * can act while both the parent and the delegated task are in flight.
+ */
+export function slowDelegationScenario(): MockScenario {
+    return {
+        name: 'slow-delegation',
+        queryPattern: '^delegate a slow task',
+        iterations: [
+            {
+                thought: 'Handing off a long-running piece of work.',
+                toolCalls: [
+                    {
+                        function_name: 'delegate_task',
+                        arguments: {
+                            title: 'Slow delegated task',
+                            // Long enough to still be running when the test presses stop,
+                            // short enough not to outlive the spec's cleanup.
+                            message: 'delegated slow work',
+                        },
+                        tool_call_id: 'tc-delegate-slow-1',
+                    },
+                ],
+            },
+        ],
+        finalResponse: 'The long task is under way.',
+        finalResponseDelayMs: 8000,
+    };
+}
+
+/**
+ * Starts two tasks at once, then waits on both together - the reason wait_for_tasks
+ * exists once run_in_background covers the single-task case.
+ */
+export function delegateTwoAndWaitScenario(): MockScenario {
+    return {
+        name: 'delegate-two-and-wait',
+        queryPattern: '^delegate two and wait',
+        iterations: [
+            {
+                thought: 'These are independent, so I will run them at the same time.',
+                toolCalls: [
+                    {
+                        function_name: 'delegate_task',
+                        arguments: { title: 'First parallel task', message: 'delegated slow work' },
+                        tool_call_id: 'tc-delegate-two-1',
+                    },
+                    {
+                        function_name: 'delegate_task',
+                        arguments: { title: 'Second parallel task', message: 'delegated slow work' },
+                        tool_call_id: 'tc-delegate-two-2',
+                    },
+                ],
+            },
+            {
+                thought: 'Both are running; waiting for them together.',
+                toolCalls: [
+                    {
+                        function_name: 'wait_for_tasks',
+                        // Preload fills in the ids the delegate calls returned.
+                        arguments: { conversation_ids: ['__DELEGATED_IDS__'], timeout_seconds: 60 },
+                        tool_call_id: 'tc-wait-two-1',
+                    },
+                ],
+            },
+        ],
+        finalResponse: 'Both parallel tasks finished.',
+    };
+}
+
+/**
+ * Delegates work it needs the answer to, in a single call. run_in_background: false
+ * holds the turn open and hands the result straight back.
+ */
+export function delegateAndWaitScenario(): MockScenario {
+    return {
+        name: 'delegate-and-wait',
+        queryPattern: '^delegate and wait',
+        iterations: [
+            {
+                thought: 'I need this answer before I can reply, so I will wait on it.',
+                toolCalls: [
+                    {
+                        function_name: 'delegate_task',
+                        arguments: {
+                            title: 'Awaited task',
+                            message: 'delegated slow work',
+                            run_in_background: false,
+                            timeout_seconds: 60,
+                        },
+                        tool_call_id: 'tc-delegate-wait-1',
+                    },
+                ],
+            },
+        ],
+        finalResponse: 'The delegated task finished and I waited for it.',
+    };
+}
+
+/** Work that runs for a few seconds, used as the body of a delegated task. */
+export function delegatedSlowWorkScenario(): MockScenario {
+    return {
+        name: 'delegated-slow-work',
+        queryPattern: '^delegated slow work',
+        iterations: Array.from({ length: 3 }, (_, i) => ({
+            thought: `Working through part ${i + 1}.`,
+            toolCalls: [
+                {
+                    function_name: 'list_files',
+                    arguments: { path: '.', pattern: '*' },
+                    tool_call_id: `tc-delegated-work-${i + 1}`,
+                },
+            ],
+        })),
+        finalResponse: 'The delegated work is done.',
+        iterationDelayMs: 1000,
+    };
+}
+
+/**
  * Default scenarios used in tests
  */
 export const defaultMockScenarios: MockScenario[] = [
@@ -600,6 +749,11 @@ export const defaultMockScenarios: MockScenario[] = [
     readFileScenario(),
     multiToolScenario(),
     pubSubReloadReproScenario(),
+    delegationScenario(),
+    slowDelegationScenario(),
+    delegatedSlowWorkScenario(),
+    delegateAndWaitScenario(),
+    delegateTwoAndWaitScenario(),
 ];
 
 /**

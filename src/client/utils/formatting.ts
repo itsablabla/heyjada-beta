@@ -60,6 +60,9 @@ export function formatToolArgs(toolName: string, args: any): string {
         case 'search_web':
             return args.query ? `${args.query}` : '';
 
+        case 'delegate_task':
+            return args.title || args.message || '';
+
         default:
             return Object.entries(args)
                 .filter(([k, v]) => v !== undefined && v !== null && v !== '' && k !== 'operation_type')
@@ -117,6 +120,9 @@ export function formatToolCallsForSidebar(toolCalls: any[]): string {
                 break;
             case 'search_web':
                 detail = args.query ? ` ${args.query}` : '';
+                break;
+            case 'delegate_task':
+                detail = args.title ? ` ${args.title}` : '';
                 break;
             case 'generate_image':
                 if (args.prompt) {
@@ -191,6 +197,12 @@ export function getToolCategory(toolName: string): ToolCategory {
             return 'write';
         case 'shell_command':
             return 'execute';
+        case 'delegate_task':
+        case 'stop_task':
+            return 'execute';
+        case 'inspect_task':
+        case 'wait_for_tasks':
+            return 'read';
         default:
             if (toolName.startsWith('chrome') || toolName.startsWith('browser'))
                 return 'web';
@@ -213,6 +225,10 @@ export function getFriendlyToolName(toolName: string): string {
         "search_web": "Search",
         "read_webpage": "Read",
         "generate_image": "Generate",
+        "delegate_task": "Delegate",
+        "inspect_task": "Check",
+        "stop_task": "Stop",
+        "wait_for_tasks": "Wait",
     };
     if (friendlyNames[toolName]) return friendlyNames[toolName];
 

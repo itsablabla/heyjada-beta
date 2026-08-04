@@ -1,13 +1,17 @@
 # Pipali Self-Query API
 Default Base URL: `http://localhost:6464/api`. If not running there, find where the bun server is running yourself.
 
-Use curl via `shell_command` or equivalent tools. Use `execution_mode: "direct"` to query these endpoints if hit sandbox restrictions and to perform unsafe/modifying operations.
+Query these with `shell_command`, using the bundled `bun` or `uv` runtimes (both are always on PATH). Use `execution_mode: "direct"` if hit sandbox restrictions and to perform unsafe/modifying operations.
 
 ## Conversations
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/conversations` | List all conversations. Supports `?q=<term>` for full-text search |
+| GET | `/conversations` | List all conversations. Supports `?q=<term>` for full-text search. Each entry carries `parentConversationId` |
 | GET | `/chat/:conversationId/history` | Full message history and metadata like cost, tokens |
+
+Conversations you delegated have `parentConversationId` set to the conversation that
+started them. Read one with `inspect_task`, or pull just the parts you need from
+`/chat/:conversationId/history` when it is long.
 
 ## Models
 | Method | Endpoint | Description |

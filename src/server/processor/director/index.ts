@@ -12,6 +12,17 @@ import { shellCommand, type ShellCommandArgs } from '../actor/shell_command';
 import { webSearch, type WebSearchArgs } from '../actor/search_web';
 import { readWebpage, type ReadWebpageArgs } from '../actor/read_webpage';
 import { askUser, type AskUserArgs } from '../actor/ask_user';
+import type { ConversationRole } from '../conversation/atif/atif.service';
+import {
+    delegateTask,
+    inspectTask,
+    stopTask,
+    waitForTasks,
+    type DelegateTaskArgs,
+    type InspectTaskArgs,
+    type StopTaskArgs,
+    type WaitForTasksArgs,
+} from '../actor/delegate_task';
 import { generateImage, type GenerateImageArgs } from '../actor/generate_image';
 import { emailUser, type EmailUserArgs } from '../actor/email_user';
 import { applyProviderToolSearch, applyToolDeferral, searchTools, SEARCH_TOOLS_TOOL_NAME, type SearchToolsArgs } from '../actor/search_tools';
@@ -138,6 +149,8 @@ interface ResearchConfig {
     isFirstEverConversation?: boolean;
     // Conversation ID for tools that need to reference the current conversation
     conversationId?: string;
+    // Whether this conversation may itself delegate
+    conversationRole?: ConversationRole;
     // Callback for real-time text delta streaming
     onTextChunk?: (chunk: string) => void;
     // MCP tools whose full schemas are advertised to the model (others are deferred behind search_tools)
@@ -523,6 +536,108 @@ Tips:
     },
 ];
 
+/** Held apart from builtInTools because which conversations get them varies by role. */
+const delegationTools: ToolDefinition[] = [
+    {
+        name: 'delegate_task',
+        description: `Hand a task to a separate conversation that works on it independently.
+
+Delegate when a task will take more than a few steps or can be parallelized.
+
+By default the task runs in the background: this returns immediately with its conversation id, you stay free to talk, and you are notified when it finishes. Set run_in_background to false when you have nothing useful to do until it is done - then this one call waits and returns the result.
+
+Start several background tasks to run them at once, then wait_for_tasks on all of them together.
+
+Write the brief as if to someone who cannot see this conversation, because they cannot - they get only what you send.`,
+        schema: {
+            type: 'object',
+            properties: {
+                title: {
+                    type: 'string',
+                    description: 'Short label for the task, shown to the user in the sidebar and task cards. A few words.',
+                },
+                message: {
+                    type: 'string',
+                    description: 'The complete, standalone brief for the task, including what "done" looks like. The task sees only this.',
+                },
+                conversation_id: {
+                    type: 'string',
+                    description: 'Omit to start a new task. Pass the id of a task you already started to send it a follow-up, which reaches it even mid-work.',
+                },
+                run_in_background: {
+                    type: 'boolean',
+                    description: 'Defaults to true. Set false to wait for the result and get it back from this call.',
+                },
+                timeout_seconds: {
+                    type: 'number',
+                    description: 'Only used when run_in_background is false. How long to wait before returning current state. Defaults to 300, maximum 1800.',
+                    minimum: 1,
+                    maximum: 1800,
+                },
+            },
+            required: ['title', 'message'],
+        },
+    },
+    {
+        name: 'inspect_task',
+        description: `Read any of the user's conversations - a task you delegated, or an earlier chat you want to recall.
+
+Once a task has finished, every detail level returns its complete final response, since that is the answer you were waiting for.
+
+Detail levels for a task still in progress:
+- "latest" (default): the most recent step. The cheap way to check on progress.
+- "outline": the current turn - any message, and which tools ran (names with a short identifying argument, never their output).
+- "full": a pointer plus recent steps. For a long conversation, follow the instructions it returns to query your own API and pull only the parts you need.`,
+        schema: {
+            type: 'object',
+            properties: {
+                conversation_id: { type: 'string', description: 'The conversation to read.' },
+                detail: {
+                    type: 'string',
+                    enum: ['latest', 'outline', 'full'],
+                    description: 'How much to return while a task is still running. Defaults to "latest".',
+                },
+            },
+            required: ['conversation_id'],
+        },
+    },
+    {
+        name: 'wait_for_tasks',
+        description: `Wait for delegated tasks to finish and get their results.
+Use this for tasks already running in the background. If you are starting a task you intend to wait for, pass run_in_background: false to delegate_task instead - that is one call rather than two.
+Pass every task you are waiting on in one call so they run concurrently. Tasks that have already finished return immediately.
+Returns each task's final response. The wait ends early if the user interrupts you or stops the run, and returns whatever state the tasks are in if it reaches the timeout.`,
+        schema: {
+            type: 'object',
+            properties: {
+                conversation_ids: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Conversation ids of the tasks to wait for, as returned by delegate_task.',
+                },
+                timeout_seconds: {
+                    type: 'number',
+                    description: 'How long to wait before giving up and reporting current state. Defaults to 300, maximum 1800.',
+                    minimum: 1,
+                    maximum: 1800,
+                },
+            },
+            required: ['conversation_ids'],
+        },
+    },
+    {
+        name: 'stop_task',
+        description: 'Stop a running conversation, such as a delegated task that is no longer needed or has gone off track. The conversation stays readable afterwards.',
+        schema: {
+            type: 'object',
+            properties: {
+                conversation_id: { type: 'string', description: 'The conversation whose run should be stopped.' },
+            },
+            required: ['conversation_id'],
+        },
+    },
+];
+
 /**
  * Get all available tools including built-in tools and MCP tools.
  * When many MCP tools are connected, their schemas are deferred behind tool
@@ -530,7 +645,13 @@ Tips:
  * marked defer_loading); others get the app-side search_tools actor, where
  * only tools in `loadedMcpTools` are advertised in full.
  */
-async function getAllTools(loadedMcpTools: Set<string> = new Set(), providerToolSearch: ProviderToolSearchMode = 'off'): Promise<ToolDefinition[]> {
+async function getAllTools(
+    loadedMcpTools: Set<string> = new Set(),
+    providerToolSearch: ProviderToolSearchMode = 'off',
+    conversationRole: ConversationRole = 'manual',
+): Promise<ToolDefinition[]> {
+    // A delegated task does the work but cannot split it further.
+    const baseTools = conversationRole === 'delegated' ? builtInTools : [...builtInTools, ...delegationTools];
     try {
         const mcpTools = await getMcpToolDefinitions();
         const deferredMcpTools = providerToolSearch !== 'off'
@@ -539,10 +660,10 @@ async function getAllTools(loadedMcpTools: Set<string> = new Set(), providerTool
                 serverDescriptions: getMcpServerDescriptions(),
             })
             : applyToolDeferral(mcpTools, loadedMcpTools);
-        return [...builtInTools, ...deferredMcpTools];
+        return [...baseTools, ...deferredMcpTools];
     } catch (error) {
         log.error({ err: error }, 'Failed to load MCP tools');
-        return builtInTools;
+        return baseTools;
     }
 }
 
@@ -573,8 +694,13 @@ async function pickNextTool(
     const { currentDate, dayOfWeek, location, username, userContext, currentIteration = 0, maxIterations, thresholdStepCount } = config;
     const isLast = currentIteration >= maxIterations - 1;
 
-    // Get all tools (built-in + MCP)
-    const tools = await getAllTools(config.loadedMcpTools, config.providerToolSearch);
+    // Get all tools (built-in + delegation + MCP). A delegated task does its own work
+    // rather than splitting it further, so delegation is withheld there.
+    const tools = await getAllTools(
+        config.loadedMcpTools,
+        config.providerToolSearch,
+        config.conversationRole,
+    );
     const toolChoice = isLast ? 'none' : 'auto';
 
     const now = new Date();
@@ -892,6 +1018,43 @@ async function executeTool(
                 );
                 return result.compiled;
             }
+            case 'delegate_task': {
+                const result = await delegateTask(
+                    toolCall.arguments as DelegateTaskArgs,
+                    {
+                        user: context?.user,
+                        parentConversationId: context?.conversationId,
+                        confirmationPreferences: context?.confirmation?.preferences,
+                        abortSignal: context?.abortSignal,
+                    },
+                );
+                return result.compiled;
+            }
+            case 'inspect_task': {
+                const result = await inspectTask(
+                    toolCall.arguments as InspectTaskArgs,
+                    { user: context?.user },
+                );
+                return result.compiled;
+            }
+            case 'stop_task': {
+                const result = await stopTask(
+                    toolCall.arguments as StopTaskArgs,
+                    { user: context?.user },
+                );
+                return result.compiled;
+            }
+            case 'wait_for_tasks': {
+                const result = await waitForTasks(
+                    toolCall.arguments as WaitForTasksArgs,
+                    {
+                        user: context?.user,
+                        abortSignal: context?.abortSignal,
+                        parentConversationId: context?.conversationId,
+                    },
+                );
+                return result.compiled;
+            }
             default:
                 return `Unknown tool: ${toolCall.function_name}`;
         }
@@ -1115,6 +1278,8 @@ export async function* research(config: ResearchConfig): AsyncGenerator<Research
             runId: config.runId,
             shownReminders,
             loadedMcpTools,
+            user: config.user,
+            abortSignal: config.abortSignal,
         };
         iteration.toolResults = await executeToolsInParallel(iteration.toolCalls, executionContext, config.abortSignal);
 

@@ -16,7 +16,7 @@
 
 import { User } from '../db/schema';
 import { research, ResearchPausedError } from './director';
-import { atifConversationService } from './conversation/atif/atif.service';
+import { atifConversationService, type ConversationRole } from './conversation/atif/atif.service';
 import { addStepToTrajectory } from './conversation/atif/atif.utils';
 import { maxIterations as defaultMaxIterations } from '../utils';
 import { loadUserContext } from '../user-context';
@@ -47,6 +47,8 @@ export interface ResearchRunnerOptions {
     chatModelId?: number;
     /** Unique ID of current research run */
     runId?: string;
+    /** Home, a delegated task, or an ordinary chat */
+    conversationRole?: ConversationRole;
     /** Callback when tool calls are about to start (before execution) */
     onToolCallStart?: (iteration: ResearchIteration) => void;
     /** Callback when an iteration completes (after execution) */
@@ -176,6 +178,7 @@ export async function* runResearchWithConversation(
         confirmationContext,
         chatModelId: options.chatModelId,
         conversationId,
+        conversationRole: options.conversationRole,
         runId,
         onTextChunk: onTextDelta,
     })) {
