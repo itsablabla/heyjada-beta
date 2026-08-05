@@ -77,6 +77,25 @@ test.describe('Delegation', () => {
         expect(children[0]!.title).toBe('Delegated task');
     });
 
+    test('a delegated task shows in the sidebar while it runs', async ({ page }) => {
+        const chatPage = new ChatPage(page);
+        await chatPage.goto();
+        // Delegate from a settled conversation: creating one refreshes the sidebar on its
+        // own, which would hide whether the delegated task ever announces itself.
+        await chatPage.sendMessage('hello there');
+        await chatPage.waitForAssistantResponse();
+
+        await chatPage.sendMessage('delegate a slow task');
+
+        // Nothing tells the client about a conversation Pipali created for itself, so the
+        // sidebar has to pick it up from the run starting - not from it finishing. Match on
+        // the title element: the parent's own row carries the same words in its subtitle.
+        await expect(
+            page.locator(`${Selectors.conversationItemWithActiveTask} .conversation-title`)
+                .filter({ hasText: /^Slow delegated task$/ }),
+        ).toBeVisible({ timeout: 15000 });
+    });
+
     test('the delegated result comes back to the parent as a system step', async ({ page, request }) => {
         const chatPage = new ChatPage(page);
         const parentId = await delegateFrom(chatPage, 'delegate a task');

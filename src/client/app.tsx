@@ -246,10 +246,18 @@ const App = () => {
             notifyConfirmationRequest(request, conv?.title, convId);
             voiceCompanionRef.current?.onConfirmationRequest(request, convId, runId);
         },
+        onRunStarted: (convId) => {
+            // Delegated tasks and routines create their conversation server-side, so a run
+            // on an unknown conversation is the sidebar's first sight of it.
+            if (!conversationsRef.current.some(c => c.id === convId)) fetchConversations();
+        },
         onTaskComplete: (_request, response, convId) => {
             const state = conversationStatesRef.current.get(convId);
             const userRequest = state?.messages.filter(m => m.role === 'user').pop()?.content;
-            notifyTaskComplete(userRequest, response, convId);
+            // A delegated task reports back to the conversation that started it, which
+            // announces itself when it responds. Only that end result is news to the user.
+            const isDelegated = !!conversationsRef.current.find(c => c.id === convId)?.parentConversationId;
+            if (!isDelegated) notifyTaskComplete(userRequest, response, convId);
             voiceCompanionRef.current?.onTaskComplete(response, convId);
             setBillingAlerts([]);
             fetchConversations();

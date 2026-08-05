@@ -1367,6 +1367,8 @@ export interface UseWebSocketChatOptions {
     wsUrl: string;
     onConversationCreated?: (conversationId: string, history?: any[]) => void;
     onConfirmationRequest?: (request: ConfirmationRequest, conversationId: string, runId: string) => void;
+    /** Fires for every run, including ones this client never started. */
+    onRunStarted?: (conversationId: string, runId: string) => void;
     onTaskComplete?: (request: string | undefined, response: string, conversationId: string) => void;
     onStepStart?: (conversationId: string, runId: string) => void;
     onBillingError?: (error: BillingError, conversationId?: string) => void;
@@ -1380,6 +1382,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
         wsUrl,
         onConversationCreated,
         onConfirmationRequest,
+        onRunStarted,
         onTaskComplete,
         onStepStart,
         onBillingError,
@@ -1410,6 +1413,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
         UseWebSocketChatOptions,
         | 'onConversationCreated'
         | 'onConfirmationRequest'
+        | 'onRunStarted'
         | 'onTaskComplete'
         | 'onStepStart'
         | 'onBillingError'
@@ -1419,6 +1423,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
     >>({
         onConversationCreated,
         onConfirmationRequest,
+        onRunStarted,
         onTaskComplete,
         onStepStart,
         onBillingError,
@@ -1431,6 +1436,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
         callbacksRef.current = {
             onConversationCreated,
             onConfirmationRequest,
+            onRunStarted,
             onTaskComplete,
             onStepStart,
             onBillingError,
@@ -1441,6 +1447,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
     }, [
         onConversationCreated,
         onConfirmationRequest,
+        onRunStarted,
         onTaskComplete,
         onStepStart,
         onBillingError,
@@ -1469,6 +1476,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
         const {
             onConversationCreated: onConversationCreatedCb,
             onConfirmationRequest: onConfirmationRequestCb,
+            onRunStarted: onRunStartedCb,
             onTaskComplete: onTaskCompleteCb,
             onStepStart: onStepStartCb,
             onBillingError: onBillingErrorCb,
@@ -1500,6 +1508,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
                     suggestedRunId: message.suggestedRunId,
                 });
                 acquireWakeLock();
+                onRunStartedCb?.(convId, runId);
                 break;
 
             case 'run_stopped':
