@@ -17,6 +17,21 @@ type MockCtx = { sessionId?: string; history?: { steps?: Array<{ observation?: {
  */
 const DELEGATED_IDS = '__DELEGATED_IDS__';
 
+/** Placeholder for the pid an earlier backgrounded shell_command returned this turn. */
+const BACKGROUND_PID = '__BACKGROUND_PID__';
+
+function findBackgroundPid(ctx?: MockCtx): number | undefined {
+    let latest: number | undefined;
+    for (const step of ctx?.history?.steps ?? []) {
+        for (const result of step?.observation?.results ?? []) {
+            if (typeof result.content !== 'string') continue;
+            const pid = result.content.match(/as pid (\d+)/)?.[1];
+            if (pid) latest = Number(pid);
+        }
+    }
+    return latest;
+}
+
 function findDelegatedConversationIds(ctx?: MockCtx): string[] {
     const ids: string[] = [];
     for (const step of ctx?.history?.steps ?? []) {
@@ -33,8 +48,17 @@ function findDelegatedConversationIds(ctx?: MockCtx): string[] {
     return ids;
 }
 
-/** Swap the placeholder for real ids, so a scenario can wait on what it started. */
+/** Swap placeholders for real handles, so a scenario can act on what it started. */
 function resolveToolArguments(args: Record<string, unknown>, ctx?: MockCtx): Record<string, unknown> {
+    if (args.pid === BACKGROUND_PID) {
+        return { ...args, pid: findBackgroundPid(ctx) ?? -1 };
+    }
+
+    // Singular form, for tools that act on one task rather than waiting on several.
+    if (args.conversation_id === DELEGATED_IDS) {
+        return { ...args, conversation_id: findDelegatedConversationIds(ctx)[0] ?? 'unknown' };
+    }
+
     const ids = args.conversation_ids;
     if (!Array.isArray(ids) || !ids.includes(DELEGATED_IDS)) return args;
 

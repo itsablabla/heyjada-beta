@@ -728,6 +728,110 @@ export function delegatedSlowWorkScenario(): MockScenario {
 }
 
 /**
+ * Starts a command that outlives the tool call. The mock supplies only the tool call,
+ * so a real process is spawned and reports its own exit back to the conversation.
+ */
+export function backgroundCommandScenario(): MockScenario {
+    return {
+        name: 'background-command',
+        queryPattern: '^run something in the background',
+        iterations: [
+            {
+                thought: 'This takes a while, so I will start it and stay responsive.',
+                toolCalls: [
+                    {
+                        function_name: 'shell_command',
+                        arguments: {
+                            justification: 'Start the long job',
+                            command: 'echo started-in-background; sleep 2; echo done-in-background',
+                            operation_type: 'read-only',
+                            run_in_background: true,
+                        },
+                        tool_call_id: 'tc-background-1',
+                    },
+                ],
+            },
+        ],
+        finalResponse: 'That is running in the background now.',
+    };
+}
+
+/**
+ * Delegates work and then changes its mind, all within one turn. The stopped task
+ * reports that it did not finish, which is the outcome that was asked for.
+ */
+export function delegateAndStopScenario(): MockScenario {
+    return {
+        name: 'delegate-and-stop',
+        queryPattern: '^delegate and stop',
+        iterations: [
+            {
+                thought: 'Handing this off.',
+                toolCalls: [
+                    {
+                        function_name: 'delegate_task',
+                        arguments: { title: 'Abandoned task', message: 'delegated slow work' },
+                        tool_call_id: 'tc-delegate-stop-1',
+                    },
+                ],
+            },
+            {
+                thought: 'On reflection that is not needed, so I will stop it.',
+                toolCalls: [
+                    {
+                        function_name: 'stop_task',
+                        // Preload fills in the id the delegate call returned.
+                        arguments: { conversation_id: '__DELEGATED_IDS__' },
+                        tool_call_id: 'tc-delegate-stop-2',
+                    },
+                ],
+            },
+        ],
+        finalResponse: 'I started that task and then stopped it again.',
+    };
+}
+
+/**
+ * Starts a long command and then changes its mind, all within one turn - the case where
+ * the stop's own exit event could push the conversation into answering twice.
+ */
+export function stopBackgroundCommandScenario(): MockScenario {
+    return {
+        name: 'stop-background-command',
+        queryPattern: '^start and stop something in the background',
+        iterations: [
+            {
+                thought: 'Starting the long job.',
+                toolCalls: [
+                    {
+                        function_name: 'shell_command',
+                        arguments: {
+                            justification: 'Start the long job',
+                            command: 'sleep 120',
+                            operation_type: 'read-only',
+                            run_in_background: true,
+                        },
+                        tool_call_id: 'tc-stop-background-1',
+                    },
+                ],
+            },
+            {
+                thought: 'On reflection that is not needed, so I will stop it.',
+                toolCalls: [
+                    {
+                        function_name: 'stop_process',
+                        // Preload fills in the pid the background command returned.
+                        arguments: { pid: '__BACKGROUND_PID__' },
+                        tool_call_id: 'tc-stop-background-2',
+                    },
+                ],
+            },
+        ],
+        finalResponse: 'I started it and then stopped it again.',
+    };
+}
+
+/**
  * Default scenarios used in tests
  */
 export const defaultMockScenarios: MockScenario[] = [
@@ -754,6 +858,9 @@ export const defaultMockScenarios: MockScenario[] = [
     delegatedSlowWorkScenario(),
     delegateAndWaitScenario(),
     delegateTwoAndWaitScenario(),
+    backgroundCommandScenario(),
+    stopBackgroundCommandScenario(),
+    delegateAndStopScenario(),
 ];
 
 /**

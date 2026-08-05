@@ -19,6 +19,7 @@ import { loadEnabledMcpServers, closeMcpClients } from "./processor/mcp";
 import { configureAuth, isAuthenticated, getPlatformUserInfo } from "./auth";
 import { createChildLogger } from './logger';
 import { initializeSandbox, shutdownSandbox } from './sandbox';
+import { killAllBackgroundProcesses } from './events/background-processes';
 import { initPlatformTransport, shutdownPlatformTransport } from './telemetry/platform-transport';
 import { setServer } from './server-instance';
 
@@ -335,6 +336,7 @@ async function main() {
 
     try {
       server.stop();
+      killAllBackgroundProcesses();
       await stopAutomationSystem();
       await closeMcpClients();
       await shutdownSandbox();

@@ -74,6 +74,8 @@ export interface DeliverToParentOptions {
     user: typeof User.$inferSelect;
     /** Written verbatim as a system step, so make it self-contained. */
     message: string;
+    /** Names the kind of operation reporting in, for anything reading steps back. */
+    kind?: string;
 }
 
 /**
@@ -83,7 +85,7 @@ export interface DeliverToParentOptions {
  * the user hears about the result without having to ask.
  */
 export async function deliverToParent(options: DeliverToParentOptions): Promise<void> {
-    const { parentConversationId, user, message } = options;
+    const { parentConversationId, user, message, kind = 'delegated_task_update' } = options;
 
     if (suppressed.has(parentConversationId)) {
         log.debug({ parentConversationId }, 'Delivery suppressed - the agent is waiting on this itself');
@@ -99,7 +101,7 @@ export async function deliverToParent(options: DeliverToParentOptions): Promise<
         undefined,
         undefined,
         undefined,
-        { kind: 'delegated_task_update' },
+        { kind },
     );
 
     const bus = getBus(parentConversationId);

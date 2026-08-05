@@ -28,6 +28,7 @@ export class TestServer {
     private host: string;
     private dbPath: string;
     private skillsDir: string;
+    private backgroundLogDir: string;
     private mockScenarios: MockScenario[];
 
     constructor(config: TestServerConfig) {
@@ -36,6 +37,7 @@ export class TestServer {
         const testId = Date.now();
         this.dbPath = `/tmp/pipali/pipali-test-${testId}`;
         this.skillsDir = `/tmp/pipali/pipali-test-${testId}-skills`;
+        this.backgroundLogDir = `/tmp/pipali/pipali-test-${testId}-background`;
         this.mockScenarios = config.mockScenarios || [];
     }
 
@@ -66,6 +68,8 @@ export class TestServer {
             PIPALI_ANON_MODE: 'true',
             // Use isolated skills directory for testing
             PIPALI_SKILLS_DIR: this.skillsDir,
+            // Keep background command logs out of the developer's real ~/.pipali
+            PIPALI_BACKGROUND_LOG_DIR: this.backgroundLogDir,
             // Disable sandbox for e2e tests so confirmation dialogs work as expected
             PIPALI_SANDBOX_DISABLED: 'true',
         };
@@ -152,6 +156,7 @@ export class TestServer {
         try {
             await rm(this.dbPath, { recursive: true, force: true });
             await rm(this.skillsDir, { recursive: true, force: true });
+            await rm(this.backgroundLogDir, { recursive: true, force: true });
             console.log('[TestServer] Cleaned up test database and skills directory');
         } catch {
             // Ignore cleanup errors

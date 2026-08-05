@@ -25,6 +25,14 @@ import {
 
 const log = createChildLogger({ component: 'delegate_task' });
 
+/**
+ * Tasks ended through stop_task. Their run_stopped is the expected outcome rather than
+ * news, so it is not reported back - the agent that asked already knows, and hearing
+ * about it would wake the conversation to announce a stop it had just carried out.
+ */
+const stoppedOnPurpose = new Set<string>();
+const STOP_MARK_TTL_MS = 30_000;
+
 export interface DelegateTaskArgs {
     title: string;
     message: string;
@@ -255,6 +263,8 @@ function createDelegatedRunWatcher(
             });
         } else if (event.type === 'run_stopped') {
             done = true;
+            if (childConversationId && stoppedOnPurpose.delete(childConversationId)) return;
+
             const reason = event.error ? `${event.reason}: ${event.error}` : event.reason;
             void deliverToParent({
                 parentConversationId,
@@ -468,7 +478,14 @@ export async function stopTask(
         return errorResult(`Conversation ${args.conversation_id} not found`);
     }
 
-    const stopped = stopConversationRun(args.conversation_id);
+    const conversationId = args.conversation_id;
+    const stopped = stopConversationRun(conversationId);
+    if (stopped) {
+        stoppedOnPurpose.add(conversationId);
+        // The run_stopped that clears this normally lands within milliseconds. Expire it
+        // anyway: a stale entry would swallow the next real failure this task reports.
+        setTimeout(() => stoppedOnPurpose.delete(conversationId), STOP_MARK_TTL_MS).unref?.();
+    }
     return {
         compiled: stopped
             ? `Stopped conversation ${args.conversation_id}.`

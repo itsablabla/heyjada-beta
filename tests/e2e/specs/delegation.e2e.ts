@@ -222,6 +222,27 @@ test.describe('Delegation', () => {
         expect(all.some(c => c.id === child!.id)).toBe(true);
     });
 
+    test('stopping a task it started does not make it answer twice', async ({ page, request }) => {
+        const chatPage = new ChatPage(page);
+        const parentId = await delegateFrom(chatPage, 'delegate and stop');
+
+        await expect(page.locator(Selectors.assistantMessage).last())
+            .toContainText('stopped it again', { timeout: 30000 });
+        await expect.poll(
+            () => chatPage.isProcessing(),
+            { timeout: 20000, message: 'expected the turn to end' },
+        ).toBe(false);
+
+        const responsesAfterAnswering = await countAgentResponses(request, parentId);
+
+        // The stopped task reports that it did not finish, which is what was asked for.
+        // Relaying it would wake the conversation to announce its own decision.
+        await page.waitForTimeout(6000);
+        expect(await chatPage.isProcessing()).toBe(false);
+        expect(await countAgentResponses(request, parentId)).toBe(responsesAfterAnswering);
+        expect(await countTaskUpdates(request, parentId)).toBe(0);
+    });
+
     test('a stopped conversation stays stopped when its tasks report back', async ({ page, request }) => {
         const chatPage = new ChatPage(page);
         const parentId = await delegateFrom(chatPage, 'delegate a slow task');

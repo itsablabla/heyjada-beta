@@ -9,6 +9,7 @@ import type { Command, CommandContext } from './index';
 import type { ClientMessage, StopCommand } from '../message-types';
 import { getBus } from '../../../events/conversation-event-bus';
 import { stopConversationRun, stopDelegatedChildren } from '../../../events/conversation-runs';
+import { stopBackgroundProcessesFor } from '../../../events/background-processes';
 import { suspendAutoStart } from '../../../events/parent-inbox';
 import { createChildLogger } from '../../../logger';
 
@@ -55,6 +56,11 @@ export const StopCommandHandler: Command<StopCommand> = {
         const stoppedChildren = await stopDelegatedChildren(conversationId);
         if (stoppedChildren.length > 0) {
             log.info({ conversationId, stoppedChildren }, 'Stopped delegated children');
+        }
+
+        const stoppedProcesses = stopBackgroundProcessesFor(conversationId);
+        if (stoppedProcesses.length > 0) {
+            log.info({ conversationId, stoppedProcesses }, 'Stopped background commands');
         }
     },
 };

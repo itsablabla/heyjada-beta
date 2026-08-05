@@ -64,6 +64,9 @@ export function formatToolArgs(toolName: string, args: any): string {
         case 'delegate_task':
             return args.title || args.message || '';
 
+        case 'stop_process':
+            return args.pid ? `pid ${args.pid}` : '';
+
         default:
             return Object.entries(args)
                 .filter(([k, v]) => v !== undefined && v !== null && v !== '' && k !== 'operation_type')
@@ -124,6 +127,9 @@ export function formatToolCallsForSidebar(toolCalls: any[]): string {
                 break;
             case 'delegate_task':
                 detail = args.title ? ` ${args.title}` : '';
+                break;
+            case 'stop_process':
+                detail = args.pid ? ` pid ${args.pid}` : '';
                 break;
             case 'generate_image':
                 if (args.prompt) {
@@ -197,6 +203,7 @@ export function getToolCategory(toolName: string): ToolCategory {
         case 'email_user':
             return 'write';
         case 'shell_command':
+        case 'stop_process':
             return 'execute';
         case 'delegate_task':
         case 'stop_task':
@@ -223,6 +230,7 @@ export function getFriendlyToolName(toolName: string): string {
         "edit_file": "Edit",
         "write_file": "Write",
         "shell_command": "Shell",
+        "stop_process": "Stop",
         "search_web": "Search",
         "read_webpage": "Read",
         "generate_image": "Generate",

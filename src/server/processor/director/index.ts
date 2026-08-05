@@ -8,7 +8,7 @@ import { readFile, type ReadFileArgs } from '../actor/read_file';
 import { grepFiles, type GrepFilesArgs } from '../actor/grep_files';
 import { editFile, type EditFileArgs } from '../actor/edit_file';
 import { writeFile, type WriteFileArgs } from '../actor/write_file';
-import { shellCommand, type ShellCommandArgs } from '../actor/shell_command';
+import { shellCommand, stopProcess, type ShellCommandArgs, type StopProcessArgs } from '../actor/shell_command';
 import { webSearch, type WebSearchArgs } from '../actor/search_web';
 import { readWebpage, type ReadWebpageArgs } from '../actor/read_webpage';
 import { askUser, type AskUserArgs } from '../actor/ask_user';
@@ -385,8 +385,26 @@ REQUIRED:
                     minimum: 1000,
                     maximum: 300000,
                 },
+                run_in_background: {
+                    type: 'boolean',
+                    description: 'Set true for work that outlives a tool call: builds, test suites, dev servers. Returns the pid and a log file to tail or grep, and you are told when the command exits. Ignores timeout.',
+                },
             },
             required: ['justification', 'command', 'operation_type'],
+        },
+    },
+    {
+        name: 'stop_process',
+        description: 'Stop a background command started by shell_command, along with anything it spawned.',
+        schema: {
+            type: 'object',
+            properties: {
+                pid: {
+                    type: 'integer',
+                    description: 'The pid returned when the command was started.',
+                },
+            },
+            required: ['pid'],
         },
     },
     {
@@ -542,15 +560,12 @@ Tips:
 const delegationTools: ToolDefinition[] = [
     {
         name: 'delegate_task',
-        description: `Hand a task to a separate conversation that works on it independently.
+        description: `Hand a task to a separate conversation to work on independently.
 
 Delegate when a task will take more than a few steps or can be parallelized.
 
-By default the task runs in the background: this returns immediately with its conversation id, you stay free to talk, and you are notified when it finishes. Set run_in_background to false when you have nothing useful to do until it is done - then this one call waits and returns the result.
-
-Start several background tasks to run them at once, then wait_for_tasks on all of them together.
-
-Write the brief as if to someone who cannot see this conversation, because they cannot - they get only what you send.`,
+If run_in_background is true, the task is delegated to and returns immediately with its conversation id, and you are notified when it finishes. Otherwise this one call waits till the task is completed and returns the result.
+You can also start several tasks in the background and wait_for_tasks on all of them together.`,
         schema: {
             type: 'object',
             properties: {
@@ -573,7 +588,7 @@ Write the brief as if to someone who cannot see this conversation, because they 
                 },
                 run_in_background: {
                     type: 'boolean',
-                    description: 'Defaults to true. Set false to wait for the result and get it back from this call.',
+                    description: 'Set false to wait for the result and get it back from this call.',
                 },
                 timeout_seconds: {
                     type: 'number',
@@ -582,7 +597,7 @@ Write the brief as if to someone who cannot see this conversation, because they 
                     maximum: 1800,
                 },
             },
-            required: ['title', 'message'],
+            required: ['title', 'message', 'run_in_background'],
         },
     },
     {
@@ -991,9 +1006,16 @@ async function executeTool(
 
                 const result = await shellCommand(
                     args,
-                    { confirmationContext: context?.confirmation }
+                    {
+                        confirmationContext: context?.confirmation,
+                        conversationId: context?.conversationId,
+                        user: context?.user,
+                    }
                 );
                 return result.compiled;
+            }
+            case 'stop_process': {
+                return stopProcess(toolCall.arguments as StopProcessArgs).compiled;
             }
             case 'search_web': {
                 const result = await webSearch(toolCall.arguments as WebSearchArgs, context?.conversationId);
