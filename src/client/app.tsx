@@ -51,6 +51,20 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Page types
 type PageType = 'home' | 'chat' | 'skills' | 'automations' | 'mcp-tools' | 'settings';
+
+/** The page a URL names, for both the first render and any history entry returned to */
+function pageFromUrl(): PageType {
+    const params = new URLSearchParams(window.location.search);
+    // Show chat page if conversationId is present (takes priority over path)
+    if (params.get('conversationId') || params.get('q')) return 'chat';
+    switch (window.location.pathname) {
+        case '/skills': return 'skills';
+        case '/automations': return 'automations';
+        case '/tools': return 'mcp-tools';
+        case '/settings': return 'settings';
+        default: return 'home';
+    }
+}
 type ConversationModelId = number | null;
 
 // Sidebar starts collapsed to an icon rail; the user's choice sticks across sessions
@@ -95,17 +109,11 @@ const App = () => {
     const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
     const [userName, setUserName] = useState<string | undefined>(undefined);
     // Current page state - determine from URL
-    const [currentPage, setCurrentPage] = useState<PageType>(() => {
-        const params = new URLSearchParams(window.location.search);
-        // Show chat page if conversationId is present (takes priority over path)
-        if (params.get('conversationId') || params.get('q')) return 'chat';
-        const path = window.location.pathname;
-        if (path === '/skills') return 'skills';
-        if (path === '/automations') return 'automations';
-        if (path === '/tools') return 'mcp-tools';
-        if (path === '/settings') return 'settings';
-        return 'home';
-    });
+    const [currentPage, setCurrentPage] = useState<PageType>(pageFromUrl);
+
+    // Set while restoring from a history entry, so the effect that mirrors the
+    // conversation into the URL does not push the entry back on and trap the user
+    const restoringFromHistoryRef = useRef(false);
 
     const updateSidebarOpen = useCallback((open: boolean) => {
         setSidebarOpen(open);
@@ -592,8 +600,12 @@ const App = () => {
     useEffect(() => {
         const prevId = prevConversationIdRef.current;
 
-        // Update URL - when viewing a conversation, always use root path
-        if (conversationId) {
+        // Update URL - when viewing a conversation, always use root path.
+        // A conversation restored by going back is already the URL we are on; pushing
+        // it again would re-add the entry the user just left and strand them there.
+        if (restoringFromHistoryRef.current) {
+            restoringFromHistoryRef.current = false;
+        } else if (conversationId) {
             const url = new URL(window.location.href);
             url.pathname = '/';
             url.searchParams.set('conversationId', conversationId);
@@ -1254,6 +1266,29 @@ const App = () => {
         // Update URL to /settings
         window.history.pushState({}, '', '/settings');
     };
+
+    // Back and forward move between conversations and pages. Without this the URL
+    // changes and the view does not, so leaving a conversation appears to do nothing.
+    useEffect(() => {
+        const restoreFromHistory = () => {
+            const urlConversationId = new URLSearchParams(window.location.search).get('conversationId') || undefined;
+            setCurrentPage(pageFromUrl());
+
+            if (urlConversationId === conversationIdRef.current) return;
+
+            restoringFromHistoryRef.current = true;
+            conversationIdRef.current = urlConversationId;
+            if (urlConversationId) {
+                setChatConversationId(urlConversationId);
+                syncSelectedModelForConversation(urlConversationId);
+            } else {
+                clearConversation();
+            }
+        };
+
+        window.addEventListener('popstate', restoreFromHistory);
+        return () => window.removeEventListener('popstate', restoreFromHistory);
+    }, [setChatConversationId, clearConversation, syncSelectedModelForConversation]);
 
     const selectConversation = (id: string, highlightTerm?: string) => {
         setCurrentPage('chat');
