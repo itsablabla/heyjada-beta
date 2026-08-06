@@ -9,6 +9,7 @@ import { mkdir, rm, readdir, cp } from 'fs/promises';
 import { scanSkillsDirectory, isValidSkillName, isValidDescription } from './loader';
 import { formatSkillsForPrompt, escapeYamlValue } from './utils';
 import type { Skill, SkillLoadResult } from './types';
+import { parseFrontmatter } from '../frontmatter';
 import { IS_COMPILED_BINARY, EMBEDDED_BUILTIN_SKILLS } from '../embedded-assets';
 import { getSkillsDir as getSkillsDirFromPaths } from '../paths';
 import { createChildLogger } from '../logger';
@@ -274,18 +275,6 @@ ${instructions}
 }
 
 /**
- * Parse a SKILL.md file into its raw YAML frontmatter and body (instructions)
- */
-function parseSkillMdParts(content: string): { yaml: string; body: string } | null {
-    const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-    if (!match) return null;
-    const yaml = match[1]!;
-    // Body starts after the closing --- of frontmatter
-    const body = content.slice(match[0].length).trim();
-    return { yaml, body };
-}
-
-/**
  * Update the metadata.visible field in raw YAML frontmatter, preserving all other fields.
  * Only writes visible: false (omits when true, since true is the default).
  */
@@ -521,7 +510,7 @@ export async function updateSkill(name: string, input: UpdateSkillInput): Promis
         };
     }
 
-    const parts = parseSkillMdParts(existingContent);
+    const parts = parseFrontmatter(existingContent);
     if (!parts) {
         return { success: false, error: 'Failed to parse existing SKILL.md frontmatter' };
     }
@@ -579,7 +568,7 @@ export async function toggleSkillVisibility(name: string, visible: boolean): Pro
         };
     }
 
-    const parts = parseSkillMdParts(existingContent);
+    const parts = parseFrontmatter(existingContent);
     if (!parts) {
         return { success: false, error: 'Failed to parse existing SKILL.md frontmatter' };
     }
