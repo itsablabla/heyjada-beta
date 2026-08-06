@@ -77,7 +77,7 @@ test.describe('Delegation', () => {
         expect(children[0]!.title).toBe('Delegated task');
     });
 
-    test('a delegated task shows in the sidebar while it runs', async ({ page }) => {
+    test('a delegated task stays out of the sidebar, and its step opens it', async ({ page }) => {
         const chatPage = new ChatPage(page);
         await chatPage.goto();
         // Delegate from a settled conversation: creating one refreshes the sidebar on its
@@ -87,13 +87,27 @@ test.describe('Delegation', () => {
 
         await chatPage.sendMessage('delegate a slow task');
 
-        // Nothing tells the client about a conversation Pipali created for itself, so the
-        // sidebar has to pick it up from the run starting - not from it finishing. Match on
-        // the title element: the parent's own row carries the same words in its subtitle.
+        // The task belongs to the conversation that started it, not to the sidebar's own list
         await expect(
-            page.locator(`${Selectors.conversationItemWithActiveTask} .conversation-title`)
+            page.locator(`${Selectors.conversationItem} .conversation-title`)
                 .filter({ hasText: /^Slow delegated task$/ }),
-        ).toBeVisible({ timeout: 15000 });
+        ).toHaveCount(0);
+
+        // The collapsed preview drops tool results, and the task's id comes from one, so
+        // the way in is the expanded trajectory - where step detail lives generally
+        await page.locator('.thoughts-toggle').first().click();
+
+        const delegateStep = page.locator('.thought-args-button').filter({ hasText: 'Slow delegated task' });
+        await expect(delegateStep).toBeVisible({ timeout: 15000 });
+
+        await delegateStep.click();
+        await expect(page.locator(`${Selectors.conversationItem}.active .conversation-title`))
+            .toHaveText('Slow delegated task', { timeout: 15000 });
+
+        // Going back leaves the task for the conversation that started it
+        await page.goBack();
+        await expect(page.locator(`${Selectors.conversationItem}.active .conversation-title`))
+            .not.toHaveText('Slow delegated task', { timeout: 15000 });
     });
 
     test('the delegated result comes back to the parent as a system step', async ({ page, request }) => {

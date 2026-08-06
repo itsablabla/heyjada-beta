@@ -16,6 +16,7 @@ import { getActiveStatus } from '../../sessions/activeSessionsStore';
 import { atifConversationService } from '../conversation/atif/atif.service';
 import type { ATIFStep } from '../conversation/atif/atif.types';
 import type { ConfirmationPreferences } from '../confirmation';
+import { formatConversationHeader } from '../../../shared';
 import { createChildLogger } from '../../logger';
 import {
     PLATFORM_TIER_MODELS,
@@ -302,7 +303,7 @@ export async function inspectTask(
     const steps = conversation.trajectory.steps.filter(step => step.source !== 'system');
     const status = describeStatus(args.conversation_id);
     const header = [
-        `Conversation: ${args.conversation_id}`,
+        formatConversationHeader(args.conversation_id),
         `Title: ${conversation.title ?? '(untitled)'}`,
         `Status: ${status}`,
     ];

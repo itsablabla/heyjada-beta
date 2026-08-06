@@ -1,5 +1,7 @@
 import { test, expect, describe } from 'bun:test';
 import { getCollapsedPreviewThoughts } from '../../src/client/components/thoughts/ThoughtsSection';
+import { getDelegatedConversationId } from '../../src/client/utils/formatting';
+import { formatConversationHeader } from '../../src/shared';
 import type { Thought } from '../../src/client/types';
 
 describe('collapsed thoughts preview', () => {
@@ -90,5 +92,26 @@ describe('collapsed thoughts preview', () => {
         expect(preview[2]?.type).toBe('tool_call');
         expect(preview[2]?.toolName).toBe('view_file');
         expect(preview[2]?.toolResult).toBeUndefined();
+    });
+});
+
+describe('delegated conversation link', () => {
+    const id = '3f2a1b4c-5d6e-4f70-8192-a3b4c5d6e7f8';
+
+    test('finds the conversation whether the task was backgrounded or waited on', () => {
+        // Backgrounded delegation reports as JSON
+        expect(getDelegatedConversationId('delegate_task', JSON.stringify({ status: 'started', conversation_id: id })))
+            .toBe(id);
+        // Delegation waited on in the foreground comes back as the inspect_task summary,
+        // built by the server. Parsing what it actually writes is what keeps the two in step.
+        expect(getDelegatedConversationId('delegate_task', `${formatConversationHeader(id)}\nTitle: Some task\nStatus: done`))
+            .toBe(id);
+    });
+
+    test('offers no link when there is no task to open', () => {
+        expect(getDelegatedConversationId('delegate_task', 'Error: Conversation not found')).toBeUndefined();
+        expect(getDelegatedConversationId('delegate_task', undefined)).toBeUndefined();
+        // Another tool naming a conversation is not a task this step started
+        expect(getDelegatedConversationId('inspect_task', `Conversation: ${id}`)).toBeUndefined();
     });
 });

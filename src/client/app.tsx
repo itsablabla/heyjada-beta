@@ -29,6 +29,7 @@ import { useFocusManagement, useFileDrop, useModels, useSidecar, useWebSocketCha
 import { setApiBaseUrl, apiFetch } from "./utils/api";
 import { generateUUID, generateDeterministicId, getToolCategory, type ToolCategory } from "./utils/formatting";
 import { initNotifications, notifyConfirmationRequest, notifyTaskComplete, setNotificationClickHandler, setupNotificationClickListener, warmAudioContext } from "./utils/notifications";
+import { ConversationNavigationContext } from "./hooks/useConversationNavigation";
 import { useVoiceSettings } from "./hooks/useVoiceSettings";
 import { useVoiceCompanion } from "./hooks/useVoiceCompanion";
 import type { VoiceMode } from "./utils/voice/voice-config";
@@ -1152,6 +1153,13 @@ const App = () => {
     // ===== Conversation Actions =====
 
     // Derive active tasks from conversationStates for home page display
+    // Delegated conversations are reached from the step that started them, not the
+    // sidebar. The open one stays listed so navigating into it does not leave the
+    // sidebar showing nothing for where you are.
+    const sidebarConversations = conversations.filter(
+        conv => !conv.parentConversationId || conv.id === conversationId,
+    );
+
     const getActiveTasks = (): ActiveTask[] => {
         const activeTasks: ActiveTask[] = [];
 
@@ -1159,6 +1167,9 @@ const App = () => {
             const hasPendingConfirmation = (pendingConfirmations.get(convId)?.length ?? 0) > 0;
             if (state.isProcessing || state.isStopped || state.isCompleted || hasPendingConfirmation) {
                 const conv = conversations.find(c => c.id === convId);
+                // A delegated task belongs to the conversation that started it, and shows
+                // there as a step. Home lists work the user began.
+                if (conv?.parentConversationId) return;
                 // Get latest user message from conversation messages or title
                 const latestUserMessage = state.messages
                     .filter(m => m.role === 'user')
@@ -1712,11 +1723,12 @@ const App = () => {
     }
 
     return (
+        <ConversationNavigationContext.Provider value={selectConversation}>
         <ErrorBoundary>
             <div className="app-wrapper">
                 <Sidebar
                     isOpen={sidebarOpen}
-                    conversations={conversations}
+                    conversations={sidebarConversations}
                     conversationStates={conversationStates}
                     pendingConfirmations={sidebarPendingConfirmations}
                     currentConversationId={conversationId}
@@ -1871,6 +1883,7 @@ const App = () => {
                 />
             </div>
         </ErrorBoundary>
+        </ConversationNavigationContext.Provider>
     );
 };
 

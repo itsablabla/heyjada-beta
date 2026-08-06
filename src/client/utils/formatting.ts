@@ -1,5 +1,6 @@
 // Formatting utilities for tool names, arguments, and display
 
+import { CONVERSATION_HEADER } from '../../shared';
 import { resolveUidLabel } from './snapshotParser';
 
 /** Format bytes to a human-readable file size string. */
@@ -322,6 +323,13 @@ export function formatToolArgsRich(toolName: string, args: any, outline = false,
             };
         }
 
+        case 'delegate_task': {
+            // title is a required argument, so the fallback is for a model that skipped it
+            const text = args.title || args.message?.split('\n')[0];
+            if (!text) return null;
+            return { text, hoverText: args.message };
+        }
+
         case 'generate_image': {
             if (!args.prompt) return null;
             let text = args.prompt;
@@ -451,4 +459,28 @@ export function generateDeterministicId(prefix: string, content: string): string
     }
     // Append string length to get ~43 bit (vs 32) collision resistance
     return `${prefix}-${hash >>> 0}-${content.length}`;
+}
+
+/**
+ * The conversation a delegate_task step started, so the step can link to it.
+ *
+ * A backgrounded task reports back as JSON; one waited on in the foreground comes
+ * back as the same text summary inspect_task produces, led by its conversation id.
+ * That header's pattern comes from the module that writes it, so the two cannot drift.
+ */
+export function getDelegatedConversationId(toolName: string, toolResult?: string): string | undefined {
+    if (toolName !== 'delegate_task' || !toolResult) {
+        return undefined;
+    }
+
+    try {
+        const started = JSON.parse(toolResult) as { conversation_id?: unknown };
+        if (typeof started.conversation_id === 'string') {
+            return started.conversation_id;
+        }
+    } catch {
+        // Not the JSON shape, so it is the text summary below
+    }
+
+    return toolResult.match(CONVERSATION_HEADER)?.[1];
 }

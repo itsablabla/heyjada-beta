@@ -2,8 +2,9 @@
 
 import { useCallback, useState } from 'react';
 import type { Thought } from '../../types';
-import { formatToolArgs, getFriendlyToolName, formatToolArgsRich, getToolCategory } from '../../utils/formatting';
+import { formatToolArgs, getFriendlyToolName, formatToolArgsRich, getToolCategory, getDelegatedConversationId } from '../../utils/formatting';
 import { getToolResultStatus } from '../../utils/toolStatus';
+import { useConversationNavigation } from '../../hooks/useConversationNavigation';
 import { ExternalLink } from '../ExternalLink';
 import { ChatMarkdown } from '../ChatMarkdown';
 import { ThoughtDiffView } from '../tool-views/ThoughtDiffView';
@@ -62,6 +63,7 @@ function formatPlainText(text: string): string {
 }
 
 export function ThoughtItem({ thought, stepNumber, isPreview = false, showResult = true, onToggle, uidMap }: ThoughtItemProps) {
+    const navigateToConversation = useConversationNavigation();
     // Track whether the reasoning text is overflowing (truncated by ellipsis)
     const [isOverflowing, setIsOverflowing] = useState(false);
     const reasoningRef = useCallback((el: HTMLDivElement | null) => {
@@ -107,6 +109,8 @@ export function ThoughtItem({ thought, stepNumber, isPreview = false, showResult
         // Determine success/error status for step indicator (pending takes precedence)
         const stepStatus = thought.isPending ? 'pending' : getToolResultStatus(thought.toolResult, toolName);
         const canToggle = !!onToggle;
+        // Delegated conversations are kept out of the sidebar, so this step is the way in
+        const delegatedConversationId = getDelegatedConversationId(toolName, thought.toolResult);
 
         return (
             <div className={`thought-item ${isPreview ? 'preview' : ''} ${thought.isPending ? 'pending' : ''}`}>
@@ -128,6 +132,14 @@ export function ThoughtItem({ thought, stepNumber, isPreview = false, showResult
                                     <ExternalLink href={richArgs.url} className="thought-args-link">
                                         {richArgs.text}
                                     </ExternalLink>
+                                ) : delegatedConversationId && navigateToConversation ? (
+                                    <button
+                                        type="button"
+                                        className="thought-args-link thought-args-button"
+                                        onClick={(e) => { e.stopPropagation(); navigateToConversation(delegatedConversationId); }}
+                                    >
+                                        {richArgs.text}
+                                    </button>
                                 ) : (
                                     <span className="thought-args-primary">{richArgs.text}</span>
                                 )}
