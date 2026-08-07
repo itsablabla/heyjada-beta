@@ -221,6 +221,7 @@ api.get('/conversations', async (c) => {
         updatedAt: Conversation.updatedAt,
         chatModelId: Conversation.chatModelId,
         automationId: Conversation.automationId,
+        parentConversationId: Conversation.parentConversationId,
         isPinned: Conversation.isPinned,
     })
     .from(Conversation)
@@ -344,6 +345,7 @@ api.get('/conversations', async (c) => {
             chatModelId: conv.chatModelId,
             isActive,
             isAutomation: !!conv.automationId,
+            parentConversationId: conv.parentConversationId,
             isPinned: conv.isPinned,
             latestReasoning,
             ...(matchSnippet !== undefined && { matchSnippet }),

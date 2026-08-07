@@ -9,7 +9,41 @@
 import { findMatchingScenario, defaultMockScenarios, type MockScenario } from './fixtures/mock-llm';
 import type { ResponseWithThought } from '../../src/server/processor/conversation/conversation';
 
-type MockCtx = { sessionId?: string };
+type MockCtx = { sessionId?: string; history?: { steps?: Array<{ observation?: { results?: Array<{ content?: unknown }> } }> } };
+
+/**
+ * Placeholder a scenario can put in tool arguments to reference every conversation id
+ * that earlier delegate_task calls returned in this turn.
+ */
+const DELEGATED_IDS = '__DELEGATED_IDS__';
+
+function findDelegatedConversationIds(ctx?: MockCtx): string[] {
+    const ids: string[] = [];
+    for (const step of ctx?.history?.steps ?? []) {
+        for (const result of step?.observation?.results ?? []) {
+            if (typeof result.content !== 'string') continue;
+            try {
+                const parsed = JSON.parse(result.content);
+                if (parsed?.conversation_id) ids.push(parsed.conversation_id as string);
+            } catch {
+                // Not a delegate result.
+            }
+        }
+    }
+    return ids;
+}
+
+/** Swap the placeholder for real ids, so a scenario can wait on what it started. */
+function resolveToolArguments(args: Record<string, unknown>, ctx?: MockCtx): Record<string, unknown> {
+    const ids = args.conversation_ids;
+    if (!Array.isArray(ids) || !ids.includes(DELEGATED_IDS)) return args;
+
+    const delegated = findDelegatedConversationIds(ctx);
+    return {
+        ...args,
+        conversation_ids: ids.flatMap(id => (id === DELEGATED_IDS ? delegated : [id])),
+    };
+}
 
 // Track mock state per session+scenario+query so multiple conversations can run concurrently.
 const scenarioState = new Map<string, { currentIteration: number }>();
@@ -108,7 +142,7 @@ function getMockResponse(query: string, ctx?: MockCtx): ResponseWithThought | Pr
             id: tc.tool_call_id,
             call_id: tc.tool_call_id,
             name: tc.function_name,
-            arguments: JSON.stringify(tc.arguments),
+            arguments: JSON.stringify(resolveToolArguments(tc.arguments as Record<string, unknown>, ctx)),
         })),
         thought: iteration.thought,
     };

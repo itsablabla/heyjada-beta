@@ -86,6 +86,12 @@
         "tierOther": "其他",
         "recommended": "推荐"
     },
+    "thoughts": {
+        "delegationModel": "交给{{tier}}模型",
+        "delegationBackground": "在后台",
+        "waitForTasks": "等待{{tasks}}",
+        "noRunInProgress": "没有正在运行的任务。"
+    },
     "home": {
         "greetings": {
             "default": [

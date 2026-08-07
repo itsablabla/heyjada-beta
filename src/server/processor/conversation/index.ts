@@ -10,10 +10,12 @@ import { createChildLogger } from '../../logger';
 
 const log = createChildLogger({ component: 'llm' });
 
-// Test mock interface - set by E2E test preload scripts via globalThis
+// Test mock interface - set by E2E test preload scripts via globalThis.
+// `history` lets a scenario react to earlier tool results, e.g. feeding an id returned
+// by one tool call into the next.
 declare global {
     var __pipaliMockLLM:
-        | ((query: string, ctx?: { sessionId?: string }) => ResponseWithThought | Promise<ResponseWithThought>)
+        | ((query: string, ctx?: { sessionId?: string; history?: ATIFTrajectory }) => ResponseWithThought | Promise<ResponseWithThought>)
         | undefined;
 }
 
@@ -31,12 +33,13 @@ export async function sendMessageToModel(
     chatModelId?: number,
     runId?: string,
     onTextChunk?: (chunk: string) => void,
+    chatModelAlias?: string,
 ) {
     // Check for test mock (E2E tests inject this via preload)
     if (globalThis.__pipaliMockLLM) {
         const actualQuery = query || history?.steps?.findLast(s => s.source === 'user')?.message || '';
         log.debug({ query: actualQuery.substring(0, 50) }, 'Using mock LLM');
-        return globalThis.__pipaliMockLLM(actualQuery, { sessionId: history?.session_id });
+        return globalThis.__pipaliMockLLM(actualQuery, { sessionId: history?.session_id, history });
     }
 
     // Resolve model: use conversation's chatModelId if provided, otherwise user's default
@@ -52,7 +55,8 @@ export async function sendMessageToModel(
         throw new Error('No chat model configured.');
     }
 
-    const modelName = chatModelWithApi.chatModel.friendlyName || chatModelWithApi.chatModel.name;
+    const requestedModelName = chatModelAlias ?? chatModelWithApi.chatModel.name;
+    const modelName = chatModelAlias ?? chatModelWithApi.chatModel.friendlyName ?? chatModelWithApi.chatModel.name;
     const aiModelApiName = chatModelWithApi.aiModelApi?.name || 'Device';
     const aiModelType = chatModelWithApi.chatModel.modelType;
     log.info({ model: modelName, provider: aiModelApiName }, 'Using model');
@@ -88,7 +92,7 @@ export async function sendMessageToModel(
             const response = await withTokenRefresh(async (token) => {
                 return sendMessageToGpt(
                     messages,
-                    chatModelWithApi.chatModel.name,
+                    requestedModelName,
                     token,
                     chatModelWithApi.aiModelApi?.apiBaseUrl,
                     tools,
@@ -143,6 +147,15 @@ export async function sendMessageToModel(
  * would need fake pricing, sync special-casing, and selector filtering.
  */
 export const PLATFORM_FAST_MODEL = 'pipali:fast';
+
+export type PlatformModelTier = 'flagship' | 'balanced' | 'lite';
+
+/** Model tier aliases resolved by the platform. */
+export const PLATFORM_TIER_MODELS = {
+    flagship: 'pipali:flagship',
+    balanced: 'pipali:balanced',
+    lite: 'pipali:lite',
+} as const satisfies Record<PlatformModelTier, string>;
 
 /**
  * One-shot utility call to the fastest model available: the platform's fast

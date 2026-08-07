@@ -86,6 +86,12 @@
         "tierOther": "Autre",
         "recommended": "Recommand\u00e9"
     },
+    "thoughts": {
+        "delegationModel": "au mod\u00e8le {{tier}}",
+        "delegationBackground": "en arri\u00e8re-plan",
+        "waitForTasks": "pour {{tasks}}",
+        "noRunInProgress": "Aucune t\u00e2che n\u2019\u00e9tait en cours."
+    },
     "home": {
         "greetings": {
             "default": [

@@ -29,6 +29,7 @@ import { useFocusManagement, useFileDrop, useModels, useSidecar, useWebSocketCha
 import { setApiBaseUrl, apiFetch } from "./utils/api";
 import { generateUUID, generateDeterministicId, getToolCategory, type ToolCategory } from "./utils/formatting";
 import { initNotifications, notifyConfirmationRequest, notifyTaskComplete, setNotificationClickHandler, setupNotificationClickListener, warmAudioContext } from "./utils/notifications";
+import { ConversationNavigationContext } from "./hooks/useConversationNavigation";
 import { useVoiceSettings } from "./hooks/useVoiceSettings";
 import { useVoiceCompanion } from "./hooks/useVoiceCompanion";
 import type { VoiceMode } from "./utils/voice/voice-config";
@@ -246,10 +247,18 @@ const App = () => {
             notifyConfirmationRequest(request, conv?.title, convId);
             voiceCompanionRef.current?.onConfirmationRequest(request, convId, runId);
         },
+        onRunStarted: (convId) => {
+            // Delegated tasks and routines create their conversation server-side, so a run
+            // on an unknown conversation is the sidebar's first sight of it.
+            if (!conversationsRef.current.some(c => c.id === convId)) fetchConversations();
+        },
         onTaskComplete: (_request, response, convId) => {
             const state = conversationStatesRef.current.get(convId);
             const userRequest = state?.messages.filter(m => m.role === 'user').pop()?.content;
-            notifyTaskComplete(userRequest, response, convId);
+            // A delegated task reports back to the conversation that started it, which
+            // announces itself when it responds. Only that end result is news to the user.
+            const isDelegated = !!conversationsRef.current.find(c => c.id === convId)?.parentConversationId;
+            if (!isDelegated) notifyTaskComplete(userRequest, response, convId);
             voiceCompanionRef.current?.onTaskComplete(response, convId);
             setBillingAlerts([]);
             fetchConversations();
@@ -1144,6 +1153,13 @@ const App = () => {
     // ===== Conversation Actions =====
 
     // Derive active tasks from conversationStates for home page display
+    // Delegated conversations are reached from the step that started them, not the
+    // sidebar. The open one stays listed so navigating into it does not leave the
+    // sidebar showing nothing for where you are.
+    const sidebarConversations = conversations.filter(
+        conv => !conv.parentConversationId || conv.id === conversationId,
+    );
+
     const getActiveTasks = (): ActiveTask[] => {
         const activeTasks: ActiveTask[] = [];
 
@@ -1151,6 +1167,9 @@ const App = () => {
             const hasPendingConfirmation = (pendingConfirmations.get(convId)?.length ?? 0) > 0;
             if (state.isProcessing || state.isStopped || state.isCompleted || hasPendingConfirmation) {
                 const conv = conversations.find(c => c.id === convId);
+                // A delegated task belongs to the conversation that started it, and shows
+                // there as a step. Home lists work the user began.
+                if (conv?.parentConversationId) return;
                 // Get latest user message from conversation messages or title
                 const latestUserMessage = state.messages
                     .filter(m => m.role === 'user')
@@ -1704,11 +1723,12 @@ const App = () => {
     }
 
     return (
+        <ConversationNavigationContext.Provider value={selectConversation}>
         <ErrorBoundary>
             <div className="app-wrapper">
                 <Sidebar
                     isOpen={sidebarOpen}
-                    conversations={conversations}
+                    conversations={sidebarConversations}
                     conversationStates={conversationStates}
                     pendingConfirmations={sidebarPendingConfirmations}
                     currentConversationId={conversationId}
@@ -1863,6 +1883,7 @@ const App = () => {
                 />
             </div>
         </ErrorBoundary>
+        </ConversationNavigationContext.Provider>
     );
 };
 

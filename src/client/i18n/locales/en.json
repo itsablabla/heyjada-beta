@@ -86,6 +86,12 @@
         "tierOther": "Other",
         "recommended": "Recommended"
     },
+    "thoughts": {
+        "delegationModel": "to {{tier}} model",
+        "delegationBackground": "in background",
+        "waitForTasks": "on {{tasks}}",
+        "noRunInProgress": "No run was in progress."
+    },
     "voice": {
         "beta": "Beta",
         "betaHint": "Turning this on adds the voice controls next to the message box.",

@@ -86,6 +86,12 @@
         "tierOther": "その他",
         "recommended": "おすすめ"
     },
+    "thoughts": {
+        "delegationModel": "{{tier}}モデルに",
+        "delegationBackground": "バックグラウンドで",
+        "waitForTasks": "{{tasks}}を待機",
+        "noRunInProgress": "実行中のタスクはありませんでした。"
+    },
     "home": {
         "greetings": {
             "default": [
