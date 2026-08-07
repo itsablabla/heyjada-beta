@@ -18,7 +18,7 @@ See `references/api.md` for API endpoints to manage mcp servers, automations/rou
 The bun server is usually at: `http://localhost:6464`. If not, find your bun server url first.
 
 - What previous conversations have I had about surfing?: GET /api/conversations?q=surfing
-- What happened in a task I delegated?: GET /api/chat/<conversation_id>/history (or use `inspect_task`)
+- What happened in a specific conversation?: Start with `inspect_task` using `latest` or `outline`. Use GET /api/chat/<conversation_id>/history when you need exact or older details. Its raw response can be large, so query it efficiently.
 - What tools are connected?:  GET /api/mcp/servers
 - What automations are set up?: GET /api/automations
 - What models are available?: GET /api/models

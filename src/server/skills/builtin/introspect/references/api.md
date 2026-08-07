@@ -6,12 +6,12 @@ Query these with `shell_command`, using the bundled `bun` or `uv` runtimes (both
 ## Conversations
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/conversations` | List all conversations. Supports `?q=<term>` for full-text search. Each entry carries `parentConversationId` |
+| GET | `/conversations` | List all conversations. Supports `?q=<term>` for full-text search |
 | GET | `/chat/:conversationId/history` | Full message history and metadata like cost, tokens |
 
-Conversations you delegated have `parentConversationId` set to the conversation that
+Delegated conversations have `parentConversationId` set to the conversation that
 started them. Read one with `inspect_task`, or pull just the parts you need from
-`/chat/:conversationId/history` when it is long.
+`/chat/:conversationId/history`.
 
 ## Models
 | Method | Endpoint | Description |
@@ -19,15 +19,10 @@ started them. Read one with `inspect_task`, or pull just the parts you need from
 | GET | `/models` | All available chat models |
 | GET | `/user/model` | User's currently selected model |
 
-## User
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/user/context` | User profile (name, location, instructions) from ~/.pipali/USER.md. Always in your system prompt too |
-
 ## Skills
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/skills` | All installed skills with descriptions from ~/.pipali/skills/**/SKILL.md |
+| GET | `/skills` | All currently loaded skills, including hidden skills and visibility state |
 
 ## Automations
 | Method | Endpoint | Description |
