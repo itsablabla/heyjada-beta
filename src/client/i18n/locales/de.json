@@ -86,6 +86,12 @@
         "tierOther": "Sonstige",
         "recommended": "Empfohlen"
     },
+    "thoughts": {
+        "delegationModel": "an das Modell {{tier}}",
+        "delegationBackground": "im Hintergrund",
+        "waitForTasks": "auf {{tasks}}",
+        "noRunInProgress": "Es wurde keine Aufgabe ausgeführt."
+    },
     "home": {
         "greetings": {
             "default": [

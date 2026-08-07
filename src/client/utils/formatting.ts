@@ -247,6 +247,13 @@ export interface RichToolArgs {
     hoverText?: string;
 }
 
+export interface DelegationToolText {
+    background: string;
+    modelTier: (tier: string) => string;
+    waitForTasks: (tasks: string) => string;
+    noRunInProgress: string;
+}
+
 /**
  * Split a path into basename and folder with home dir stripped.
  * Returns [basename, folder] where folder has ~/ prefix removed.
@@ -267,7 +274,14 @@ function splitPath(fullPath: string): [string, string] {
  * File tools return structured primary/secondary text at all detail levels.
  * In outline mode, primary is basename; in full mode, primary includes more context.
  */
-export function formatToolArgsRich(toolName: string, args: any, outline = false, uidMap?: Map<string, { role: string; label: string }>): RichToolArgs | null {
+export function formatToolArgsRich(
+    toolName: string,
+    args: any,
+    outline = false,
+    uidMap?: Map<string, { role: string; label: string }>,
+    delegatedTaskTitles?: Map<string, string>,
+    delegationText?: DelegationToolText,
+): RichToolArgs | null {
     if (!args || typeof args !== 'object') return null;
 
     switch (toolName) {
@@ -327,7 +341,34 @@ export function formatToolArgsRich(toolName: string, args: any, outline = false,
             // title is a required argument, so the fallback is for a model that skipped it
             const text = args.title || args.message?.split('\n')[0];
             if (!text) return null;
-            return { text, hoverText: args.message };
+            const secondary = [
+                typeof args.model_tier === 'string'
+                    ? delegationText?.modelTier(args.model_tier) ?? args.model_tier
+                    : undefined,
+                args.run_in_background !== false ? delegationText?.background : undefined,
+            ].filter(Boolean).join(' ');
+            return { text, secondary: secondary || undefined, hoverText: args.message };
+        }
+        case 'wait_for_tasks': {
+            const ids: string[] = Array.isArray(args.conversation_ids)
+                ? args.conversation_ids.filter((id: unknown): id is string => typeof id === 'string')
+                : [];
+            if (ids.length === 0) return null;
+            const tasks = ids.map(id => delegatedTaskTitles?.get(id) ?? id).join(', ');
+            return {
+                text: delegationText?.waitForTasks(tasks) ?? tasks,
+                hoverText: ids.join(', '),
+            };
+        }
+
+        case 'inspect_task':
+        case 'stop_task': {
+            if (typeof args.conversation_id !== 'string') return null;
+            const title = delegatedTaskTitles?.get(args.conversation_id);
+            return {
+                text: title ?? args.conversation_id,
+                hoverText: args.conversation_id,
+            };
         }
 
         case 'generate_image': {
@@ -483,4 +524,57 @@ export function getDelegatedConversationId(toolName: string, toolResult?: string
     }
 
     return toolResult.match(CONVERSATION_HEADER)?.[1];
+}
+
+/** Match delegated conversation handles in tool results back to their user-facing titles. */
+export function buildDelegatedTaskTitleMap(thoughts: Array<{
+    type: string;
+    toolName?: string;
+    toolArgs?: Record<string, unknown>;
+    toolResult?: string;
+}>): Map<string, string> {
+    const titles = new Map<string, string>();
+    for (const thought of thoughts) {
+        if (thought.type !== 'tool_call' || thought.toolName !== 'delegate_task') continue;
+        const conversationId = getDelegatedConversationId(thought.toolName, thought.toolResult);
+        const title = thought.toolArgs?.title;
+        if (conversationId && typeof title === 'string' && title.trim()) {
+            titles.set(conversationId, title);
+        }
+    }
+    return titles;
+}
+
+/** Remove internal handles and redundant acknowledgements from delegation tool output. */
+export function formatDelegationToolResult(
+    toolName: string,
+    result?: string,
+    noRunInProgress?: string,
+): string | null | undefined {
+    if (!result || !['delegate_task', 'inspect_task', 'wait_for_tasks', 'stop_task'].includes(toolName)) {
+        return result;
+    }
+
+    if (toolName === 'delegate_task') {
+        try {
+            const parsed = JSON.parse(result) as { status?: unknown; conversation_id?: unknown };
+            if (parsed.status === 'started' && typeof parsed.conversation_id === 'string') return null;
+        } catch {
+            // Foreground delegation returns the same readable summary as wait_for_tasks.
+        }
+    }
+
+    if (/^Stopped conversation [0-9a-f-]+\.$/i.test(result)) return null;
+    if (/^Conversation [0-9a-f-]+ had no run in progress\.$/i.test(result)) {
+        return noRunInProgress ?? result;
+    }
+
+    return result
+        .split('\n\n---\n\n')
+        .map(summary => {
+            const [firstLine, ...rest] = summary.split('\n');
+            return firstLine && CONVERSATION_HEADER.test(firstLine) ? rest.join('\n') : summary;
+        })
+        .join('\n\n---\n\n')
+        .trim();
 }
