@@ -69,6 +69,8 @@ export interface ToolExecutionContext {
     loadedMcpTools?: Set<string>;
     /** Owner of this run, for tools that create or read other conversations */
     user?: typeof User.$inferSelect;
+    /** Concrete model backing this run, used to derive delegated model policy */
+    chatModelId?: number;
     /** Aborted when the run is stopped, so long-waiting tools can release and clean up */
     abortSignal?: AbortSignal;
 }

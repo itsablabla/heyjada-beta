@@ -7,7 +7,7 @@
  */
 
 import { eq, inArray } from 'drizzle-orm';
-import { db } from '../../db';
+import { db, getChatModelById, getDefaultChatModel } from '../../db';
 import { Conversation, User } from '../../db/schema';
 import { getBus, type ConversationEvent } from '../../events/conversation-event-bus';
 import { startConversationRun, stopConversationRun } from '../../events/conversation-runs';
@@ -17,12 +17,18 @@ import { atifConversationService } from '../conversation/atif/atif.service';
 import type { ATIFStep } from '../conversation/atif/atif.types';
 import type { ConfirmationPreferences } from '../confirmation';
 import { createChildLogger } from '../../logger';
+import {
+    PLATFORM_TIER_MODELS,
+    type PlatformModelTier,
+} from '../conversation';
 
 const log = createChildLogger({ component: 'delegate_task' });
 
 export interface DelegateTaskArgs {
     title: string;
     message: string;
+    /** Omit to use the parent conversation's intelligence tier. */
+    model_tier?: PlatformModelTier;
     /** Omit to start a new task; provide to send a follow-up to one already running. */
     conversation_id?: string;
     /** Default true. When false, the call waits and returns the task's result. */
@@ -47,6 +53,14 @@ export interface WaitForTasksArgs {
 
 export interface DelegationResult {
     compiled: string;
+}
+
+export function selectDelegatedModelAlias(
+    requestedTier: PlatformModelTier | undefined,
+    parentTier: PlatformModelTier | null | undefined,
+): string | undefined {
+    const tier = requestedTier ?? parentTier;
+    return tier ? PLATFORM_TIER_MODELS[tier] : undefined;
 }
 
 function errorResult(message: string): DelegationResult {
@@ -141,6 +155,7 @@ export async function delegateTask(
         parentConversationId?: string;
         confirmationPreferences?: ConfirmationPreferences;
         abortSignal?: AbortSignal;
+        parentChatModelId?: number;
     },
 ): Promise<DelegationResult> {
     const { user, parentConversationId } = options;
@@ -155,12 +170,21 @@ export async function delegateTask(
     }
 
     try {
+        const parentModel = options.parentChatModelId !== undefined
+            ? await getChatModelById(options.parentChatModelId)
+            : await getDefaultChatModel(user);
+        const chatModelAlias = parentModel?.aiModelApi?.name === 'Pipali'
+            ? selectDelegatedModelAlias(args.model_tier, parentModel.chatModel.tier)
+            : undefined;
+
         const result = await startConversationRun({
             user,
             message: args.message,
             conversationId: targetId,
             title: args.title,
             parentConversationId,
+            chatModelId: parentModel?.chatModel.id,
+            chatModelAlias,
             // Inherit as a copy: what the user already approved carries over, but the
             // child saying "don't ask again" must not rewrite the parent's policy.
             confirmationPreferences: options.confirmationPreferences

@@ -562,6 +562,11 @@ Write the brief as if to someone who cannot see this conversation, because they 
                     type: 'string',
                     description: 'The complete, standalone brief for the task, including what "done" looks like. The task sees only this.',
                 },
+                model_tier: {
+                    type: 'string',
+                    enum: ['flagship', 'balanced', 'lite'],
+                    description: 'Model intelligence tier for this task. Choose based on difficulty and cost; omit to use the same tier as this conversation.',
+                },
                 conversation_id: {
                     type: 'string',
                     description: 'Omit to start a new task. Pass the id of a task you already started to send it a follow-up, which reaches it even mid-work.',
@@ -1029,6 +1034,7 @@ async function executeTool(
                         parentConversationId: context?.conversationId,
                         confirmationPreferences: context?.confirmation?.preferences,
                         abortSignal: context?.abortSignal,
+                        parentChatModelId: context?.chatModelId,
                     },
                 );
                 return result.compiled;
@@ -1282,6 +1288,7 @@ export async function* research(config: ResearchConfig): AsyncGenerator<Research
             shownReminders,
             loadedMcpTools,
             user: config.user,
+            chatModelId: config.chatModelId,
             abortSignal: config.abortSignal,
         };
         iteration.toolResults = await executeToolsInParallel(iteration.toolCalls, executionContext, config.abortSignal);
