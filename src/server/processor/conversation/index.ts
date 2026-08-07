@@ -33,6 +33,7 @@ export async function sendMessageToModel(
     chatModelId?: number,
     runId?: string,
     onTextChunk?: (chunk: string) => void,
+    chatModelAlias?: string,
 ) {
     // Check for test mock (E2E tests inject this via preload)
     if (globalThis.__pipaliMockLLM) {
@@ -54,7 +55,8 @@ export async function sendMessageToModel(
         throw new Error('No chat model configured.');
     }
 
-    const modelName = chatModelWithApi.chatModel.friendlyName || chatModelWithApi.chatModel.name;
+    const requestedModelName = chatModelAlias ?? chatModelWithApi.chatModel.name;
+    const modelName = chatModelAlias ?? chatModelWithApi.chatModel.friendlyName ?? chatModelWithApi.chatModel.name;
     const aiModelApiName = chatModelWithApi.aiModelApi?.name || 'Device';
     const aiModelType = chatModelWithApi.chatModel.modelType;
     log.info({ model: modelName, provider: aiModelApiName }, 'Using model');
@@ -90,7 +92,7 @@ export async function sendMessageToModel(
             const response = await withTokenRefresh(async (token) => {
                 return sendMessageToGpt(
                     messages,
-                    chatModelWithApi.chatModel.name,
+                    requestedModelName,
                     token,
                     chatModelWithApi.aiModelApi?.apiBaseUrl,
                     tools,
@@ -145,6 +147,15 @@ export async function sendMessageToModel(
  * would need fake pricing, sync special-casing, and selector filtering.
  */
 export const PLATFORM_FAST_MODEL = 'pipali:fast';
+
+export type PlatformModelTier = 'flagship' | 'balanced' | 'lite';
+
+/** Model tier aliases resolved by the platform. */
+export const PLATFORM_TIER_MODELS = {
+    flagship: 'pipali:flagship',
+    balanced: 'pipali:balanced',
+    lite: 'pipali:lite',
+} as const satisfies Record<PlatformModelTier, string>;
 
 /**
  * One-shot utility call to the fastest model available: the platform's fast

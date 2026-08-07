@@ -98,6 +98,8 @@ export interface StartConversationRunOptions {
     /** Omit to create a new conversation. */
     conversationId?: string;
     chatModelId?: number;
+    /** Row-less platform alias used for this run without persisting a fake model row. */
+    chatModelAlias?: string;
     /** Title for a newly created conversation. */
     title?: string;
     /** Marks a new conversation as delegated from this parent. */
@@ -148,7 +150,13 @@ export async function startConversationRun(
         }
     }
 
-    if (message && queueMessageOnActiveRun(conversationId, { runId, clientMessageId, message, chatModelId: chatModelWithApi?.chatModel.id })) {
+    if (message && queueMessageOnActiveRun(conversationId, {
+        runId,
+        clientMessageId,
+        message,
+        chatModelId: chatModelWithApi?.chatModel.id,
+        chatModelAlias: options.chatModelAlias,
+    })) {
         log.info({ conversationId, runId }, 'Queued message on active run');
         return { conversationId, runId, queued: true };
     }
@@ -170,6 +178,7 @@ export async function startConversationRun(
         clientMessageId,
         confirmationPreferences: bus.confirmationPreferences,
         chatModelId: chatModelWithApi?.chatModel.id,
+        chatModelAlias: options.chatModelAlias,
     }).catch(error => {
         log.error({ err: error, conversationId, runId }, 'Run failed');
     });

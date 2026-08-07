@@ -141,6 +141,8 @@ interface ResearchConfig {
     confirmationContext?: ConfirmationContext;
     // Chat model ID to use for this conversation (overrides user's default)
     chatModelId?: number;
+    // Row-less platform model alias to use while retaining the selected model's configuration
+    chatModelAlias?: string;
     // Unique ID of current research run
     runId?: string;
     // Step count when iteration threshold was first reached, for stable warning injection
@@ -764,6 +766,7 @@ async function pickNextTool(
             config.chatModelId,
             config.runId,
             config.onTextChunk,
+            config.chatModelAlias,
         );
 
         // Check if response is valid

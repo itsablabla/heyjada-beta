@@ -32,6 +32,7 @@ export interface ExecuteRunOptions {
     clientMessageId: string;
     confirmationPreferences: ConfirmationPreferences;
     chatModelId?: number;
+    chatModelAlias?: string;
     /** Override the confirmation context (e.g., for automation hybrid confirmations) */
     confirmationContextOverride?: ConfirmationContext;
 }
@@ -53,6 +54,14 @@ function sanitizeErrorForClient(error: unknown): string {
 
 function isNonEmptyString(value: unknown): value is string {
     return typeof value === 'string' && value.trim().length > 0;
+}
+
+/** A model alias belongs to one queued run; omitting it explicitly returns to the concrete model. */
+function resolveQueuedModel(
+    currentChatModelId: number | undefined,
+    next: Pick<QueuedMessage, 'chatModelId' | 'chatModelAlias'>,
+): [chatModelId: number | undefined, chatModelAlias: string | undefined] {
+    return [next.chatModelId ?? currentChatModelId, next.chatModelAlias];
 }
 
 function ensureUniqueRunId(
@@ -133,6 +142,7 @@ export async function executeRun(options: ExecuteRunOptions): Promise<void> {
     let runId = options.runId;
     let clientMessageId = options.clientMessageId;
     let currentChatModelId = options.chatModelId;
+    let currentChatModelAlias = options.chatModelAlias;
     let carryOverQueue: QueuedMessage[] = [];
 
     while (true) {
@@ -204,6 +214,7 @@ export async function executeRun(options: ExecuteRunOptions): Promise<void> {
                 confirmationContext,
                 systemPrompt: systemPromptOverride,
                 chatModelId: currentChatModelId,
+                chatModelAlias: currentChatModelAlias,
                 conversationRole,
                 runId: runIdAuthoritative,
                 onTextDelta: (delta) => {
@@ -294,7 +305,7 @@ export async function executeRun(options: ExecuteRunOptions): Promise<void> {
                     runId = next.runId;
                     clientMessageId = next.clientMessageId;
                     userMessage = next.message;
-                    currentChatModelId = next.chatModelId ?? currentChatModelId;
+                    [currentChatModelId, currentChatModelAlias] = resolveQueuedModel(currentChatModelId, next);
                     carryOverQueue = rest;
                     continue;
                 }
@@ -331,7 +342,7 @@ export async function executeRun(options: ExecuteRunOptions): Promise<void> {
                     runId = next.runId;
                     clientMessageId = next.clientMessageId;
                     userMessage = next.message;
-                    currentChatModelId = next.chatModelId ?? currentChatModelId;
+                    [currentChatModelId, currentChatModelAlias] = resolveQueuedModel(currentChatModelId, next);
                     carryOverQueue = rest;
                     continue;
                 }
@@ -387,7 +398,7 @@ export async function executeRun(options: ExecuteRunOptions): Promise<void> {
                         runId = next.runId;
                         clientMessageId = next.clientMessageId;
                         userMessage = next.message;
-                        currentChatModelId = next.chatModelId ?? currentChatModelId;
+                        [currentChatModelId, currentChatModelAlias] = resolveQueuedModel(currentChatModelId, next);
                         carryOverQueue = rest;
                         continue;
                     }

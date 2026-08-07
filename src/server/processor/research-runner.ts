@@ -45,6 +45,8 @@ export interface ResearchRunnerOptions {
     confirmationContext?: ConfirmationContext;
     /** Chat model ID to use for this conversation */
     chatModelId?: number;
+    /** Row-less platform model alias to use for this run */
+    chatModelAlias?: string;
     /** Unique ID of current research run */
     runId?: string;
     /** Home, a delegated task, or an ordinary chat */
@@ -177,6 +179,7 @@ export async function* runResearchWithConversation(
         abortSignal,
         confirmationContext,
         chatModelId: options.chatModelId,
+        chatModelAlias: options.chatModelAlias,
         conversationId,
         conversationRole: options.conversationRole,
         runId,
