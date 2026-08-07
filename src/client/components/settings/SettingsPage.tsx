@@ -229,24 +229,22 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                 <div className="settings-page">
                     <div className="settings-header">
                         <h2>{t('settings.title')}</h2>
-                        {sandboxStatus?.supported && (
-                            <div className="settings-tabs">
-                                <button
-                                    className={`settings-tab ${activeTab === 'profile' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('profile')}
-                                >
-                                    <User size={16} />
-                                    <span>{t('settings.tabProfile')}</span>
-                                </button>
-                                <button
-                                    className={`settings-tab ${activeTab === 'permissions' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('permissions')}
-                                >
-                                    <Shield size={16} />
-                                    <span>{t('settings.tabPermissions')}</span>
-                                </button>
-                            </div>
-                        )}
+                        <div className="settings-tabs">
+                            <button
+                                className={`settings-tab ${activeTab === 'profile' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('profile')}
+                            >
+                                <User size={16} />
+                                <span>{t('settings.tabProfile')}</span>
+                            </button>
+                            <button
+                                className={`settings-tab ${activeTab === 'permissions' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('permissions')}
+                            >
+                                <Shield size={16} />
+                                <span>{t('settings.tabPermissions')}</span>
+                            </button>
+                        </div>
                     </div>
 
                     {error && (
@@ -398,7 +396,7 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                         </div>
 
                         {/* Sandbox toggle */}
-                        <div className="settings-section">
+                        {sandboxStatus?.supported && <div className="settings-section">
                             <div className="settings-section-header">
                                 <div>
                                     <h3 className="settings-section-title">
@@ -421,10 +419,10 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                                     </label>
                                 )}
                             </div>
-                        </div>
+                        </div>}
 
                         {/* File permissions */}
-                        {sandboxConfig && (
+                        {sandboxStatus?.supported && sandboxConfig && (
                         <div className="settings-section">
                             <h3 className="settings-section-title">
                                 <FolderLock size={18} />
