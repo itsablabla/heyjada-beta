@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { type User } from '../../db/schema';
 import type { ToolDefinition } from '../conversation/conversation';
 import { sendMessageToModel } from '../conversation/index';
@@ -893,14 +894,23 @@ async function pickNextTool(
 }
 
 /**
+ * Extract shell text preceding any heredoc body to scan for (chained) commands.
+ * Interpreter payloads (`python3 << 'EOF' ...`) are not shell syntax that need to scanned.
+ */
+function shellPortion(command: string): string {
+    return command.split(/<<-?\s*['"]?\w+/)[0] ?? command;
+}
+
+/**
  * Detect if a shell command is a `find` invocation.
  * Matches `find /path ...` at the start or after pipe/chain operators.
  */
 export function isShellFindCommand(command: string): boolean {
-    const trimmed = command.trimStart();
+    const shell = shellPortion(command);
+    const trimmed = shell.trimStart();
     if (trimmed.startsWith('find ') || trimmed === 'find') return true;
     // Check for find after pipe or chain operators
-    return /[|;&]\s*find\s/.test(command);
+    return /[|;&]\s*find\s/.test(shell);
 }
 
 /**
@@ -909,7 +919,7 @@ export function isShellFindCommand(command: string): boolean {
  */
 export function extractFindPath(command: string): string | undefined {
     // Split on chain operators to get the segment containing `find`
-    const segments = command.split(/[|;&]+/);
+    const segments = shellPortion(command).split(/[|;&]+/);
     const findSegment = segments.reverse().find(s => s.trimStart().startsWith('find '));
     if (!findSegment) return undefined;
     const afterFind = findSegment.trimStart().slice('find '.length).trimStart();
@@ -994,7 +1004,8 @@ async function executeTool(
                 ) {
                     const findPath = extractFindPath(args.command);
                     const resolvedFindPath = findPath ? resolvePath(findPath) : resolvePath('~');
-                    if (isBroadSearch(resolvedFindPath)) {
+                    // A find on a missing path fails instantly, so there is no slow scan to warn about
+                    if (isBroadSearch(resolvedFindPath) && existsSync(resolvedFindPath)) {
                         context.shownReminders.add('find_warned');
                         return '[System Warning]: prefer `mdfind` over `find` for instant results and to avoid TCC permission dialogs.\n'
                             + 'Examples: `mdfind -name "report" -onlyin ~/Documents` (find by name substring), '
