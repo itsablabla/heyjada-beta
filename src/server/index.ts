@@ -17,6 +17,7 @@ import {
 import { startAutomationSystem, stopAutomationSystem } from "./automation";
 import { loadEnabledMcpServers, closeMcpClients } from "./processor/mcp";
 import { configureAuth, isAuthenticated, getPlatformUserInfo } from "./auth";
+import { initBasicAuth, checkBasicAuth } from "./auth/http-basic";
 import { createChildLogger } from './logger';
 import { initializeSandbox, shutdownSandbox } from './sandbox';
 import { killAllBackgroundProcesses } from './events/background-processes';
@@ -274,6 +275,9 @@ async function main() {
   // Paths for quieter logging (e.g frequent polling endpoints)
   const QUIETER_PATHS = new Set(['/api/automations/confirmations/pending']);
 
+  // Initialize the web login gate before accepting requests
+  initBasicAuth();
+
   const server = Bun.serve<WebSocketData, any>({
     async fetch(req, server) {
         const url = new URL(req.url);
@@ -281,6 +285,12 @@ async function main() {
             log.debug(`[${req.method}] ${url.pathname}`);
         } else {
             log.info(`[${req.method}] ${url.pathname}`);
+        }
+
+        // Basic authentication gate (HTTP routes and WebSocket handshake)
+        const unauthorized = checkBasicAuth(req);
+        if (unauthorized) {
+            return unauthorized;
         }
 
         // WebSocket
