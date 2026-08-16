@@ -37,10 +37,21 @@ export {
     getActiveFileWatcherCount,
 } from './scheduler';
 
+export {
+    getAutomationOutputDir,
+    ensureAutomationOutputDir,
+    sanitizeAutomationFolderName,
+} from './output-dir';
+
 /**
  * Start the automation system
  */
 export async function startAutomationSystem(): Promise<void> {
+    // Ensure the default automations output folder exists
+    const { ensureAutomationsDir } = await import('../paths');
+    const automationsDir = ensureAutomationsDir();
+    log.info(`Automations output folder: ${automationsDir}`);
+
     // Clean up any orphaned executions from previous server instance
     const { cleanupOrphanedExecutions } = await import('./executor');
     await cleanupOrphanedExecutions();

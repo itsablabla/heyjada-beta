@@ -18,6 +18,7 @@ import {
     activateAutomation,
     deactivateAutomation,
     reloadAutomation,
+    ensureAutomationOutputDir,
     type TriggerConfig,
     type TriggerEventData,
 } from '../automation';
@@ -210,6 +211,13 @@ automations.post('/', zValidator('json', createAutomationSchema), async (c) => {
     // Start the scheduler/watcher for this automation (only if it has a trigger)
     if (automation.triggerType && automation.triggerConfig) {
         await activateAutomation(automation);
+    }
+
+    // Create the automation's persistent output folder
+    try {
+        ensureAutomationOutputDir(automation);
+    } catch (error) {
+        log.warn({ err: error }, `Failed to create output folder for ${automation.id}`);
     }
 
     log.info(`Created automation: ${automation.name} (${automation.id})`);

@@ -29,6 +29,7 @@ The bun server is usually at: `http://localhost:6464`. If not, find your bun ser
 |---------|------|
 | User profile | `~/.pipali/USER.md` |
 | Skills directory | `~/.pipali/skills/` |
+| Automations output folder | `~/HeyJada/Automations/` (files created by automations go here by default, one subfolder per automation) |
 | App data (macOS) | `~/Library/Application Support/pipali/` |
 | App data (Linux) | `~/.local/share/pipali/` |
 | App data (Windows) | `%APPDATA%/pipali/` |
@@ -70,6 +71,7 @@ The app has a navigation sidebar on the left and a main content area.
 - Can be activated/deactivated, run manually, or deleted
 - Routines is the user facing name of the automations feature in code
 - Routines allow user to assign scheduled tasks for you to work on or reusable prompts that they can trigger manually
+- Files created by automations are saved to `~/HeyJada/Automations/<automation name>/` by default unless the automation prompt specifies another location
 
 ### Tools Page
 - Add MCP servers (stdio or HTTP transport). 

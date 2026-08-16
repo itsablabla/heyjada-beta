@@ -16,6 +16,7 @@ import type { ConfirmationRequest, ConfirmationResponse } from '../../processor/
 import { createStandardConfirmationOptions } from '../../processor/confirmation/confirmation.types';
 import { getOrCreateBus } from '../../events/conversation-event-bus';
 import { executeRun } from '../../events/run-executor';
+import { ensureAutomationOutputDir } from '../output-dir';
 import { createChildLogger } from '../../logger';
 
 const log = createChildLogger({ component: 'automation' });
@@ -229,7 +230,8 @@ async function runExecutionWithRetry(
  */
 function buildPromptWithContext(
     basePrompt: string,
-    triggerData: TriggerEventData
+    triggerData: TriggerEventData,
+    outputDir?: string
 ): string {
     let context = '';
 
@@ -242,6 +244,10 @@ function buildPromptWithContext(
         if (triggerData.external.metadata && Object.keys(triggerData.external.metadata).length > 0) {
             context += `Metadata: ${JSON.stringify(triggerData.external.metadata)}\n\n`;
         }
+    }
+
+    if (outputDir) {
+        context += `[Default output folder: ${outputDir}. Save any files you create to this folder unless the task specifies a different location.]\n\n`;
     }
 
     return context + basePrompt;
@@ -406,8 +412,16 @@ async function runExecution(
         // Get or create the automation's conversation
         const conversationId = await getOrCreateAutomationConversation(automation, user);
 
+        // Ensure the automation's persistent output folder exists
+        let outputDir: string | undefined;
+        try {
+            outputDir = ensureAutomationOutputDir(automation);
+        } catch (error) {
+            log.warn({ err: error }, `Failed to ensure output folder for ${automationId}`);
+        }
+
         // Build the prompt with trigger context
-        const contextualPrompt = buildPromptWithContext(automation.prompt, triggerData);
+        const contextualPrompt = buildPromptWithContext(automation.prompt, triggerData, outputDir);
 
         // Always create bus so WS observers can subscribe mid-run
         const bus = getOrCreateBus(conversationId);
