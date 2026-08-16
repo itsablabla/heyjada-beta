@@ -86,7 +86,7 @@ export async function emailUser(args: EmailUserArgs, conversationId?: string): P
         log.info(`Sending email with subject: "${subject.slice(0, 100)}"${processedAttachments?.length ? ` and ${processedAttachments.length} attachment(s)` : ''}`);
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (conversationId) headers['X-HeyJada-Conversation-ID'] = conversationId;
+        if (conversationId) headers['X-Pipali-Conversation-ID'] = conversationId;
 
         const result = await platformFetch<{ success: boolean; email: string }>(endpoint, {
             method: 'POST',

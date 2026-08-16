@@ -263,7 +263,7 @@
         "sendGuidance": "Anweisungen senden (lehnt den aktuellen Vorgang ab)"
     },
     "notifications": {
-        "questionFromPipali": "Frage von HeyJada",
+        "questionFromHeyJada": "Frage von HeyJada",
         "actionRequired": "Aktion erforderlich",
         "taskComplete": "Task abgeschlossen",
         "taskFinished": "Dein Task wurde abgeschlossen"
@@ -286,23 +286,23 @@
         },
         "modeMenu": {
             "title": "Sprachmodus",
-            "spokenHint": "Sage jederzeit \"HeyJada, speak freely\" oder \"HeyJada, ask first\""
+            "spokenHint": "Sage jederzeit \"Hey Jada, speak freely\" oder \"Hey Jada, ask first\""
         },
         "enabledHint": "Solange der Sprachmodus aktiv ist, wird Sprache in der Nähe dieses Geräts transkribiert, um zu prüfen, ob du HeyJada ansprichst; nicht adressierte Sprache wird verworfen und nie gespeichert.",
         "status": {
-            "idle": "Wartet auf \"HeyJada…\" – zum Sprechen tippen",
+            "idle": "Wartet auf \"Hey Jada…\" – zum Sprechen tippen",
             "dormant": "Sprachmodus schläft – zum Aufwecken tippen",
-            "announced": "HeyJada möchte etwas sagen – sage \"HeyJada, go ahead\" oder tippe",
+            "announced": "HeyJada möchte etwas sagen – sage \"Hey Jada, go ahead\" oder tippe",
             "speaking": "Spricht – zum Antworten tippen",
             "listening": "Hört zu – zum Senden tippen",
             "transcribing": "Transkribiert…"
         },
         "coach": {
-            "idle": "Sage \"HeyJada…\" zum Sprechen – oder tippe hier",
-            "idleWorking": "Arbeitet – sage \"HeyJada…\" zum Umlenken, \"HeyJada, stop\" zum Abbrechen",
+            "idle": "Sage \"Hey Jada…\" zum Sprechen – oder tippe hier",
+            "idleWorking": "Arbeitet – sage \"Hey Jada…\" zum Umlenken, \"Hey Jada, stop\" zum Abbrechen",
             "dormant": "Sprachmodus schläft – tippe auf das Mikrofon zum Aufwecken",
-            "goAheadPending": "HeyJada hat etwas für dich – sage \"HeyJada, go ahead\"",
-            "goAheadResult": "Deine Ergebnisse sind fertig – sage \"HeyJada, go ahead\" zum Anhören",
+            "goAheadPending": "HeyJada hat etwas für dich – sage \"Hey Jada, go ahead\"",
+            "goAheadResult": "Deine Ergebnisse sind fertig – sage \"Hey Jada, go ahead\" zum Anhören",
             "speaking": "Sprich einfach los, um zu unterbrechen – oder sage \"stop\" für Ruhe",
             "listening": "Sage \"send it\", wenn du fertig bist, \"scratch that\" zum Neuanfangen",
             "listeningDecision": "Sage \"yes\", \"no\" oder gib eigene Anweisungen",
@@ -354,7 +354,7 @@
         "loading": "Skills werden geladen...",
         "reloadTooltip": "Skills von der Festplatte neu laden",
         "noSkillsTitle": "Keine Skills gefunden",
-        "noSkillsDescription": "Skills erweitern Pipalis Fähigkeiten mit eigenen Anweisungen.",
+        "noSkillsDescription": "Skills erweitern die Fähigkeiten von HeyJada mit eigenen Anweisungen.",
         "noSkillsHint": "Erstelle einen Skill, indem du eine ",
         "skillMdFile": "SKILL.md",
         "fileIn": "-Datei anlegst in:",

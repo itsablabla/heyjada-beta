@@ -240,7 +240,7 @@ async function searchWithPlatform(
     }
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (conversationId) headers['X-HeyJada-Conversation-ID'] = conversationId;
+    if (conversationId) headers['X-Pipali-Conversation-ID'] = conversationId;
 
     const fetchResult = await platformFetch<PlatformSearchResponse>(searchEndpoint, {
         method: 'POST',

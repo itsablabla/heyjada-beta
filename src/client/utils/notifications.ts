@@ -398,7 +398,7 @@ export async function notifyConfirmationRequest(
 
     // Build notification content
     const title = request.operation === 'ask_user'
-        ? i18n.t('notifications.questionFromPipali')
+        ? i18n.t('notifications.questionFromHeyJada')
         : i18n.t('notifications.actionRequired');
 
     const body = conversationTitle
