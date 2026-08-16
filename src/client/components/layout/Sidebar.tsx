@@ -1,9 +1,9 @@
 // Sidebar with conversation list, collapsible to an icon rail
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, MessageSquare, AlertCircle, CheckCircle, Plus, MoreVertical, Trash2, ChevronRight, Search, X, ScrollText, Clock, Hammer, Settings, LogOut, Shield, Sun, Moon, Monitor, Pencil, Pin, PinOff, Copy, Link, FileText, Gift, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { Loader2, MessageSquare, AlertCircle, CheckCircle, Plus, MoreVertical, Trash2, ChevronRight, ChevronDown, Search, X, ScrollText, Clock, Hammer, Settings, LogOut, Shield, Sun, Moon, Monitor, Pencil, Pin, PinOff, Copy, Link, FileText, Gift, PanelLeft, PanelLeftClose, Folder, FolderOpen, FolderPlus, FolderInput } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import type { ConversationSummary, ConversationState, ConfirmationRequest, AuthStatus, BillingAlert } from '../../types';
+import type { ConversationSummary, FolderSummary, ConversationState, ConfirmationRequest, AuthStatus, BillingAlert } from '../../types';
 import { useTheme } from '../../hooks';
 import { BillingAlertBanner } from '../billing';
 import { Logo } from './Logo';
@@ -63,6 +63,11 @@ interface SidebarProps {
     onCopyConversationRaw: (id: string) => void;
     onRenameConversation: (id: string, title: string) => Promise<boolean>;
     onPinConversation: (id: string, isPinned: boolean) => void;
+    folders: FolderSummary[];
+    onMoveConversationToFolder: (id: string, folderId: string | null) => void;
+    onCreateFolder: (name: string, parentId: string | null) => Promise<boolean>;
+    onRenameFolder: (id: string, name: string) => Promise<boolean>;
+    onDeleteFolder: (id: string) => void;
     onGoToSkills?: () => void;
     onGoToAutomations?: () => void;
     onGoToMcpTools?: () => void;
@@ -94,6 +99,11 @@ export function Sidebar({
     onCopyConversationRaw,
     onRenameConversation,
     onPinConversation,
+    folders,
+    onMoveConversationToFolder,
+    onCreateFolder,
+    onRenameFolder,
+    onDeleteFolder,
     onGoToSkills,
     onGoToAutomations,
     onGoToMcpTools,
@@ -107,6 +117,15 @@ export function Sidebar({
     const [openConversationMenuId, setOpenConversationMenuId] = useState<string | null>(null);
     const [openMenuContext, setOpenMenuContext] = useState<'sidebar' | 'modal' | null>(null);
     const [showCopySubmenu, setShowCopySubmenu] = useState(false);
+    const [showMoveSubmenu, setShowMoveSubmenu] = useState(false);
+    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+    const [openFolderMenuId, setOpenFolderMenuId] = useState<string | null>(null);
+    const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+    const [folderNameValue, setFolderNameValue] = useState('');
+    // null = not creating; { parentId } = creating a folder under parentId (null for root)
+    const [creatingFolderIn, setCreatingFolderIn] = useState<{ parentId: string | null } | null>(null);
+    const folderNameInputRef = useRef<HTMLInputElement>(null);
+    const folderSubmittingRef = useRef(false);
     const [showAllChatsModal, setShowAllChatsModal] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -152,6 +171,11 @@ export function Sidebar({
                 setOpenConversationMenuId(null);
                 setOpenMenuContext(null);
                 setShowCopySubmenu(false);
+                setShowMoveSubmenu(false);
+            }
+            // Close folder menu
+            if (!target.closest('.folder-menu-container')) {
+                setOpenFolderMenuId(null);
             }
             // Close user menu
             if (!target.closest('.user-profile-container')) {
@@ -257,20 +281,44 @@ export function Sidebar({
         );
     })();
 
-    // Split conversations into visible (first 5) and hidden (rest)
+    // Folder helpers: known folders by id, children by parent, conversations per folder
+    const folderIds = new Set(folders.map(f => f.id));
+    const childFolders = (parentId: string | null) =>
+        folders.filter(f => (f.parentId ?? null) === parentId);
+    const conversationsInFolder = (folderId: string) =>
+        conversations.filter(conv => conv.folderId === folderId);
+
+    // Depth-first flatten of the folder tree, for the "move to" submenu
+    const flattenedFolders = (() => {
+        const out: { folder: FolderSummary; depth: number }[] = [];
+        const walk = (parentId: string | null, depth: number) => {
+            for (const folder of childFolders(parentId)) {
+                out.push({ folder, depth });
+                walk(folder.id, depth + 1);
+            }
+        };
+        walk(null, 0);
+        return out;
+    })();
+
+    // Conversations outside any (known) folder live at the root of the sidebar
+    const rootConversations = conversations.filter(conv => !conv.folderId || !folderIds.has(conv.folderId));
+
+    // Split root conversations into visible (first 5) and hidden (rest)
     // Always include the current conversation so it appears in the sidebar
-    const topConversations = conversations.slice(0, MAX_VISIBLE_CHATS);
+    const topConversations = rootConversations.slice(0, MAX_VISIBLE_CHATS);
     const currentInTop = !currentConversationId || topConversations.some(c => c.id === currentConversationId);
-    const currentConv = !currentInTop ? conversations.find(c => c.id === currentConversationId) : undefined;
+    const currentConv = !currentInTop ? rootConversations.find(c => c.id === currentConversationId) : undefined;
     const visibleConversations = currentConv
         ? [...topConversations.slice(0, MAX_VISIBLE_CHATS - 1), currentConv]
         : topConversations;
-    const hasMoreChats = conversations.length > MAX_VISIBLE_CHATS;
-    const hiddenChatsCount = conversations.length - visibleConversations.length;
+    const hasMoreChats = rootConversations.length > MAX_VISIBLE_CHATS;
+    const hiddenChatsCount = rootConversations.length - visibleConversations.length;
 
     const toggleConversationMenu = (id: string, e: React.MouseEvent, context: 'sidebar' | 'modal') => {
         e.stopPropagation();
         setShowCopySubmenu(false);
+        setShowMoveSubmenu(false);
         if (openConversationMenuId === id && openMenuContext === context) {
             setOpenConversationMenuId(null);
             setOpenMenuContext(null);
@@ -390,6 +438,193 @@ export function Sidebar({
         finishRename();
     };
 
+    // ===== Folder actions =====
+
+    const toggleFolderExpanded = (id: string) => {
+        setExpandedFolders(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const startCreateFolder = (parentId: string | null) => {
+        setCreatingFolderIn({ parentId });
+        setRenamingFolderId(null);
+        setFolderNameValue('');
+        setOpenFolderMenuId(null);
+        setOpenConversationMenuId(null);
+        setOpenMenuContext(null);
+        if (parentId) {
+            setExpandedFolders(prev => new Set(prev).add(parentId));
+        }
+    };
+
+    const startRenameFolder = (folder: FolderSummary) => {
+        setRenamingFolderId(folder.id);
+        setCreatingFolderIn(null);
+        setFolderNameValue(folder.name);
+        setOpenFolderMenuId(null);
+    };
+
+    // Focus the folder name input after it mounts
+    useEffect(() => {
+        if (creatingFolderIn || renamingFolderId) {
+            requestAnimationFrame(() => folderNameInputRef.current?.focus());
+        }
+    }, [creatingFolderIn, renamingFolderId]);
+
+    const submitFolderName = async () => {
+        // Guard against double submission (Enter triggers onKeyDown followed by onBlur)
+        if (folderSubmittingRef.current) return;
+        folderSubmittingRef.current = true;
+        const trimmed = folderNameValue.trim();
+        if (creatingFolderIn) {
+            const parentId = creatingFolderIn.parentId;
+            setCreatingFolderIn(null);
+            if (trimmed) await onCreateFolder(trimmed, parentId);
+        } else if (renamingFolderId) {
+            const id = renamingFolderId;
+            setRenamingFolderId(null);
+            const folder = folders.find(f => f.id === id);
+            if (trimmed && folder && folder.name !== trimmed) await onRenameFolder(id, trimmed);
+        }
+        setFolderNameValue('');
+        folderSubmittingRef.current = false;
+    };
+
+    const cancelFolderName = () => {
+        setCreatingFolderIn(null);
+        setRenamingFolderId(null);
+        setFolderNameValue('');
+    };
+
+    // Inline input row used for both creating and renaming folders
+    const renderFolderNameInput = (depth: number) => (
+        <div className="folder-item folder-name-editor" style={{ paddingLeft: `${depth * 16}px` }}>
+            <Folder size={16} className="conversation-icon" />
+            <input
+                ref={folderNameInputRef}
+                className="conversation-rename-input"
+                value={folderNameValue}
+                placeholder={t('sidebar.folderNamePlaceholder')}
+                onChange={(e) => setFolderNameValue(e.target.value)}
+                onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') void submitFolderName();
+                    if (e.key === 'Escape') cancelFolderName();
+                }}
+                onBlur={() => void submitFolderName()}
+                onClick={(e) => e.stopPropagation()}
+            />
+        </div>
+    );
+
+    // Render a folder row plus (when expanded) its sub-folders and conversations
+    const renderFolderItem = (folder: FolderSummary, depth = 0): React.ReactNode => {
+        const isExpanded = expandedFolders.has(folder.id);
+        const subFolders = childFolders(folder.id);
+        const folderConversations = conversationsInFolder(folder.id);
+        const itemCount = subFolders.length + folderConversations.length;
+
+        if (renamingFolderId === folder.id) {
+            return <React.Fragment key={folder.id}>{renderFolderNameInput(depth)}</React.Fragment>;
+        }
+
+        return (
+            <React.Fragment key={folder.id}>
+                <div
+                    className="folder-item"
+                    style={{ paddingLeft: `${depth * 16}px` }}
+                    onClick={() => toggleFolderExpanded(folder.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleFolderExpanded(folder.id);
+                        }
+                    }}
+                    aria-expanded={isExpanded}
+                    aria-label={folder.name}
+                >
+                    {isExpanded ? <ChevronDown size={14} className="folder-chevron" /> : <ChevronRight size={14} className="folder-chevron" />}
+                    {isExpanded ? <FolderOpen size={16} className="conversation-icon" /> : <Folder size={16} className="conversation-icon" />}
+                    <span className="conversation-title folder-name">{folder.name}</span>
+                    {itemCount > 0 && <span className="folder-count">{itemCount}</span>}
+
+                    <div className="conversation-menu-container folder-menu-container">
+                        <button
+                            className="menu-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenFolderMenuId(prev => prev === folder.id ? null : folder.id);
+                            }}
+                            aria-label={t('sidebar.folderActions')}
+                        >
+                            <MoreVertical size={16} />
+                        </button>
+                        {openFolderMenuId === folder.id && (
+                            <div className="conversation-menu" role="menu">
+                                <button
+                                    className="conversation-menu-item"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        startCreateFolder(folder.id);
+                                    }}
+                                    role="menuitem"
+                                >
+                                    <FolderPlus size={14} />
+                                    <span>{t('sidebar.newSubfolder')}</span>
+                                </button>
+                                <button
+                                    className="conversation-menu-item"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        startRenameFolder(folder);
+                                    }}
+                                    role="menuitem"
+                                >
+                                    <Pencil size={14} />
+                                    <span>{t('common.rename')}</span>
+                                </button>
+                                <button
+                                    className="conversation-menu-item danger"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenFolderMenuId(null);
+                                        onDeleteFolder(folder.id);
+                                    }}
+                                    role="menuitem"
+                                >
+                                    <Trash2 size={14} />
+                                    <span>{t('common.delete')}</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {isExpanded && (
+                    <div className="folder-children">
+                        {creatingFolderIn?.parentId === folder.id && renderFolderNameInput(depth + 1)}
+                        {subFolders.map(sub => renderFolderItem(sub, depth + 1))}
+                        {folderConversations.map(conv => (
+                            <div key={conv.id} style={{ paddingLeft: `${(depth + 1) * 16}px` }}>
+                                {renderConversationItem(conv)}
+                            </div>
+                        ))}
+                        {subFolders.length === 0 && folderConversations.length === 0 && creatingFolderIn?.parentId !== folder.id && (
+                            <div className="folder-empty" style={{ paddingLeft: `${(depth + 1) * 16 + 22}px` }}>
+                                {t('sidebar.emptyFolder')}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </React.Fragment>
+        );
+    };
+
     // Render a conversation item (reused in both sidebar and modal)
     const renderConversationItem = (conv: ConversationSummary, inModal = false, index?: number) => {
         const liveState = conversationStates.get(conv.id);
@@ -507,6 +742,7 @@ export function Sidebar({
                                     className="conversation-menu-item"
                                     onClick={(e) => {
                                         e.stopPropagation();
+                                        setShowMoveSubmenu(false);
                                         setShowCopySubmenu(prev => !prev);
                                     }}
                                     role="menuitem"
@@ -565,6 +801,62 @@ export function Sidebar({
                                         )}
                                         <span>{t('sidebar.copyTrace')}</span>
                                     </button>
+                                </div>
+                            </div>
+
+                            <div className={`conversation-menu-submenu-container ${showMoveSubmenu ? 'open' : ''}`}>
+                                <button
+                                    className="conversation-menu-item"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowCopySubmenu(false);
+                                        setShowMoveSubmenu(prev => !prev);
+                                    }}
+                                    role="menuitem"
+                                >
+                                    <FolderInput size={14} />
+                                    <span>{t('sidebar.moveToFolder')}</span>
+                                    <ChevronRight size={12} className="submenu-arrow" />
+                                </button>
+                                <div className="conversation-submenu" role="menu">
+                                    {conv.folderId && (
+                                        <button
+                                            className="conversation-menu-item"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenConversationMenuId(null);
+                                                setOpenMenuContext(null);
+                                                setShowMoveSubmenu(false);
+                                                onMoveConversationToFolder(conv.id, null);
+                                            }}
+                                            role="menuitem"
+                                        >
+                                            <X size={14} />
+                                            <span>{t('sidebar.removeFromFolder')}</span>
+                                        </button>
+                                    )}
+                                    {flattenedFolders.map(({ folder, depth }) => (
+                                        <button
+                                            key={folder.id}
+                                            className="conversation-menu-item"
+                                            style={{ paddingLeft: `${12 + depth * 14}px` }}
+                                            disabled={conv.folderId === folder.id}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenConversationMenuId(null);
+                                                setOpenMenuContext(null);
+                                                setShowMoveSubmenu(false);
+                                                onMoveConversationToFolder(conv.id, folder.id);
+                                            }}
+                                            role="menuitem"
+                                        >
+                                            <Folder size={14} />
+                                            <span>{folder.name}</span>
+                                        </button>
+                                    ))}
+                                    {flattenedFolders.length === 0 && (
+                                        <div className="conversation-menu-empty">{t('sidebar.noFoldersYet')}</div>
+                                    )}
                                 </div>
                             </div>
 
@@ -673,6 +965,23 @@ export function Sidebar({
                         <Settings size={16} />
                         <span>{t('sidebar.settings')}</span>
                     </button>
+                </div>
+
+                {/* Folders for organizing chats */}
+                <div className="folders-section">
+                    <div className="folders-header">
+                        <span className="folders-label">{t('sidebar.folders')}</span>
+                        <button
+                            className="menu-btn folder-add-btn"
+                            onClick={() => startCreateFolder(null)}
+                            title={t('sidebar.newFolder')}
+                            aria-label={t('sidebar.newFolder')}
+                        >
+                            <FolderPlus size={15} />
+                        </button>
+                    </div>
+                    {creatingFolderIn?.parentId === null && renderFolderNameInput(0)}
+                    {childFolders(null).map(folder => renderFolderItem(folder))}
                 </div>
 
                 <div className="conversations-list">

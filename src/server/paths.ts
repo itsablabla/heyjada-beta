@@ -132,6 +132,27 @@ export function getDatabaseDir(): string {
 }
 
 /**
+ * Get the default automations output directory path
+ * A user-visible, persistent folder where files created by automations
+ * are placed by default (each automation gets its own subfolder).
+ */
+export function getAutomationsDir(): string {
+    if (process.env.PIPALI_AUTOMATIONS_DIR) {
+        return process.env.PIPALI_AUTOMATIONS_DIR;
+    }
+    return path.join(os.homedir(), 'HeyJada', 'Automations');
+}
+
+/**
+ * Get the automations output directory, creating it if it doesn't exist
+ */
+export function ensureAutomationsDir(): string {
+    const dir = getAutomationsDir();
+    fs.mkdirSync(dir, { recursive: true });
+    return dir;
+}
+
+/**
  * Get the skills directory path
  * Note: Skills currently use ~/.pipali/skills for backwards compatibility
  * This will be migrated to use getAppDataDir() in a future release

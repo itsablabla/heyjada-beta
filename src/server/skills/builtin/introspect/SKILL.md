@@ -7,7 +7,7 @@ description: Always read this skill before answering questions about your capabi
 Get grounded answers about your capabilities and configuration - reference your actual UI, API and code. Explain using language suitable to the user's capabilities (e.g limit technical jargon when interacting with non-technical users).
 
 ## Architecture Overview
-You run as a desktop app. Pipali code is open-source at https://github.com/khoj-ai/pipali. Stack: Tauri desktop shell (Rust) + Bun server (as tauri sidecar) + React frontend
+You run as a web app served from a Bun server (an optional Tauri desktop shell also exists). HeyJada is based on the open-source Pipali code at https://github.com/khoj-ai/pipali. Stack: Bun server + React frontend (+ optional Tauri desktop shell in Rust)
 
 ## Query Live State
 Query your own API to answer questions about your current setup and manage state. Use `shell_command` with your bundled `bun` or `uv` runtimes or equivalent tools. Use `execution_mode: "direct"` if you hit sandbox restrictions.
@@ -29,6 +29,7 @@ The bun server is usually at: `http://localhost:6464`. If not, find your bun ser
 |---------|------|
 | User profile | `~/.pipali/USER.md` |
 | Skills directory | `~/.pipali/skills/` |
+| Automations output folder | `~/HeyJada/Automations/` (files created by automations go here by default, one subfolder per automation) |
 | App data (macOS) | `~/Library/Application Support/pipali/` |
 | App data (Linux) | `~/.local/share/pipali/` |
 | App data (Windows) | `%APPDATA%/pipali/` |
@@ -48,7 +49,7 @@ The app has a navigation sidebar on the left and a main content area.
 
 ### Home Page
 - New tasks/chats are started from the home page
-- Navigate by clicking the pipali name+icon on top pane of main content area
+- Navigate by clicking the HeyJada name+icon on top pane of main content area
 - A live overview of all tasks being worked on, awaiting user confirmation, completed (but not yet viewed by user) or pinned by user is visible as task cards with progress indicators
 - Tasks you start with `delegate_task` appear as cards too, and their results come back to you as system messages
 
@@ -70,6 +71,7 @@ The app has a navigation sidebar on the left and a main content area.
 - Can be activated/deactivated, run manually, or deleted
 - Routines is the user facing name of the automations feature in code
 - Routines allow user to assign scheduled tasks for you to work on or reusable prompts that they can trigger manually
+- Files created by automations are saved to `~/HeyJada/Automations/<automation name>/` by default unless the automation prompt specifies another location
 
 ### Tools Page
 - Add MCP servers (stdio or HTTP transport). 
@@ -80,7 +82,7 @@ The app has a navigation sidebar on the left and a main content area.
 View, create, update, delete skills
 
 ## Source Code
-For deep implementation questions, read the code in the Pipali GitHub repo. Raw file URLs pattern: `https://raw.githubusercontent.com/khoj-ai/pipali/main/<path>`
+For deep implementation questions, read the code in the upstream Pipali GitHub repo. Raw file URLs pattern: `https://raw.githubusercontent.com/khoj-ai/pipali/main/<path>`
 
 Key source files:
 - Server entry: `src/server/index.ts`

@@ -13,6 +13,7 @@ import type {
     Thought,
     ConfirmationRequest,
     ConversationSummary,
+    FolderSummary,
     ConversationState,
     ActiveTask,
     AuthStatus,
@@ -105,6 +106,7 @@ const App = () => {
     // Core state
     const [input, setInput] = useState("");
     const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+    const [folders, setFolders] = useState<FolderSummary[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(() => localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true');
     const [copyingConversationId, setCopyingConversationId] = useState<string | null>(null);
     const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
@@ -450,6 +452,7 @@ const App = () => {
 
         const fetchInitialData = () => {
             fetchConversations();
+            fetchFolders();
             fetchAutomationConfirmations();
             fetchAuthStatus();
             fetchUserName();
@@ -767,6 +770,18 @@ const App = () => {
             }
         } catch (e) {
             console.error("Failed to fetch conversations", e);
+        }
+    };
+
+    const fetchFolders = async () => {
+        try {
+            const res = await apiFetch('/api/folders');
+            if (res.ok) {
+                const data = await res.json();
+                setFolders(data.folders as FolderSummary[]);
+            }
+        } catch (e) {
+            console.error("Failed to fetch folders", e);
         }
     };
 
@@ -1370,6 +1385,70 @@ const App = () => {
         }
     };
 
+    const moveConversationToFolder = async (id: string, folderId: string | null) => {
+        try {
+            const res = await apiFetch(`/api/conversations/${id}/folder`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ folderId }),
+            });
+            if (res.ok) {
+                setConversations(prev => prev.map(c => c.id === id ? { ...c, folderId } : c));
+            }
+        } catch (e) {
+            console.error("Failed to move conversation to folder", e);
+        }
+    };
+
+    const createFolder = async (name: string, parentId: string | null): Promise<boolean> => {
+        try {
+            const res = await apiFetch('/api/folders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, parentId }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setFolders(prev => [...prev, data.folder as FolderSummary]);
+                return true;
+            }
+        } catch (e) {
+            console.error("Failed to create folder", e);
+        }
+        return false;
+    };
+
+    const renameFolder = async (id: string, name: string): Promise<boolean> => {
+        try {
+            const res = await apiFetch(`/api/folders/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name }),
+            });
+            if (res.ok) {
+                setFolders(prev => prev.map(f => f.id === id ? { ...f, name } : f));
+                return true;
+            }
+        } catch (e) {
+            console.error("Failed to rename folder", e);
+        }
+        return false;
+    };
+
+    const deleteFolder = async (id: string) => {
+        try {
+            const res = await apiFetch(`/api/folders/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                // Sub-folders cascade server-side and conversations return to the root,
+                // so refresh both lists from the server.
+                fetchFolders();
+                fetchConversations();
+            }
+        } catch (e) {
+            console.error("Failed to delete folder", e);
+        }
+    };
+
     const deleteConversation = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         try {
@@ -1746,6 +1825,11 @@ const App = () => {
                     onCopyConversationRaw={copyConversationRaw}
                     onRenameConversation={renameConversation}
                     onPinConversation={pinConversation}
+                    folders={folders}
+                    onMoveConversationToFolder={moveConversationToFolder}
+                    onCreateFolder={createFolder}
+                    onRenameFolder={renameFolder}
+                    onDeleteFolder={deleteFolder}
                     onGoToSkills={goToSkillsPage}
                     onGoToAutomations={goToAutomationsPage}
                     onGoToMcpTools={goToMcpToolsPage}

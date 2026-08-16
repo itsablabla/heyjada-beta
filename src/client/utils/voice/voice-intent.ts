@@ -116,12 +116,14 @@ function editDistance(a: string, b: string): number {
 const LEAD_INS = new Set(ADDRESS_LEAD_INS);
 
 /**
- * Does this open-context utterance address Pipali? Matches the address word as
+ * Does this open-context utterance address HeyJada? Matches the address word as
  * the first token (after optional lead-ins like "hey"), fuzzily — STT mangles
- * the proper noun ("Bipali") and may split it ("Pip ali"). Returns the payload
- * after the address word: "Pipali, also check the logs" → "also check the logs".
+ * the proper noun ("Jara") and may split it ("Ja da"). Returns the payload
+ * after the address word: "Jada, also check the logs" → "also check the logs".
  */
 export function parseAddressing(text: string): { addressed: boolean; payload: string } {
+    // Scale fuzz to the name's length so short names don't over-match common words.
+    const maxFuzz = ADDRESS_NAME.length >= 6 ? 2 : 1;
     const rawTokens = text.trim().split(/\s+/).filter(Boolean);
     let i = 0;
     while (i < rawTokens.length && LEAD_INS.has(normalizeUtterance(rawTokens[i]!))) i++;
@@ -130,10 +132,10 @@ export function parseAddressing(text: string): { addressed: boolean; payload: st
     if (!first) return { addressed: false, payload: '' };
 
     let consumed = 0;
-    if (first.length >= 4 && editDistance(first, ADDRESS_NAME) <= 2) {
+    if (first.length >= 4 && editDistance(first, ADDRESS_NAME) <= maxFuzz) {
         consumed = 1;
     } else if (i + 1 < rawTokens.length) {
-        // STT sometimes splits the name: "Pip ali, do X".
+        // STT sometimes splits the name: "Ja da, do X".
         const merged = first + normalizeUtterance(rawTokens[i + 1]!);
         if (merged.length >= 4 && editDistance(merged, ADDRESS_NAME) <= 1) consumed = 2;
     }

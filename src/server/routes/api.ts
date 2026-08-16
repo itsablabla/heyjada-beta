@@ -6,7 +6,7 @@ import { cors } from 'hono/cors';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { db, getDefaultChatModel } from '../db';
-import { Automation, Conversation, ConversationStep } from '../db/schema';
+import { Automation, Conversation, ConversationStep, ConversationFolder } from '../db/schema';
 import { asc, eq, desc, and, inArray, sql } from 'drizzle-orm';
 import { AiModelApi, ChatModel, User, UserChatModel } from '../db/schema';
 import openapi from './openapi';
@@ -223,6 +223,7 @@ api.get('/conversations', async (c) => {
         automationId: Conversation.automationId,
         parentConversationId: Conversation.parentConversationId,
         isPinned: Conversation.isPinned,
+        folderId: Conversation.folderId,
     })
     .from(Conversation)
     .where(whereClause)
@@ -347,6 +348,7 @@ api.get('/conversations', async (c) => {
             isAutomation: !!conv.automationId,
             parentConversationId: conv.parentConversationId,
             isPinned: conv.isPinned,
+            folderId: conv.folderId,
             latestReasoning,
             ...(matchSnippet !== undefined && { matchSnippet }),
         };
@@ -414,6 +416,156 @@ api.put('/conversations/:conversationId/pin', async (c) => {
         return c.json({ error: 'isPinned must be a boolean' }, 400);
     }
     await db.update(Conversation).set({ isPinned }).where(eq(Conversation.id, conversationId));
+    return c.json({ success: true });
+});
+
+// Move a conversation into a folder (or to the root with folderId: null)
+api.put('/conversations/:conversationId/folder', async (c) => {
+    const conversationId = c.req.param('conversationId');
+    try {
+        z.uuid().parse(conversationId);
+    } catch (e) {
+        return c.json({ error: 'Invalid conversation ID' }, 400);
+    }
+    const body = await c.req.json();
+    const folderId = body.folderId ?? null;
+    if (folderId !== null) {
+        try {
+            z.uuid().parse(folderId);
+        } catch (e) {
+            return c.json({ error: 'folderId must be a UUID or null' }, 400);
+        }
+        const [folder] = await db.select({ id: ConversationFolder.id })
+            .from(ConversationFolder).where(eq(ConversationFolder.id, folderId));
+        if (!folder) {
+            return c.json({ error: 'Folder not found' }, 404);
+        }
+    }
+    await db.update(Conversation).set({ folderId }).where(eq(Conversation.id, conversationId));
+    return c.json({ success: true });
+});
+
+// List all folders for the user
+api.get('/folders', async (c) => {
+    const [adminUser] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    if (!adminUser) {
+        return c.json({ error: 'User not found' }, 404);
+    }
+    const folders = await db.select({
+        id: ConversationFolder.id,
+        name: ConversationFolder.name,
+        parentId: ConversationFolder.parentId,
+        createdAt: ConversationFolder.createdAt,
+        updatedAt: ConversationFolder.updatedAt,
+    })
+    .from(ConversationFolder)
+    .where(eq(ConversationFolder.userId, adminUser.id))
+    .orderBy(asc(ConversationFolder.name));
+    return c.json({ folders });
+});
+
+// Create a folder (optionally nested under a parent folder)
+api.post('/folders', async (c) => {
+    const [adminUser] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    if (!adminUser) {
+        return c.json({ error: 'User not found' }, 404);
+    }
+    const body = await c.req.json();
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (!name) {
+        return c.json({ error: 'name must be a non-empty string' }, 400);
+    }
+    const parentId = body.parentId ?? null;
+    if (parentId !== null) {
+        try {
+            z.uuid().parse(parentId);
+        } catch (e) {
+            return c.json({ error: 'parentId must be a UUID or null' }, 400);
+        }
+        const [parent] = await db.select({ id: ConversationFolder.id })
+            .from(ConversationFolder)
+            .where(and(eq(ConversationFolder.id, parentId), eq(ConversationFolder.userId, adminUser.id)));
+        if (!parent) {
+            return c.json({ error: 'Parent folder not found' }, 404);
+        }
+    }
+    const [folder] = await db.insert(ConversationFolder)
+        .values({ userId: adminUser.id, name, parentId })
+        .returning({
+            id: ConversationFolder.id,
+            name: ConversationFolder.name,
+            parentId: ConversationFolder.parentId,
+            createdAt: ConversationFolder.createdAt,
+            updatedAt: ConversationFolder.updatedAt,
+        });
+    return c.json({ folder });
+});
+
+// Rename a folder and/or move it under another parent
+api.put('/folders/:folderId', async (c) => {
+    const folderId = c.req.param('folderId');
+    try {
+        z.uuid().parse(folderId);
+    } catch (e) {
+        return c.json({ error: 'Invalid folder ID' }, 400);
+    }
+    const body = await c.req.json();
+    const updates: { name?: string; parentId?: string | null; updatedAt: Date } = { updatedAt: new Date() };
+    if (body.name !== undefined) {
+        const name = typeof body.name === 'string' ? body.name.trim() : '';
+        if (!name) {
+            return c.json({ error: 'name must be a non-empty string' }, 400);
+        }
+        updates.name = name;
+    }
+    if (body.parentId !== undefined) {
+        const parentId = body.parentId ?? null;
+        if (parentId !== null) {
+            try {
+                z.uuid().parse(parentId);
+            } catch (e) {
+                return c.json({ error: 'parentId must be a UUID or null' }, 400);
+            }
+            if (parentId === folderId) {
+                return c.json({ error: 'A folder cannot be its own parent' }, 400);
+            }
+            // Reject moves that would create a cycle (parent chain reaching this folder)
+            let cursor: string | null = parentId;
+            while (cursor) {
+                if (cursor === folderId) {
+                    return c.json({ error: 'Cannot move a folder into one of its own sub-folders' }, 400);
+                }
+                const [row]: { parentId: string | null }[] = await db.select({ parentId: ConversationFolder.parentId })
+                    .from(ConversationFolder).where(eq(ConversationFolder.id, cursor));
+                if (!row) {
+                    return c.json({ error: 'Parent folder not found' }, 404);
+                }
+                cursor = row.parentId;
+            }
+        }
+        updates.parentId = parentId;
+    }
+    const updated = await db.update(ConversationFolder).set(updates)
+        .where(eq(ConversationFolder.id, folderId)).returning();
+    if (updated.length === 0) {
+        return c.json({ error: 'Folder not found' }, 404);
+    }
+    return c.json({ success: true });
+});
+
+// Delete a folder. Sub-folders are deleted too (cascade); conversations inside
+// any deleted folder move back to the root (folder_id set null).
+api.delete('/folders/:folderId', async (c) => {
+    const folderId = c.req.param('folderId');
+    try {
+        z.uuid().parse(folderId);
+    } catch (e) {
+        return c.json({ error: 'Invalid folder ID' }, 400);
+    }
+    const deleted = await db.delete(ConversationFolder).where(eq(ConversationFolder.id, folderId)).returning();
+    if (deleted.length === 0) {
+        return c.json({ error: 'Folder not found' }, 404);
+    }
     return c.json({ success: true });
 });
 

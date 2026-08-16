@@ -31,6 +31,88 @@
     display: none;
 }
 
+.sidebar.collapsed .folders-section {
+    display: none;
+}
+
+/* Folders for organizing chats */
+.folders-section {
+    padding: 8px 8px 0 8px;
+    flex-shrink: 0;
+    max-height: 40%;
+    overflow-y: auto;
+}
+
+.folders-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 12px 4px 12px;
+}
+
+.folders-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+}
+
+.folder-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+    text-align: left;
+    position: relative;
+}
+
+.folder-item:hover {
+    background: var(--color-bg-muted);
+    color: var(--color-text);
+}
+
+.folder-item .folder-chevron {
+    flex-shrink: 0;
+}
+
+.folder-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.folder-count {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+}
+
+.folder-empty {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    padding: 4px 12px 6px 12px;
+    font-style: italic;
+}
+
+.conversation-menu-empty {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    padding: 8px 12px;
+    font-style: italic;
+}
+
+
 /*
  * The rail is too narrow for the wordmark or for logo and toggle side by side,
  * so stack them. Both stay visible: the logo is the only route to the home page.
