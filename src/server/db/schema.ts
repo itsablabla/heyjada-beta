@@ -210,10 +210,14 @@ export const ConversationFolder = pgTable('conversation_folder', {
     userId: integer('user_id').notNull().references(() => User.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     parentId: uuid('parent_id').references((): AnyPgColumn => ConversationFolder.id, { onDelete: 'cascade' }),
+    // Set for built-in system folders (e.g. 'automations'). System folders are
+    // created automatically and cannot be renamed, moved, or deleted.
+    systemKey: text('system_key'),
     ...dbBaseModel,
 }, (table) => [
     index('conversation_folder_user_id_idx').on(table.userId),
     index('conversation_folder_parent_id_idx').on(table.parentId),
+    uniqueIndex('conversation_folder_user_system_key_idx').on(table.userId, table.systemKey),
 ]);
 
 // Conversation Schema

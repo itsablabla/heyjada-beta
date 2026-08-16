@@ -864,30 +864,34 @@ export function Sidebar({
                                     <FolderPlus size={14} />
                                     <span>{t('folders.newSubfolder', 'New subfolder')}</span>
                                 </button>
-                                <button
-                                    className="conversation-menu-item"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenFolderMenuId(null);
-                                        void promptForFolderRename(folder);
-                                    }}
-                                    role="menuitem"
-                                >
-                                    <Pencil size={14} />
-                                    <span>{t('common.rename')}</span>
-                                </button>
-                                <button
-                                    className="conversation-menu-item danger"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenFolderMenuId(null);
-                                        void handleDeleteFolder(folder);
-                                    }}
-                                    role="menuitem"
-                                >
-                                    <Trash2 size={14} />
-                                    <span>{t('folders.deleteFolder', 'Delete folder')}</span>
-                                </button>
+                                {!folder.systemKey && (
+                                    <>
+                                        <button
+                                            className="conversation-menu-item"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenFolderMenuId(null);
+                                                void promptForFolderRename(folder);
+                                            }}
+                                            role="menuitem"
+                                        >
+                                            <Pencil size={14} />
+                                            <span>{t('common.rename')}</span>
+                                        </button>
+                                        <button
+                                            className="conversation-menu-item danger"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenFolderMenuId(null);
+                                                void handleDeleteFolder(folder);
+                                            }}
+                                            role="menuitem"
+                                        >
+                                            <Trash2 size={14} />
+                                            <span>{t('folders.deleteFolder', 'Delete folder')}</span>
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>

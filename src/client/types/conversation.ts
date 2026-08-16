@@ -23,6 +23,8 @@ export type ConversationFolder = {
     id: string;
     name: string;
     parentId: string | null;
+    /** Set for built-in system folders (e.g. 'automations') that cannot be renamed or deleted. */
+    systemKey?: string | null;
 };
 
 // Per-conversation state for tracking active tasks

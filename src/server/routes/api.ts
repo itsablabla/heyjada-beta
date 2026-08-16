@@ -450,6 +450,7 @@ api.get('/folders', async (c) => {
         id: ConversationFolder.id,
         name: ConversationFolder.name,
         parentId: ConversationFolder.parentId,
+        systemKey: ConversationFolder.systemKey,
         createdAt: ConversationFolder.createdAt,
         updatedAt: ConversationFolder.updatedAt,
     })
@@ -500,6 +501,7 @@ api.patch('/folders/:folderId', zValidator('json', z.object({
     const [folder] = await db.select().from(ConversationFolder)
         .where(and(eq(ConversationFolder.id, folderId), eq(ConversationFolder.userId, user.id)));
     if (!folder) return c.json({ error: 'Folder not found' }, 404);
+    if (folder.systemKey) return c.json({ error: 'System folders cannot be renamed or moved' }, 400);
 
     const { name, parentId } = c.req.valid('json');
     const updates: { name?: string; parentId?: string | null; updatedAt: Date } = { updatedAt: new Date() };
@@ -524,6 +526,7 @@ api.patch('/folders/:folderId', zValidator('json', z.object({
 
 // Delete a folder. Subfolders are deleted too (FK cascade); conversations in
 // deleted folders are kept and simply become unfiled (folder_id set null).
+// System folders (e.g. the Automations folder) are persistent and cannot be deleted.
 api.delete('/folders/:folderId', async (c) => {
     const folderId = c.req.param('folderId');
     try {
@@ -533,6 +536,16 @@ api.delete('/folders/:folderId', async (c) => {
     }
     const user = await getDefaultUserRecord();
     if (!user) return c.json({ error: 'User not found' }, 404);
+
+    const [folder] = await db.select({ systemKey: ConversationFolder.systemKey })
+        .from(ConversationFolder)
+        .where(and(eq(ConversationFolder.id, folderId), eq(ConversationFolder.userId, user.id)));
+    if (!folder) {
+        return c.json({ error: 'Folder not found' }, 404);
+    }
+    if (folder.systemKey) {
+        return c.json({ error: 'System folders cannot be deleted' }, 400);
+    }
 
     const deleted = await db.delete(ConversationFolder)
         .where(and(eq(ConversationFolder.id, folderId), eq(ConversationFolder.userId, user.id)))

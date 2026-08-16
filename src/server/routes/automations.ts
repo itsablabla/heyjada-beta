@@ -11,6 +11,7 @@ import { db } from '../db';
 import { Automation, AutomationExecution, Conversation, User } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { getDefaultUser } from '../utils';
+import { getOrCreateAutomationsFolder } from '../db/folders';
 import {
     queueExecution,
     respondToConfirmation,
@@ -187,6 +188,10 @@ automations.post('/', zValidator('json', createAutomationSchema), async (c) => {
 
     const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
     if (!user) return c.json({ error: 'User not found' }, 404);
+
+    // Ensure the persistent "Automations" folder exists; automation
+    // conversations are filed there automatically
+    await getOrCreateAutomationsFolder(user.id);
 
     const insertResult = await db.insert(Automation)
         .values({

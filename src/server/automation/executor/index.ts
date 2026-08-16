@@ -15,6 +15,7 @@ import { createEmptyPreferences, CONFIRMATION_TIMEOUT_MS } from '../../processor
 import type { ConfirmationRequest, ConfirmationResponse } from '../../processor/confirmation/confirmation.types';
 import { createStandardConfirmationOptions } from '../../processor/confirmation/confirmation.types';
 import { getOrCreateBus } from '../../events/conversation-event-bus';
+import { getOrCreateAutomationsFolder } from '../../db/folders';
 import { executeRun } from '../../events/run-executor';
 import { createChildLogger } from '../../logger';
 
@@ -343,13 +344,16 @@ async function getOrCreateAutomationConversation(
         `Routine: ${automation.name}`
     );
 
-    // Link the conversation to the automation (bidirectional)
+    // Link the conversation to the automation (bidirectional) and file it
+    // in the persistent "Automations" folder
     await db.update(Automation)
         .set({ conversationId: conversation.id })
         .where(eq(Automation.id, automation.id));
 
+    const folderId = await getOrCreateAutomationsFolder(user.id);
+
     await db.update(Conversation)
-        .set({ automationId: automation.id })
+        .set({ automationId: automation.id, folderId })
         .where(eq(Conversation.id, conversation.id));
 
     return conversation.id;
