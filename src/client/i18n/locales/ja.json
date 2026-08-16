@@ -62,7 +62,16 @@
         "keyboardHintToggle": "切り替え",
         "keyboardHintClose": "閉じる",
         "billingAlert": "請求アラート",
-        "dismissBillingAlert": "請求アラートを閉じる"
+        "dismissBillingAlert": "請求アラートを閉じる",
+        "folders": "フォルダー",
+        "newFolder": "新しいフォルダー",
+        "newSubfolder": "新しいサブフォルダー",
+        "folderNamePlaceholder": "フォルダー名",
+        "folderActions": "フォルダー操作",
+        "moveToFolder": "フォルダーに移動",
+        "removeFromFolder": "フォルダーから外す",
+        "noFoldersYet": "フォルダーはまだありません",
+        "emptyFolder": "空"
     },
     "inputArea": {
         "askAnything": "何でも聞いてください",

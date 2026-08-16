@@ -62,7 +62,16 @@
         "keyboardHintToggle": "umschalten",
         "keyboardHintClose": "schließen",
         "billingAlert": "Abrechnungshinweis",
-        "dismissBillingAlert": "Abrechnungshinweis ausblenden"
+        "dismissBillingAlert": "Abrechnungshinweis ausblenden",
+        "folders": "Ordner",
+        "newFolder": "Neuer Ordner",
+        "newSubfolder": "Neuer Unterordner",
+        "folderNamePlaceholder": "Ordnername",
+        "folderActions": "Ordneraktionen",
+        "moveToFolder": "In Ordner verschieben",
+        "removeFromFolder": "Aus Ordner entfernen",
+        "noFoldersYet": "Noch keine Ordner",
+        "emptyFolder": "Leer"
     },
     "inputArea": {
         "askAnything": "Frag irgendetwas",

@@ -62,7 +62,16 @@
         "keyboardHintToggle": "toggle",
         "keyboardHintClose": "close",
         "billingAlert": "Billing alert",
-        "dismissBillingAlert": "Dismiss billing alert"
+        "dismissBillingAlert": "Dismiss billing alert",
+        "folders": "Folders",
+        "newFolder": "New folder",
+        "newSubfolder": "New subfolder",
+        "folderNamePlaceholder": "Folder name",
+        "folderActions": "Folder actions",
+        "moveToFolder": "Move to folder",
+        "removeFromFolder": "Remove from folder",
+        "noFoldersYet": "No folders yet",
+        "emptyFolder": "Empty"
     },
     "inputArea": {
         "askAnything": "Ask anything",

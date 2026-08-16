@@ -62,7 +62,16 @@
         "keyboardHintToggle": "切换",
         "keyboardHintClose": "关闭",
         "billingAlert": "账单提醒",
-        "dismissBillingAlert": "忽略账单提醒"
+        "dismissBillingAlert": "忽略账单提醒",
+        "folders": "文件夹",
+        "newFolder": "新建文件夹",
+        "newSubfolder": "新建子文件夹",
+        "folderNamePlaceholder": "文件夹名称",
+        "folderActions": "文件夹操作",
+        "moveToFolder": "移动到文件夹",
+        "removeFromFolder": "从文件夹移除",
+        "noFoldersYet": "暂无文件夹",
+        "emptyFolder": "空"
     },
     "inputArea": {
         "askAnything": "随便问点什么",

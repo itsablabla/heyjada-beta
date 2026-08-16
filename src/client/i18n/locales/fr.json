@@ -62,7 +62,16 @@
         "keyboardHintToggle": "basculer",
         "keyboardHintClose": "fermer",
         "billingAlert": "Alerte de facturation",
-        "dismissBillingAlert": "Ignorer l'alerte de facturation"
+        "dismissBillingAlert": "Ignorer l'alerte de facturation",
+        "folders": "Dossiers",
+        "newFolder": "Nouveau dossier",
+        "newSubfolder": "Nouveau sous-dossier",
+        "folderNamePlaceholder": "Nom du dossier",
+        "folderActions": "Actions du dossier",
+        "moveToFolder": "Déplacer vers un dossier",
+        "removeFromFolder": "Retirer du dossier",
+        "noFoldersYet": "Aucun dossier pour l'instant",
+        "emptyFolder": "Vide"
     },
     "inputArea": {
         "askAnything": "Pose n'importe quelle question",

@@ -14,8 +14,19 @@ export type ConversationSummary = {
     /** Set when this conversation is a task delegated by another conversation. */
     parentConversationId?: string | null;
     isPinned?: boolean;
+    /** Folder this conversation lives in; null/undefined means the root. */
+    folderId?: string | null;
     latestReasoning?: string;
     matchSnippet?: string;
+};
+
+// A user-defined folder (optionally nested) for organizing conversations
+export type FolderSummary = {
+    id: string;
+    name: string;
+    parentId: string | null;
+    createdAt: string;
+    updatedAt: string;
 };
 
 // Per-conversation state for tracking active tasks
