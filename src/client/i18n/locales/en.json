@@ -62,7 +62,22 @@
         "keyboardHintToggle": "toggle",
         "keyboardHintClose": "close",
         "billingAlert": "Billing alert",
-        "dismissBillingAlert": "Dismiss billing alert"
+        "dismissBillingAlert": "Dismiss billing alert",
+        "pinned": "Pinned"
+    },
+    "folders": {
+        "title": "Folders",
+        "newFolder": "New folder",
+        "newSubfolder": "New subfolder",
+        "folderNamePrompt": "Folder name",
+        "subfolderNamePrompt": "Subfolder name",
+        "renameFolderPrompt": "Rename folder",
+        "deleteFolder": "Delete folder",
+        "deleteFolderConfirm": "Delete this folder? Subfolders will be deleted and chats will become unfiled.",
+        "moveToFolder": "Move to folder",
+        "noFolder": "No folder",
+        "folderActions": "Folder actions",
+        "openFolder": "Open folder: {{name}}"
     },
     "inputArea": {
         "askAnything": "Ask anything",

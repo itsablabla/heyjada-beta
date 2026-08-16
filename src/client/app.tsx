@@ -12,6 +12,7 @@ import type {
     Message,
     Thought,
     ConfirmationRequest,
+    ConversationFolder,
     ConversationSummary,
     ConversationState,
     ActiveTask,
@@ -105,6 +106,7 @@ const App = () => {
     // Core state
     const [input, setInput] = useState("");
     const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+    const [folders, setFolders] = useState<ConversationFolder[]>([]);
     const [sidebarOpen, setSidebarOpen] = useState(() => localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true');
     const [copyingConversationId, setCopyingConversationId] = useState<string | null>(null);
     const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
@@ -450,6 +452,7 @@ const App = () => {
 
         const fetchInitialData = () => {
             fetchConversations();
+            fetchFolders();
             fetchAutomationConfirmations();
             fetchAuthStatus();
             fetchUserName();
@@ -546,6 +549,7 @@ const App = () => {
         onWindowShown(() => {
             // Refetch conversations and models when window is re-shown via shortcut/tray
             fetchConversations();
+            fetchFolders();
             refetchModels();
 
             // Check for pending confirmations and navigate accordingly
@@ -767,6 +771,18 @@ const App = () => {
             }
         } catch (e) {
             console.error("Failed to fetch conversations", e);
+        }
+    };
+
+    const fetchFolders = async () => {
+        try {
+            const res = await apiFetch('/api/folders');
+            if (res.ok) {
+                const data = await res.json();
+                setFolders((data.folders ?? []) as ConversationFolder[]);
+            }
+        } catch (e) {
+            console.error("Failed to fetch folders", e);
         }
     };
 
@@ -1370,6 +1386,77 @@ const App = () => {
         }
     };
 
+    const createFolder = async (name: string, parentId?: string | null): Promise<boolean> => {
+        const trimmed = name.trim();
+        if (!trimmed) return false;
+
+        try {
+            const res = await apiFetch('/api/folders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: trimmed, parentId: parentId ?? null }),
+            });
+            if (res.ok) {
+                await fetchFolders();
+                return true;
+            }
+        } catch (e) {
+            console.error("Failed to create folder", e);
+        }
+        return false;
+    };
+
+    const renameFolder = async (id: string, name: string): Promise<boolean> => {
+        const trimmed = name.trim();
+        if (!trimmed) return false;
+
+        try {
+            const res = await apiFetch(`/api/folders/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: trimmed }),
+            });
+            if (res.ok) {
+                await fetchFolders();
+                return true;
+            }
+        } catch (e) {
+            console.error("Failed to rename folder", e);
+        }
+        return false;
+    };
+
+    const deleteFolder = async (id: string): Promise<boolean> => {
+        try {
+            const res = await apiFetch(`/api/folders/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                await Promise.all([fetchFolders(), fetchConversations()]);
+                return true;
+            }
+        } catch (e) {
+            console.error("Failed to delete folder", e);
+        }
+        return false;
+    };
+
+    const moveConversationToFolder = async (conversationId: string, folderId: string | null): Promise<boolean> => {
+        try {
+            const res = await apiFetch(`/api/conversations/${conversationId}/folder`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ folderId }),
+            });
+            if (res.ok) {
+                setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, folderId } : c));
+                await fetchConversations();
+                return true;
+            }
+        } catch (e) {
+            console.error("Failed to move conversation to folder", e);
+        }
+        return false;
+    };
+
     const deleteConversation = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         try {
@@ -1699,6 +1786,7 @@ const App = () => {
     // Handle successful login - refetch auth status and models
     const handleLoginSuccess = useCallback(async () => {
         await fetchAuthStatus();
+        await Promise.all([fetchConversations(), fetchFolders()]);
         // Refetch models after a delay to allow server sync to complete
         setTimeout(() => refetchModels(), 3000);
     }, [refetchModels]);
@@ -1729,6 +1817,7 @@ const App = () => {
                 <Sidebar
                     isOpen={sidebarOpen}
                     conversations={sidebarConversations}
+                    folders={folders}
                     conversationStates={conversationStates}
                     pendingConfirmations={sidebarPendingConfirmations}
                     currentConversationId={conversationId}
@@ -1746,6 +1835,10 @@ const App = () => {
                     onCopyConversationRaw={copyConversationRaw}
                     onRenameConversation={renameConversation}
                     onPinConversation={pinConversation}
+                    onCreateFolder={createFolder}
+                    onRenameFolder={renameFolder}
+                    onDeleteFolder={deleteFolder}
+                    onMoveConversationToFolder={moveConversationToFolder}
                     onGoToSkills={goToSkillsPage}
                     onGoToAutomations={goToAutomationsPage}
                     onGoToMcpTools={goToMcpToolsPage}

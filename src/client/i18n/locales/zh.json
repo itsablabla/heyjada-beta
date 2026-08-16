@@ -62,7 +62,22 @@
         "keyboardHintToggle": "切换",
         "keyboardHintClose": "关闭",
         "billingAlert": "账单提醒",
-        "dismissBillingAlert": "忽略账单提醒"
+        "dismissBillingAlert": "忽略账单提醒",
+        "pinned": "置顶"
+    },
+    "folders": {
+        "title": "文件夹",
+        "newFolder": "新建文件夹",
+        "newSubfolder": "新建子文件夹",
+        "folderNamePrompt": "文件夹名称",
+        "subfolderNamePrompt": "子文件夹名称",
+        "renameFolderPrompt": "重命名文件夹",
+        "deleteFolder": "删除文件夹",
+        "deleteFolderConfirm": "删除此文件夹？子文件夹将被删除，对话将变为未归档。",
+        "moveToFolder": "移至文件夹",
+        "noFolder": "无文件夹",
+        "folderActions": "文件夹操作",
+        "openFolder": "打开文件夹：{{name}}"
     },
     "inputArea": {
         "askAnything": "随便问点什么",

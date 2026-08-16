@@ -62,7 +62,22 @@
         "keyboardHintToggle": "basculer",
         "keyboardHintClose": "fermer",
         "billingAlert": "Alerte de facturation",
-        "dismissBillingAlert": "Ignorer l'alerte de facturation"
+        "dismissBillingAlert": "Ignorer l'alerte de facturation",
+        "pinned": "Épinglés"
+    },
+    "folders": {
+        "title": "Dossiers",
+        "newFolder": "Nouveau dossier",
+        "newSubfolder": "Nouveau sous-dossier",
+        "folderNamePrompt": "Nom du dossier",
+        "subfolderNamePrompt": "Nom du sous-dossier",
+        "renameFolderPrompt": "Renommer le dossier",
+        "deleteFolder": "Supprimer le dossier",
+        "deleteFolderConfirm": "Supprimer ce dossier ? Les sous-dossiers seront supprimés et les conversations ne seront plus classées.",
+        "moveToFolder": "Déplacer vers un dossier",
+        "noFolder": "Aucun dossier",
+        "folderActions": "Actions du dossier",
+        "openFolder": "Ouvrir le dossier : {{name}}"
     },
     "inputArea": {
         "askAnything": "Pose n'importe quelle question",

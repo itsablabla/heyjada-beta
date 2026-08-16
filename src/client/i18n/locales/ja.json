@@ -62,7 +62,22 @@
         "keyboardHintToggle": "切り替え",
         "keyboardHintClose": "閉じる",
         "billingAlert": "請求アラート",
-        "dismissBillingAlert": "請求アラートを閉じる"
+        "dismissBillingAlert": "請求アラートを閉じる",
+        "pinned": "固定済み"
+    },
+    "folders": {
+        "title": "フォルダー",
+        "newFolder": "新しいフォルダー",
+        "newSubfolder": "新しいサブフォルダー",
+        "folderNamePrompt": "フォルダー名",
+        "subfolderNamePrompt": "サブフォルダー名",
+        "renameFolderPrompt": "フォルダー名を変更",
+        "deleteFolder": "フォルダーを削除",
+        "deleteFolderConfirm": "このフォルダーを削除しますか？サブフォルダーは削除され、チャットは未分類になります。",
+        "moveToFolder": "フォルダーに移動",
+        "noFolder": "フォルダーなし",
+        "folderActions": "フォルダー操作",
+        "openFolder": "フォルダーを開く: {{name}}"
     },
     "inputArea": {
         "askAnything": "何でも聞いてください",

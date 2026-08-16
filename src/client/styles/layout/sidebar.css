@@ -426,6 +426,115 @@
     padding: 8px;
 }
 
+.conversation-section {
+    margin-bottom: 8px;
+}
+
+.conversation-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px 4px 12px;
+}
+
+.conversation-section-title {
+    display: block;
+    padding: 6px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+}
+
+.conversation-section-header .conversation-section-title {
+    padding: 0;
+}
+
+.section-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.section-icon-btn:hover {
+    background: var(--color-bg-muted);
+    color: var(--color-text);
+}
+
+.sidebar-folder-section {
+    margin-bottom: 8px;
+}
+
+.folder-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.folder-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 34px;
+    padding: 8px 8px;
+    background: transparent;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+    position: relative;
+}
+
+.folder-row:hover,
+.folder-row:focus-within {
+    background: var(--color-bg-muted);
+    color: var(--color-text);
+}
+
+.folder-row:focus-visible {
+    outline: 2px solid rgba(23, 23, 23, 0.25);
+    outline-offset: 2px;
+}
+
+.folder-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.folder-menu-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.folder-row:hover .folder-menu-btn,
+.folder-row:focus-within .folder-menu-btn {
+    opacity: 1;
+}
+
+.folder-menu {
+    min-width: 190px;
+}
+
+.folder-conversation-item {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
 .conversation-item {
     display: flex;
     align-items: center;

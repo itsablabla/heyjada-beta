@@ -62,7 +62,22 @@
         "keyboardHintToggle": "umschalten",
         "keyboardHintClose": "schließen",
         "billingAlert": "Abrechnungshinweis",
-        "dismissBillingAlert": "Abrechnungshinweis ausblenden"
+        "dismissBillingAlert": "Abrechnungshinweis ausblenden",
+        "pinned": "Angeheftet"
+    },
+    "folders": {
+        "title": "Ordner",
+        "newFolder": "Neuer Ordner",
+        "newSubfolder": "Neuer Unterordner",
+        "folderNamePrompt": "Ordnername",
+        "subfolderNamePrompt": "Unterordnername",
+        "renameFolderPrompt": "Ordner umbenennen",
+        "deleteFolder": "Ordner löschen",
+        "deleteFolderConfirm": "Diesen Ordner löschen? Unterordner werden gelöscht und Chats werden aus dem Ordner entfernt.",
+        "moveToFolder": "In Ordner verschieben",
+        "noFolder": "Kein Ordner",
+        "folderActions": "Ordneraktionen",
+        "openFolder": "Ordner öffnen: {{name}}"
     },
     "inputArea": {
         "askAnything": "Frag irgendetwas",
