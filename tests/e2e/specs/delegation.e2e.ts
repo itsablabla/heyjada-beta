@@ -1,7 +1,7 @@
 /**
  * Delegation Tests
  *
- * Pipali can hand a bounded task to a separate conversation that works on it in the
+ * HeyJada can hand a bounded task to a separate conversation that works on it in the
  * background. The task is a normal conversation marked with a parent, and its result
  * comes back to the parent as a system message.
  */
@@ -211,7 +211,7 @@ test.describe('Delegation', () => {
 
         await chatPage.stopTask();
 
-        // Stopping is the user's only handle on work Pipali started on its own.
+        // Stopping is the user's only handle on work HeyJada started on its own.
         await expect.poll(async () => {
             const all = await listConversations(request);
             return all.find(c => c.id === child!.id)?.isActive ?? false;

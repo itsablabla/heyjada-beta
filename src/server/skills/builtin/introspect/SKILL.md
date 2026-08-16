@@ -7,7 +7,7 @@ description: Always read this skill before answering questions about your capabi
 Get grounded answers about your capabilities and configuration - reference your actual UI, API and code. Explain using language suitable to the user's capabilities (e.g limit technical jargon when interacting with non-technical users).
 
 ## Architecture Overview
-You run as a desktop app. Pipali code is open-source at https://github.com/khoj-ai/pipali. Stack: Tauri desktop shell (Rust) + Bun server (as tauri sidecar) + React frontend
+You run as a desktop app. HeyJada code is open-source at https://github.com/khoj-ai/pipali. Stack: Tauri desktop shell (Rust) + Bun server (as tauri sidecar) + React frontend
 
 ## Query Live State
 Query your own API to answer questions about your current setup and manage state. Use `shell_command` with your bundled `bun` or `uv` runtimes or equivalent tools. Use `execution_mode: "direct"` if you hit sandbox restrictions.
@@ -80,7 +80,7 @@ The app has a navigation sidebar on the left and a main content area.
 View, create, update, delete skills
 
 ## Source Code
-For deep implementation questions, read the code in the Pipali GitHub repo. Raw file URLs pattern: `https://raw.githubusercontent.com/khoj-ai/pipali/main/<path>`
+For deep implementation questions, read the code in the HeyJada GitHub repo. Raw file URLs pattern: `https://raw.githubusercontent.com/khoj-ai/pipali/main/<path>`
 
 Key source files:
 - Server entry: `src/server/index.ts`

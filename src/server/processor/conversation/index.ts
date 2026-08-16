@@ -85,7 +85,7 @@ export async function sendMessageToModel(
     // Extract conversation ID from trajectory for platform tracing
     const conversationId = history?.session_id;
 
-    // Pipali Platform exposes an OpenAI-compatible Responses API for all model types
+    // HeyJada Platform exposes an OpenAI-compatible Responses API for all model types
     // (openai, anthropic, google), so route all platform models through sendMessageToGpt
     if (aiModelApiName === 'Pipali') {
         try {

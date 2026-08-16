@@ -1,7 +1,7 @@
 /**
  * Platform Authentication Module
  *
- * Handles authentication with the Pipali Platform for the local app.
+ * Handles authentication with the HeyJada Platform for the local app.
  * Stores tokens in the local PGlite database and provides functions
  * to check auth status, get tokens, and refresh tokens.
  */
@@ -391,7 +391,7 @@ export async function getPlatformUserInfo(): Promise<PlatformUserInfo | null> {
 
 /**
  * Sync platform models to the app's local database
- * This sets up Pipali Platform as an AI provider and adds available models
+ * This sets up HeyJada Platform as an AI provider and adds available models
  */
 export async function syncPlatformModels(): Promise<void> {
     const tokens = await getStoredTokens();
@@ -451,7 +451,7 @@ export async function syncPlatformModels(): Promise<void> {
             recommended: boolean;
         }>;
 
-        // Check if Pipali provider already exists
+        // Check if HeyJada provider already exists
         const [existingProvider] = await db
             .select()
             .from(AiModelApi)
@@ -464,15 +464,15 @@ export async function syncPlatformModels(): Promise<void> {
             // Update base URL if it has changed (e.g., platform URL was updated)
             const expectedBaseUrl = `${platformUrl}/openai/v1`;
             if (existingProvider.apiBaseUrl !== expectedBaseUrl) {
-                log.info({ oldUrl: existingProvider.apiBaseUrl, newUrl: expectedBaseUrl }, 'Updating Pipali provider base URL');
+                log.info({ oldUrl: existingProvider.apiBaseUrl, newUrl: expectedBaseUrl }, 'Updating HeyJada provider base URL');
                 await db
                     .update(AiModelApi)
                     .set({ apiBaseUrl: expectedBaseUrl, updatedAt: new Date() })
                     .where(eq(AiModelApi.id, providerId));
             }
-            log.debug('Pipali provider already exists');
+            log.debug('HeyJada provider already exists');
         } else {
-            // Create the Pipali provider
+            // Create the HeyJada provider
             // The API key will be the access token, and base URL is the platform URL
             const [newProvider] = await db.insert(AiModelApi).values({
                 name: 'Pipali',
@@ -481,12 +481,12 @@ export async function syncPlatformModels(): Promise<void> {
             }).returning();
 
             if (!newProvider) {
-                log.error('Failed to create Pipali provider');
+                log.error('Failed to create HeyJada provider');
                 return;
             }
 
             providerId = newProvider.id;
-            log.info('Created Pipali provider');
+            log.info('Created HeyJada provider');
         }
 
         // Get existing models for this provider
@@ -628,7 +628,7 @@ export async function syncPlatformModels(): Promise<void> {
 
 /**
  * Sync platform web tools (web search and web scraper) to the app's local database
- * This sets up Pipali as a web search and web scraper provider
+ * This sets up HeyJada as a web search and web scraper provider
  * Platform tools are only used if the user hasn't configured local API keys
  */
 export async function syncPlatformWebTools(): Promise<void> {
@@ -661,9 +661,9 @@ export async function syncPlatformWebTools(): Promise<void> {
                     updatedAt: new Date(),
                 })
                 .where(eq(WebSearchProvider.id, existingSearchProvider.id));
-            log.debug('Updated Pipali web search provider');
+            log.debug('Updated HeyJada web search provider');
         } else {
-            // Create the Pipali web search provider
+            // Create the HeyJada web search provider
             await db.insert(WebSearchProvider).values({
                 name: 'Pipali',
                 type: 'platform',
@@ -672,7 +672,7 @@ export async function syncPlatformWebTools(): Promise<void> {
                 priority: 100, // Low priority so local API keys are tried first
                 enabled: true,
             });
-            log.info('Created Pipali web search provider');
+            log.info('Created HeyJada web search provider');
         }
 
         // Check if platform web scraper already exists
@@ -693,9 +693,9 @@ export async function syncPlatformWebTools(): Promise<void> {
                     updatedAt: new Date(),
                 })
                 .where(eq(WebScraper.id, existingScraper.id));
-            log.debug('Updated Pipali web scraper');
+            log.debug('Updated HeyJada web scraper');
         } else {
-            // Create the Pipali web scraper
+            // Create the HeyJada web scraper
             await db.insert(WebScraper).values({
                 name: 'Pipali',
                 type: 'platform',
@@ -704,7 +704,7 @@ export async function syncPlatformWebTools(): Promise<void> {
                 priority: 100, // Low priority so local API keys are tried first
                 enabled: true,
             });
-            log.info('Created Pipali web scraper');
+            log.info('Created HeyJada web scraper');
         }
 
         log.info('Platform web tools sync complete');

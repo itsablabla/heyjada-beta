@@ -23,7 +23,7 @@ export type ErrorCategory =
 export interface ModelInfo {
     /** Model name (e.g., "gpt-5.2", "claude-4.5-sonnet") */
     name: string;
-    /** Provider name (e.g., "Pipali", "OpenAI") */
+    /** Provider name (e.g., "HeyJada", "OpenAI") */
     provider: string;
     /** Model type (e.g., "openai", "google") */
     type?: string;

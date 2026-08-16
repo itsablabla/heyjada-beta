@@ -1,4 +1,4 @@
-# Pipali Self-Query API
+# HeyJada Self-Query API
 Default Base URL: `http://localhost:6464/api`. If not running there, find where the bun server is running yourself.
 
 Query these with `shell_command`, using the bundled `bun` or `uv` runtimes (both are always on PATH). Use `execution_mode: "direct"` if hit sandbox restrictions and to perform unsafe/modifying operations.

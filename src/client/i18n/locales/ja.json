@@ -271,23 +271,23 @@
         },
         "modeMenu": {
             "title": "音声モード",
-            "spokenHint": "いつでも「Pipali, speak freely」または「Pipali, ask first」と言えます"
+            "spokenHint": "いつでも「HeyJada, speak freely」または「HeyJada, ask first」と言えます"
         },
         "enabledHint": "音声モードが有効な間、この端末の近くの音声は、Pipaliへの呼びかけかどうかを確認するために文字起こしされます。呼びかけでない音声は破棄され、保存されることはありません。",
         "status": {
-            "idle": "「Pipali…」の呼びかけを待機中 — タップして話す",
+            "idle": "「HeyJada…」の呼びかけを待機中 — タップして話す",
             "dormant": "音声モードは休止中 — タップして再開",
-            "announced": "Pipaliからお知らせがあります — 「Pipali, go ahead」と言うかタップ",
+            "announced": "Pipaliからお知らせがあります — 「HeyJada, go ahead」と言うかタップ",
             "speaking": "読み上げ中 — タップして返答",
             "listening": "聞き取り中 — タップして送信",
             "transcribing": "文字起こし中…"
         },
         "coach": {
-            "idle": "「Pipali…」と話しかけてください — 入力もできます",
-            "idleWorking": "作業中 — 「Pipali…」で軌道修正、「Pipali, stop」で中止",
+            "idle": "「HeyJada…」と話しかけてください — 入力もできます",
+            "idleWorking": "作業中 — 「HeyJada…」で軌道修正、「HeyJada, stop」で中止",
             "dormant": "音声モードは休止中 — マイクをタップして再開",
-            "goAheadPending": "Pipaliからお知らせがあります — 「Pipali, go ahead」と言ってください",
-            "goAheadResult": "結果ができました — 「Pipali, go ahead」で読み上げます",
+            "goAheadPending": "Pipaliからお知らせがあります — 「HeyJada, go ahead」と言ってください",
+            "goAheadResult": "結果ができました — 「HeyJada, go ahead」で読み上げます",
             "speaking": "そのまま話すと割り込めます — 「stop」で停止",
             "listening": "終わったら「send it」、やり直すなら「scratch that」",
             "listeningDecision": "「yes」「no」、または自由に指示してください",

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.tauri.app/config/capability",
   "identifier": "default",
-  "description": "Default capability set for Pipali",
+  "description": "Default capability set for HeyJada",
   "windows": ["main", "splashscreen"],
   "permissions": [
     "core:default",

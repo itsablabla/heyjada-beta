@@ -1,4 +1,4 @@
-// Clickable Pipali wordmark - lives in the sidebar on desktop, the header on mobile
+// Clickable HeyJada wordmark - lives in the sidebar on desktop, the header on mobile
 
 import { useTranslation } from 'react-i18next';
 import { getApiBaseUrl } from '../../utils/api';

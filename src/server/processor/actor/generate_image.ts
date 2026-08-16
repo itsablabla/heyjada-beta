@@ -1,7 +1,7 @@
 /**
  * Image Generation Actor Tool
  *
- * Generates images from text prompts using the Pipali Platform's image generation service.
+ * Generates images from text prompts using the HeyJada Platform's image generation service.
  * Saves the generated image to disk and returns it as multimodal content.
  */
 
@@ -53,7 +53,7 @@ export async function generateImage(args: GenerateImageArgs, conversationId?: st
     log.debug(`Generating image for prompt: "${prompt.slice(0, 100)}${prompt.length > 100 ? '...' : ''}"`);
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (conversationId) headers['X-Pipali-Conversation-ID'] = conversationId;
+    if (conversationId) headers['X-HeyJada-Conversation-ID'] = conversationId;
 
     try {
         const result = await platformFetch<PlatformImageResponse>(endpoint, {

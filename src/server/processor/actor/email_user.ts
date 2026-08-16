@@ -1,7 +1,7 @@
 /**
  * Email User Actor Tool
  *
- * Sends an email to the user via the Pipali Platform's email service.
+ * Sends an email to the user via the HeyJada Platform's email service.
  * Useful for notifications, summaries, and reports from background tasks and automations.
  */
 
@@ -86,7 +86,7 @@ export async function emailUser(args: EmailUserArgs, conversationId?: string): P
         log.info(`Sending email with subject: "${subject.slice(0, 100)}"${processedAttachments?.length ? ` and ${processedAttachments.length} attachment(s)` : ''}`);
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (conversationId) headers['X-Pipali-Conversation-ID'] = conversationId;
+        if (conversationId) headers['X-HeyJada-Conversation-ID'] = conversationId;
 
         const result = await platformFetch<{ success: boolean; email: string }>(endpoint, {
             method: 'POST',

@@ -33,7 +33,7 @@ describe('buildConfirmationSummary', () => {
             },
         });
         const out = buildConfirmationSummary(r);
-        expect(out).toContain('Pipali wants to run a read-write shell command to clean the build directory.');
+        expect(out).toContain('HeyJada wants to run a read-write shell command to clean the build directory.');
         expect(out).toContain('high-risk');
         expect(out).toContain('Affects 3 files');
         expect(out).toContain('Say yes to proceed, or no to decline.');
@@ -52,7 +52,7 @@ describe('buildConfirmationSummary', () => {
 
     test('edits name the file in spoken form', () => {
         const r = req({ operation: 'edit_file', context: { toolName: 'edit_file', toolArgs: {}, affectedFiles: ['/Users/alex/Documents/Notes/Tasks.org'] } });
-        expect(buildConfirmationSummary(r)).toContain('Pipali wants to edit Tasks.org under the Documents/Notes folder.');
+        expect(buildConfirmationSummary(r)).toContain('HeyJada wants to edit Tasks.org under the Documents/Notes folder.');
     });
 
     test('mcp tool calls speak the humanized tool name', () => {
@@ -60,7 +60,7 @@ describe('buildConfirmationSummary', () => {
             operation: 'mcp_tool_call', title: 'Confirm Tool Call',
             context: { toolName: 'github__create_issue', toolArgs: { title: 'Bug' } },
         });
-        expect(buildConfirmationSummary(r)).toContain('Pipali wants to use the github create issue tool.');
+        expect(buildConfirmationSummary(r)).toContain('HeyJada wants to use the github create issue tool.');
     });
 
     test('weaves the spoken detail in before the decision trailer', () => {
@@ -154,21 +154,21 @@ describe('buildCompletionSummary', () => {
         const long = 'First paragraph. ' + 'x'.repeat(OVERFLOW) + '\n\nSecond paragraph.';
         const out = buildCompletionSummary(long);
         expect(out).toContain('First paragraph.');
-        expect(out).toContain('Open Pipali to read the full result.');
+        expect(out).toContain('Open HeyJada to read the full result.');
         expect(out).not.toContain('Second paragraph.');
     });
 
     test('caps at a paragraph break within the limit', () => {
-        const text = 'Para one is short.\n\n' + 'y'.repeat(OVERFLOW);
+        const text = 'Para one is short.\n\n' + 'q'.repeat(OVERFLOW);
         const out = buildCompletionSummary(text);
-        expect(out).toBe('Para one is short. … Open Pipali to read the full result.');
-        expect(out).not.toContain('y');
+        expect(out).toBe('Para one is short. … Open HeyJada to read the full result.');
+        expect(out).not.toContain('q');
     });
 
     test('caps at a sentence end, not mid-word', () => {
         const text = 'Alpha. Beta. ' + 'z'.repeat(OVERFLOW);
         const out = buildCompletionSummary(text);
-        expect(out).toBe('Alpha. Beta. … Open Pipali to read the full result.');
+        expect(out).toBe('Alpha. Beta. … Open HeyJada to read the full result.');
         expect(out).not.toContain('z');
     });
 });

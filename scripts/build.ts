@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Build script for creating a TRUE single-file executable of Pipali
+ * Build script for creating a TRUE single-file executable of HeyJada
  *
  * This script:
  * 1. Builds the frontend (React app)
@@ -412,7 +412,7 @@ async function main() {
     const startTime = Date.now();
     const { target } = await parseArgs();
 
-    console.log("🍞 Pipali Single-File Build Script");
+    console.log("🍞 HeyJada Single-File Build Script");
     console.log("=".repeat(40));
 
     try {
