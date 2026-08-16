@@ -217,6 +217,8 @@ export const ConversationFolder = pgTable('conversation_folder', {
 }, (table) => [
     index('conversation_folder_user_id_idx').on(table.userId),
     index('conversation_folder_parent_id_idx').on(table.parentId),
+    // Note: NULLs are distinct in this unique index, so users can have any
+    // number of regular (non-system) folders; only system keys are deduped.
     uniqueIndex('conversation_folder_user_system_key_idx').on(table.userId, table.systemKey),
 ]);
 
