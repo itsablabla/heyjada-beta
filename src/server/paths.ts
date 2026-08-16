@@ -16,8 +16,9 @@ const APP_NAME = 'pipali';
  * - Linux: ~/.local/share/pipali (or XDG_DATA_HOME/pipali)
  */
 export function getAppDataDir(): string {
-    if (process.env.PIPALI_DATA_DIR) {
-        return process.env.PIPALI_DATA_DIR;
+    const overrideDataDir = process.env.HEYJADA_DATA_DIR || process.env.PIPALI_DATA_DIR;
+    if (overrideDataDir) {
+        return overrideDataDir;
     }
 
     const platform = process.platform;
@@ -42,8 +43,9 @@ export function getAppDataDir(): string {
  * - Linux: ~/.config/pipali (or XDG_CONFIG_HOME/pipali)
  */
 export function getAppConfigDir(): string {
-    if (process.env.PIPALI_CONFIG_DIR) {
-        return process.env.PIPALI_CONFIG_DIR;
+    const overrideConfigDir = process.env.HEYJADA_CONFIG_DIR || process.env.PIPALI_CONFIG_DIR;
+    if (overrideConfigDir) {
+        return overrideConfigDir;
     }
 
     const platform = process.platform;
@@ -68,8 +70,9 @@ export function getAppConfigDir(): string {
  * - Linux: ~/.cache/pipali (or XDG_CACHE_HOME/pipali)
  */
 export function getAppCacheDir(): string {
-    if (process.env.PIPALI_CACHE_DIR) {
-        return process.env.PIPALI_CACHE_DIR;
+    const overrideCacheDir = process.env.HEYJADA_CACHE_DIR || process.env.PIPALI_CACHE_DIR;
+    if (overrideCacheDir) {
+        return overrideCacheDir;
     }
 
     const platform = process.platform;
@@ -98,8 +101,9 @@ export function getAppCacheDir(): string {
  * - Linux: ~/.local/state/pipali/logs (or XDG_STATE_HOME/pipali/logs)
  */
 export function getAppLogsDir(): string {
-    if (process.env.PIPALI_LOGS_DIR) {
-        return process.env.PIPALI_LOGS_DIR;
+    const overrideLogsDir = process.env.HEYJADA_LOGS_DIR || process.env.PIPALI_LOGS_DIR;
+    if (overrideLogsDir) {
+        return overrideLogsDir;
     }
 
     const platform = process.platform;
@@ -137,8 +141,9 @@ export function getDatabaseDir(): string {
  * This will be migrated to use getAppDataDir() in a future release
  */
 export function getSkillsDir(): string {
-    if (process.env.PIPALI_SKILLS_DIR) {
-        return process.env.PIPALI_SKILLS_DIR;
+    const overrideSkillsDir = process.env.HEYJADA_SKILLS_DIR || process.env.PIPALI_SKILLS_DIR;
+    if (overrideSkillsDir) {
+        return overrideSkillsDir;
     }
     return path.join(os.homedir(), '.pipali', 'skills');
 }

@@ -299,7 +299,7 @@ function getTokenExtractorHtml(): string {
     return `<!DOCTYPE html>
 <html>
 <head>
-    <title>Pipali - Completing Authentication</title>
+    <title>HeyJada - Completing Authentication</title>
     <link rel="icon" type="image/png" href="/icons/pipali_64.png">
     <link rel="apple-touch-icon" href="/icons/pipali_128.png">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -331,8 +331,8 @@ function getTokenExtractorHtml(): string {
 <body>
     <header class="page-header">
         <div class="brand">
-            <img src="/icons/pipali_128.png" alt="Pipali" />
-            <span class="app-name">Pipali</span>
+            <img src="/icons/pipali_128.png" alt="HeyJada" />
+            <span class="app-name">HeyJada</span>
         </div>
     </header>
     <main class="main-content">
@@ -347,8 +347,8 @@ function getTokenExtractorHtml(): string {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
             <h1>Login successful</h1>
-            <p class="subtitle">Returning you to the Pipali app. You can close this tab once it's in focus.</p>
-            <a href="pipali://auth/callback" class="btn" id="open-app">Open Pipali</a>
+            <p class="subtitle">Returning you to the HeyJada app. You can close this tab once it's in focus.</p>
+            <a href="pipali://auth/callback" class="btn" id="open-app">Open HeyJada</a>
         </div>
     </main>
     <script>
@@ -400,7 +400,7 @@ function getTokenExtractorHtml(): string {
                         // Desktop auth - show success message, then auto-foreground the
                         // app via the pipali:// deep link (same UX as VS Code). The OS
                         // routes the link to the running app, which focuses its window.
-                        // The "Open Pipali" button is a fallback if the browser blocks
+                        // The "Open HeyJada" button is a fallback if the browser blocks
                         // or the user dismisses the protocol-handler prompt.
                         document.getElementById('loading').style.display = 'none';
                         document.getElementById('success').style.display = 'block';
@@ -428,7 +428,7 @@ function getAuthErrorHtml(error: string): string {
     return `<!DOCTYPE html>
 <html>
 <head>
-    <title>Pipali - Authentication Failed</title>
+    <title>HeyJada - Authentication Failed</title>
     <link rel="icon" type="image/png" href="/icons/pipali_64.png">
     <link rel="apple-touch-icon" href="/icons/pipali_128.png">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -457,8 +457,8 @@ function getAuthErrorHtml(error: string): string {
 <body>
     <header class="page-header">
         <div class="brand">
-            <img src="/icons/pipali_128.png" alt="Pipali" />
-            <span class="app-name">Pipali</span>
+            <img src="/icons/pipali_128.png" alt="HeyJada" />
+            <span class="app-name">HeyJada</span>
         </div>
     </header>
     <main class="main-content">

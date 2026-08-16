@@ -1,0 +1,2 @@
+ALTER TABLE "conversation_folder" ADD COLUMN "system_key" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "conversation_folder_user_system_key_idx" ON "conversation_folder" USING btree ("user_id","system_key");

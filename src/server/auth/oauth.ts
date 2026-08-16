@@ -1,5 +1,5 @@
 /**
- * Browser-based Authentication Flows for Pipali App
+ * Browser-based Authentication Flows for HeyJada App
  *
  * Handles authentication flows that open the browser:
  * 1. Open the browser to the platform's auth page (OAuth or email login/signup)

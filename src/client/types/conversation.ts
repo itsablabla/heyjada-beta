@@ -8,6 +8,7 @@ export type ConversationSummary = {
     preview: string;
     createdAt: string;
     updatedAt: string;
+    folderId?: string | null;
     chatModelId?: number | null;
     isActive?: boolean;
     isAutomation?: boolean;
@@ -16,6 +17,14 @@ export type ConversationSummary = {
     isPinned?: boolean;
     latestReasoning?: string;
     matchSnippet?: string;
+};
+
+export type ConversationFolder = {
+    id: string;
+    name: string;
+    parentId: string | null;
+    /** Set for built-in system folders (e.g. 'automations') that cannot be renamed or deleted. */
+    systemKey?: string | null;
 };
 
 // Per-conversation state for tracking active tasks

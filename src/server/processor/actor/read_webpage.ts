@@ -2,7 +2,7 @@
  * Read Webpage Actor Tool
  *
  * Reads and extracts content from web pages.
- * Tries the Pipali Platform scraper first, falls back to direct URL fetch.
+ * Tries the HeyJada Platform scraper first, falls back to direct URL fetch.
  * Uses LLM to extract relevant information from raw content on direct fetch.
  */
 
@@ -58,7 +58,7 @@ export interface ReadWebpageOptions {
 }
 
 /**
- * Read webpage content using Pipali Platform API
+ * Read webpage content using HeyJada Platform API
  * Uses platformFetch for automatic token refresh on 401 errors
  */
 async function readWithPlatform(
@@ -78,7 +78,7 @@ async function readWithPlatform(
         payload.fresh = true;
     }
 
-    log.debug(`Read using Pipali Platform: ${url}${fresh ? ' (fresh)' : ''}`);
+    log.debug(`Read using HeyJada Platform: ${url}${fresh ? ' (fresh)' : ''}`);
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (conversationId) headers['X-Pipali-Conversation-ID'] = conversationId;
@@ -210,7 +210,7 @@ function isValidUrl(urlString: string): boolean {
 /**
  * Main read_webpage function
  *
- * Tries Pipali Platform scraper. Fallback to local, direct URL fetch.
+ * Tries HeyJada Platform scraper. Fallback to local, direct URL fetch.
  * Use LLM to process raw webpage content.
  *
  * Security: Internal/private network URLs require user confirmation.

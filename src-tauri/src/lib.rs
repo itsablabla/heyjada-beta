@@ -185,7 +185,7 @@ fn get_server_resource_dir(app: &AppHandle) -> Result<std::path::PathBuf, String
 
 /// Start the sidecar process
 ///
-/// This starts the Pipali server using the bundled Bun runtime.
+/// This starts the HeyJada server using the bundled Bun runtime.
 /// The server source code is bundled in the resources directory,
 /// and we use the bundled Bun binary to run it.
 pub fn start_sidecar(app: &AppHandle) -> Result<(), String> {
@@ -540,7 +540,7 @@ pub fn run() {
             });
 
             // Setup system tray menu
-            let show_item = MenuItemBuilder::with_id("show", "Show Pipali").build(app)?;
+            let show_item = MenuItemBuilder::with_id("show", "Show HeyJada").build(app)?;
             let keep_awake_item = CheckMenuItemBuilder::with_id("keep_awake", "Keep Device Awake")
                 .checked(wake_state.is_user_enabled())
                 .build(app)?;

@@ -25,7 +25,7 @@
 - Error responses shown as dismissible cards with copyable details instead of raw text
 
 ### 🛠️ Fix
-- Make Pipali app work on Ubuntu, Debian again
+- Make HeyJada app work on Ubuntu, Debian again
 - Multiple, same turn edits to the same file no longer overwrite each other
 
 ## 0.5.2
@@ -46,12 +46,12 @@
 ### 🎁 New
 - Model selector now shows tier, tagline, and cost tier to help you choose the right model
 - Clear finished tasks from home page in one click with new bulk dismiss action
-- Attach files when answering confirmation questions and Pipali will receive them
+- Attach files when answering confirmation questions and HeyJada will receive them
 
 ### 🧪 Improve
 - Home page no longer shows tasks you've already seen finish, only unseen completed tasks appear
 - Visually distinguish queued messages when sent mid-run
-- Pipali can fetch fresh webpage content for time-sensitive pages like news, prices, or status updates
+- HeyJada can fetch fresh webpage content for time-sensitive pages like news, prices, or status updates
 
 ### 🛠️ Fix
 - Model shown in model selector always stays in sync when switch conversations
@@ -73,7 +73,7 @@
 
 ### 🛠️ Fix
 - Consistently scroll to last message and avoid sporadic blank screen when open conversation
-- Fix shell tool escaping to run more inline scripts written by Pipali
+- Fix shell tool escaping to run more inline scripts written by HeyJada
 - Fix duplicate rendering of shell command output on interrupt
 - Fix duplicate rendering of math equations
 
@@ -81,21 +81,21 @@
 
 ### 🎁 New
 - Copy link, messages, or raw trace of any chat from the sidebar menu
-- Toggle which skills are visible to Pipali from the skills page
+- Toggle which skills are visible to HeyJada from the skills page
 
 ### 🧪 Improve
-- Click Pipali OS notification to open the app to that conversation on Windows and Mac
+- Click HeyJada OS notification to open the app to that conversation on Windows and Mac
 - Show app version and what's new in app from user profile menu in sidebar
 
 ### 🛠️ Fix
-- Enable Pipali to use Chrome browser on more machine setups
+- Enable HeyJada to use Chrome browser on more machine setups
 - Fix shell sandbox to allow reads from the temp directory
 
 ## 0.3.0
 
 ### 🎁 New
-- Empower Pipali to help you onboard, navigate it and re-configure itself
-  You can now just ask Pipali to find/refer to old chats, create routines and connect to mcp tools
+- Empower HeyJada to help you onboard, navigate it and re-configure itself
+  You can now just ask HeyJada to find/refer to old chats, create routines and connect to mcp tools
 - Pin conversations to home page for easy, quick access
 - Stream task and automation runs in real-time across multiple devices
 
@@ -166,9 +166,9 @@
 ## 0.1.1
 
 ### 🎁 New
-- Use Pipali on Linux
+- Use HeyJada on Linux
 - Interact with Claude models, like Opus, via the platform
-- Ask Pipali to email you, especially useful with Routines (e.g. get a weekly report in your inbox)
+- Ask HeyJada to email you, especially useful with Routines (e.g. get a weekly report in your inbox)
 
 ### 🧪 Improve
 - Better handling of dates near midnight for more accurate scheduling
@@ -179,10 +179,10 @@
 
 ## 0.1.0
 
-The first release of Pipali!
+The first release of HeyJada!
 
 ### 🏔️ Work Async
-- Assign Pipali tasks and go grab a coffee. Track progress, give feedback and get notified when it needs your attention
+- Assign HeyJada tasks and go grab a coffee. Track progress, give feedback and get notified when it needs your attention
 
 ### 📑 Create Polished Deliverables
 - Turn messy inputs into shareable outputs — briefs, decision memos, project updates, meeting notes and spreadsheets
@@ -194,8 +194,8 @@ The first release of Pipali!
 - Create skills for all your custom workflows — where to find project documents, which accounting method to follow or your email organization policy
 
 ### 🛠️ Connect Your Tools
-- Integrate Jira, Linear, Slack and more via MCP. Pipali can create issues, post messages and interact with external APIs on your behalf
-- Use the right AI model for the right task. Model access provided through the Pipali Platform — Single Sign On, no API key setup needed
+- Integrate Jira, Linear, Slack and more via MCP. HeyJada can create issues, post messages and interact with external APIs on your behalf
+- Use the right AI model for the right task. Model access provided through the HeyJada Platform — Single Sign On, no API key setup needed
 
 ### 🦺 Run Safely
 - Commands run in a local sandbox that restricts file and network access. Commands needing broader access require your explicit approval

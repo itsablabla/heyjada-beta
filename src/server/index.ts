@@ -22,31 +22,41 @@ import { initializeSandbox, shutdownSandbox } from './sandbox';
 import { killAllBackgroundProcesses } from './events/background-processes';
 import { initPlatformTransport, shutdownPlatformTransport } from './telemetry/platform-transport';
 import { setServer } from './server-instance';
+import { timingSafeEqual } from 'node:crypto';
 
 const log = createChildLogger({ component: 'server' });
 
 // Parse CLI arguments
 function getServerConfig() {
+    const env = (name: string) => process.env[`HEYJADA_${name}`] ?? process.env[`PIPALI_${name}`];
     const { values } = parseArgs({
         args: Bun.argv.slice(2),
         options: {
             host: {
                 type: "string",
                 short: "h",
-                default: process.env.PIPALI_HOST || "127.0.0.1",
+                default: env("HOST") || "127.0.0.1",
             },
             port: {
                 type: "string",
                 short: "p",
-                default: process.env.PIPALI_PORT || "6464",
+                default: env("PORT") || "6464",
             },
             anon: {
                 type: "boolean",
-                default: process.env.PIPALI_ANON_MODE === "true",
+                default: env("ANON_MODE") === "true",
             },
             "platform-url": {
                 type: "string",
-                default: process.env.PIPALI_PLATFORM_URL || "https://platform.pipali.ai",
+                default: env("PLATFORM_URL") || "https://platform.pipali.ai",
+            },
+            "auth-username": {
+                type: "string",
+                default: env("AUTH_USERNAME"),
+            },
+            "auth-password": {
+                type: "string",
+                default: env("AUTH_PASSWORD"),
             },
             help: {
                 type: "boolean",
@@ -59,22 +69,24 @@ function getServerConfig() {
 
     if (values.help) {
         log.info(`
-Pipali - Personal AI Assistant
+HeyJada - Personal AI Assistant
 
-Usage: pipali [options]
+Usage: heyjada [options]
 
 Options:
-  -h, --host <host>        Host to bind to (default: 127.0.0.1, env: PIPALI_HOST)
-  -p, --port <port>        Port to listen on (default: 6464, env: PIPALI_PORT)
-      --anon               Skip platform authentication, use local API keys (env: PIPALI_ANON_MODE)
-      --platform-url <url> Platform URL for authentication (env: PIPALI_PLATFORM_URL)
+  -h, --host <host>        Host to bind to (default: 127.0.0.1, env: HEYJADA_HOST)
+  -p, --port <port>        Port to listen on (default: 6464, env: HEYJADA_PORT)
+      --anon               Skip platform authentication, use local API keys (env: HEYJADA_ANON_MODE)
+      --platform-url <url> Platform URL for authentication (env: HEYJADA_PLATFORM_URL)
+      --auth-username <u>  Username for HTTP Basic Auth (env: HEYJADA_AUTH_USERNAME)
+      --auth-password <p>  Password for HTTP Basic Auth (env: HEYJADA_AUTH_PASSWORD)
       --help               Show this help message
 
 Examples:
-  pipali                        # Start with platform authentication
-  pipali --anon                 # Start without authentication (use local API keys)
-  pipali -p 8080                # Start on 127.0.0.1:8080
-  pipali --host 0.0.0.0         # Start on all interfaces
+  heyjada                       # Start with platform authentication
+  heyjada --anon                # Start without authentication (use local API keys)
+  heyjada -p 8080               # Start on 127.0.0.1:8080
+  heyjada --host 0.0.0.0        # Start on all interfaces (remote server / web app)
 `);
         process.exit(0);
     }
@@ -84,6 +96,8 @@ Examples:
         port: parseInt(values.port as string, 10),
         anon: values.anon as boolean,
         platformUrl: values["platform-url"] as string,
+        authUsername: values["auth-username"] as string | undefined,
+        authPassword: values["auth-password"] as string | undefined,
     };
 }
 
@@ -274,6 +288,29 @@ async function main() {
   // Paths for quieter logging (e.g frequent polling endpoints)
   const QUIETER_PATHS = new Set(['/api/automations/confirmations/pending']);
 
+  // HTTP Basic Auth — enabled when both a username and password are configured
+  // (via --auth-username/--auth-password or HEYJADA_AUTH_USERNAME/HEYJADA_AUTH_PASSWORD).
+  // Guards every route, including the WebSocket upgrade, the API and static assets.
+  const basicAuthEnabled = !!(config.authUsername && config.authPassword);
+  const expectedAuthHeader = basicAuthEnabled
+      ? new TextEncoder().encode(`Basic ${Buffer.from(`${config.authUsername}:${config.authPassword}`).toString('base64')}`)
+      : null;
+
+  const isAuthorized = (req: Request): boolean => {
+      if (!expectedAuthHeader) return true;
+      const header = req.headers.get('authorization');
+      if (!header) return false;
+      const given = new TextEncoder().encode(header);
+      if (given.length !== expectedAuthHeader.length) return false;
+      return timingSafeEqual(given, expectedAuthHeader);
+  };
+
+  if (basicAuthEnabled) {
+      log.info('🔒 HTTP Basic Auth enabled - all routes require a username and password');
+  } else if (config.host !== '127.0.0.1' && config.host !== 'localhost') {
+      log.warn('⚠️  Server is exposed beyond localhost without Basic Auth. Set HEYJADA_AUTH_USERNAME and HEYJADA_AUTH_PASSWORD to protect it.');
+  }
+
   const server = Bun.serve<WebSocketData, any>({
     async fetch(req, server) {
         const url = new URL(req.url);
@@ -281,6 +318,14 @@ async function main() {
             log.debug(`[${req.method}] ${url.pathname}`);
         } else {
             log.info(`[${req.method}] ${url.pathname}`);
+        }
+
+        // HTTP Basic Auth challenge (when enabled)
+        if (!isAuthorized(req)) {
+            return new Response('Authentication required', {
+                status: 401,
+                headers: { 'WWW-Authenticate': 'Basic realm="HeyJada", charset="UTF-8"' },
+            });
         }
 
         // WebSocket

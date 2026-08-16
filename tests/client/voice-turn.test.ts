@@ -4,21 +4,21 @@ import { STT_BIAS_PROMPT } from '../../src/client/utils/voice/voice-config';
 
 // Verbatim from dogfooding: what STT returned for segments where nothing was
 // said. Both are the prompt's command list read back, and neither matched it
-// exactly — "nevermind" came back as "Never mind", "Pipali" as "Pipli".
-const RECITED_COMMANDS = 'Hey Pipli. Hey Pipali, over to you. Send it. Scratch that. Clear that. Stop listening. Cancel that. Stop. Stop that. Stop it. Stop working. Hold on. Wait. Hang on. Abort. Cancel. Cancel that. Never mind. Never mind. That\'s enough. Enough. Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.';
+// exactly — "nevermind" came back as "Never mind", "Jada" as "Jadda".
+const RECITED_COMMANDS = 'Hey Jadda. Hey Jada, over to you. Send it. Scratch that. Clear that. Stop listening. Cancel that. Stop. Stop that. Stop it. Stop working. Hold on. Wait. Hang on. Abort. Cancel. Cancel that. Never mind. Never mind. That\'s enough. Enough. Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.';
 const RECITED_COMMANDS_UNADDRESSED = 'over to you. Send it. Scratch that. Clear that. Stop listening. Cancel that. Stop. Stop that. Stop it. Stop working. Hold on. Wait. Hang on. Abort. Cancel. Cancel that. Never mind. Never mind. That\'s enough. Enough. Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.';
 
 describe('isSelfEcho', () => {
-    const readout = 'Pipali wants to edit Tasks.org under the Documents folder. Say yes to continue.';
+    const readout = 'HeyJada wants to edit Tasks.org under the Documents folder. Say yes to continue.';
 
-    test('flags a fragment of what Pipali is saying right now', () => {
+    test('flags a fragment of what HeyJada is saying right now', () => {
         for (const s of ['under the Documents folder', 'wants to edit Tasks.org']) {
             expect(isSelfEcho(s, readout)).toBe(true);
         }
     });
 
-    test('flags a single word Pipali is saying — including a decisive one', () => {
-        // A bare "yes" that Pipali itself just said cannot be told from an echo,
+    test('flags a single word HeyJada is saying — including a decisive one', () => {
+        // A bare "yes" that HeyJada itself just said cannot be told from an echo,
         // and acting on it would approve an operation nobody asked for.
         expect(isSelfEcho('yes', readout)).toBe(true);
         expect(isSelfEcho('Documents', readout)).toBe(true);
@@ -31,7 +31,7 @@ describe('isSelfEcho', () => {
     });
 
     test('addressed speech is the user by construction', () => {
-        expect(isSelfEcho('Pipali, the Documents folder', readout)).toBe(false);
+        expect(isSelfEcho('Jada, the Documents folder', readout)).toBe(false);
     });
 
     test('words in common are not enough without the phrasing', () => {
@@ -71,14 +71,14 @@ describe('isHallucination', () => {
     });
 
     test('short command words contained in the prompt stay usable', () => {
-        for (const s of ['Send it.', 'go ahead', 'scratch that', 'Pipali']) {
+        for (const s of ['Send it.', 'go ahead', 'scratch that', 'Jada']) {
             expect(isHallucination(s)).toBe(false);
         }
     });
 
     test('the wake phrase itself is never treated as noise', () => {
         // It was, which meant the one phrase the UI teaches did nothing.
-        for (const s of ['Hey Pipali', 'hey pipali', 'Hey Pipali!']) {
+        for (const s of ['Hey Jada', 'hey jada', 'Hey Jada!']) {
             expect(isHallucination(s)).toBe(false);
         }
     });
@@ -91,14 +91,14 @@ describe('isHallucination', () => {
     test('flags a partial echo too short for the speech-rate check to see', () => {
         // A 9-16 word fragment fits its clip honestly, so only the wording
         // check stands between it and the transcript.
-        expect(isHallucination('A voice message snippet by the user to Pipali')).toBe(true);
+        expect(isHallucination('A voice message snippet by the user to HeyJada')).toBe(true);
         expect(isHallucination('Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.')).toBe(true);
     });
 
     test('leaves a real utterance built around a command alone', () => {
         for (const s of [
-            'Hey Pipali, over to you',
-            'Pipali, hold on, wait',
+            'Hey Jada, over to you',
+            'Jada, hold on, wait',
             'stop working on the report and send it over to you',
             'Ask first before speaking to the vendor about the delay',
         ]) {

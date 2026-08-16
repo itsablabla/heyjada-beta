@@ -116,10 +116,10 @@ function editDistance(a: string, b: string): number {
 const LEAD_INS = new Set(ADDRESS_LEAD_INS);
 
 /**
- * Does this open-context utterance address Pipali? Matches the address word as
+ * Does this open-context utterance address HeyJada? Matches the address word as
  * the first token (after optional lead-ins like "hey"), fuzzily — STT mangles
  * the proper noun ("Bipali") and may split it ("Pip ali"). Returns the payload
- * after the address word: "Pipali, also check the logs" → "also check the logs".
+ * after the address word: "HeyJada, also check the logs" → "also check the logs".
  */
 export function parseAddressing(text: string): { addressed: boolean; payload: string } {
     const rawTokens = text.trim().split(/\s+/).filter(Boolean);
@@ -130,7 +130,7 @@ export function parseAddressing(text: string): { addressed: boolean; payload: st
     if (!first) return { addressed: false, payload: '' };
 
     let consumed = 0;
-    if (first.length >= 4 && editDistance(first, ADDRESS_NAME) <= 2) {
+    if (first.length >= 4 && editDistance(first, ADDRESS_NAME) <= (ADDRESS_NAME.length >= 6 ? 2 : 1)) {
         consumed = 1;
     } else if (i + 1 < rawTokens.length) {
         // STT sometimes splits the name: "Pip ali, do X".

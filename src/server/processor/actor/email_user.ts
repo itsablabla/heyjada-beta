@@ -1,7 +1,7 @@
 /**
  * Email User Actor Tool
  *
- * Sends an email to the user via the Pipali Platform's email service.
+ * Sends an email to the user via the HeyJada Platform's email service.
  * Useful for notifications, summaries, and reports from background tasks and automations.
  */
 

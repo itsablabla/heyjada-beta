@@ -542,7 +542,7 @@ const SKIP_DIRECTORIES = new Set([
     "node_modules",
     ".git",
     "dist",
-    "platform", // Pipali Platform is a separate service
+    "platform", // HeyJada Platform is a separate service
 ]);
 
 /**
@@ -800,7 +800,7 @@ async function buildTauri(debug: boolean, platform: Platform, disableUpdaterArti
     // Skip for release builds — Tauri signs with the Developer ID certificate via
     // APPLE_SIGNING_IDENTITY and ad-hoc re-signing would destroy that signature.
     if (platform.startsWith("darwin") && debug) {
-        const appPath = path.join(ROOT_DIR, "src-tauri", "target", "debug", "bundle", "macos", "Pipali.app");
+        const appPath = path.join(ROOT_DIR, "src-tauri", "target", "debug", "bundle", "macos", "HeyJada.app");
         const entitlements = path.join(ROOT_DIR, "src-tauri", "Entitlements.plist");
         console.log("🔏 Re-signing debug app bundle with correct bundle identifier...");
         const signProc = Bun.spawn([
@@ -822,7 +822,7 @@ async function main() {
     const startTime = Date.now();
     const { platform, debug, disableUpdaterArtifacts } = await parseArgs();
 
-    console.log("🍞 Pipali Tauri Desktop Build (Bundled Runtimes)");
+    console.log("🍞 HeyJada Tauri Desktop Build (Bundled Runtimes)");
     console.log("=".repeat(50));
     console.log(`Platform: ${platform}`);
     console.log(`Mode: ${debug ? "debug" : "release"}`);

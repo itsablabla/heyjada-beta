@@ -1,4 +1,4 @@
-import { serial, text, timestamp, pgTable, pgEnum, uuid, boolean, integer, jsonb, real, primaryKey, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { serial, text, timestamp, pgTable, pgEnum, uuid, boolean, integer, jsonb, real, primaryKey, index, uniqueIndex, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { type ATIFAgent, type ATIFFinalMetrics, type ATIFStep, type ATIFStepSource, type ATIFTrajectory } from '../processor/conversation/atif/atif.types';
 import { type TriggerConfig, type TriggerEventData } from '../automation/types';
 import { type ConfirmationRequest } from '../processor/confirmation/confirmation.types';
@@ -203,6 +203,25 @@ export const agents = pgTable('agents', {
     ...dbBaseModel,
 });
 
+// Conversation Folder Schema
+// Folders (and subfolders, via parentId) to organize chat sessions
+export const ConversationFolder = pgTable('conversation_folder', {
+    id: uuid('id').defaultRandom().notNull().primaryKey(),
+    userId: integer('user_id').notNull().references(() => User.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    parentId: uuid('parent_id').references((): AnyPgColumn => ConversationFolder.id, { onDelete: 'cascade' }),
+    // Set for built-in system folders (e.g. 'automations'). System folders are
+    // created automatically and cannot be renamed, moved, or deleted.
+    systemKey: text('system_key'),
+    ...dbBaseModel,
+}, (table) => [
+    index('conversation_folder_user_id_idx').on(table.userId),
+    index('conversation_folder_parent_id_idx').on(table.parentId),
+    // Note: NULLs are distinct in this unique index, so users can have any
+    // number of regular (non-system) folders; only system keys are deduped.
+    uniqueIndex('conversation_folder_user_system_key_idx').on(table.userId, table.systemKey),
+]);
+
 // Conversation Schema
 export const Conversation = pgTable('conversation', {
     id: uuid('id').defaultRandom().notNull().primaryKey(),
@@ -219,9 +238,12 @@ export const Conversation = pgTable('conversation', {
     parentConversationId: uuid('parent_conversation_id'),
     chatModelId: integer('chat_model_id').references(() => ChatModel.id),
     isPinned: boolean('is_pinned').default(false).notNull(),
+    // Optional folder assignment for organizing chat sessions
+    folderId: uuid('folder_id').references(() => ConversationFolder.id, { onDelete: 'set null' }),
     ...dbBaseModel,
 }, (table) => [
     index('conversation_parent_conversation_id_idx').on(table.parentConversationId),
+    index('conversation_folder_id_idx').on(table.folderId),
 ]);
 
 export const ConversationStep = pgTable('conversation_step', {
@@ -415,7 +437,7 @@ export const McpOAuthState = pgTable('mcp_oauth_state', {
 }));
 
 // Platform Authentication Token Storage
-// Stores tokens for authenticated sessions with the Pipali Platform
+// Stores tokens for authenticated sessions with the HeyJada Platform
 export const PlatformAuth = pgTable('platform_auth', {
     id: serial('id').primaryKey(),
     userId: integer('user_id').notNull().references(() => User.id, { onDelete: 'cascade' }),
