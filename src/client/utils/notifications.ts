@@ -1,5 +1,5 @@
 /**
- * Notification utilities for Pipali.
+ * Notification utilities for HeyJada.
  * In Tauri desktop app, sends native macOS notifications via Rust command with click handling.
  * In browser, uses Web Notification API.
  */
@@ -79,9 +79,9 @@ function ensureSpeechGain(ctx: AudioContext): GainNode {
 }
 
 /**
- * Duck Pipali's speech the moment someone starts talking over it, before the
+ * Duck HeyJada's speech the moment someone starts talking over it, before the
  * words have been transcribed. Quieting down is the recoverable move: it costs
- * nothing if the sound turns out to be Pipali's own echo, and it makes the
+ * nothing if the sound turns out to be HeyJada's own echo, and it makes the
  * response to a real interruption immediate instead of a transcription away.
  */
 export function duckSpeech(ducked: boolean): void {

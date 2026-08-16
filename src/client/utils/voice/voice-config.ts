@@ -17,7 +17,7 @@ export const VOICE_TUNABLES = {
     /**
      * Onset window size (frames). Majority voting (3 of 4) instead of strictly
      * consecutive frames, so the consonant dips in short commands ("send it",
-     * "Pipali") don't keep resetting onset at normal speaking volume.
+     * "HeyJada") don't keep resetting onset at normal speaking volume.
      */
     speechStartWindow: 4,
     /** Trailing silence that closes a segment — a pause, never the turn. */
@@ -28,21 +28,21 @@ export const VOICE_TUNABLES = {
     maxSegmentMs: 30_000,
     /** Sample rate segments are downsampled to before WAV-encoding for STT. */
     sttSampleRate: 16_000,
-    // --- Full duplex: the mic stays open while Pipali speaks ---
+    // --- Full duplex: the mic stays open while HeyJada speaks ---
     /**
-     * Voiced threshold while Pipali is audible. The platform's own echo
+     * Voiced threshold while HeyJada is audible. The platform's own echo
      * cancellation does the real work here — measured on macOS, it drops
-     * Pipali's voice at the mic to ~0.4% of what was played, far under the plain
+     * HeyJada's voice at the mic to ~0.4% of what was played, far under the plain
      * threshold. This is the modest second line for whatever residual gets
      * through, chosen to sit above that and below ordinary speech (~0.05-0.15),
      * so talking over a readout still just works.
      */
     speakingEnergyThreshold: 0.04,
-    /** Gain Pipali's speech ducks to while a suspected barge-in is transcribed. */
+    /** Gain HeyJada's speech ducks to while a suspected barge-in is transcribed. */
     duckGain: 0.15,
-    /** Share of an utterance's word pairs Pipali must be saying for it to read as echo. */
+    /** Share of an utterance's word pairs HeyJada must be saying for it to read as echo. */
     selfEchoBigramRatio: 0.6,
-    /** How long after Pipali finishes speaking that bare speech counts as the reply. */
+    /** How long after HeyJada finishes speaking that bare speech counts as the reply. */
     replyInvitationMs: 10_000,
     /** Session ends (dormant) after this long without addressed speech. */
     idleTimeoutMs: 900_000,
@@ -66,15 +66,15 @@ export type VoiceMode = 'off' | 'ask_first' | 'speak_freely';
 
 /**
  * Where a live voice session is in its cycle. `dormant` is the mic off after an
- * idle timeout; `announced` is Pipali holding something back until the user
+ * idle timeout; `announced` is HeyJada holding something back until the user
  * gives a go-ahead. Drives both the mic button and the composer's coaching.
  */
 export type VoiceStatus = 'idle' | 'dormant' | 'announced' | 'speaking' | 'listening' | 'transcribing';
 
-/** Whole-utterance phrases that switch Pipali to speaking without a go-ahead. */
+/** Whole-utterance phrases that switch HeyJada to speaking without a go-ahead. */
 export const SPEAK_FREELY_PHRASES = ['speak freely', 'talk freely'];
 
-/** Whole-utterance phrases that switch Pipali back to chiming for a go-ahead. */
+/** Whole-utterance phrases that switch HeyJada back to chiming for a go-ahead. */
 export const ASK_FIRST_PHRASES = ['ask first', 'ask before speaking', 'ask to speak'];
 
 /** Tail-position phrases that submit the current turn. */
@@ -87,7 +87,7 @@ export const DISCARD_PHRASES = ['scratch that', 'clear that'];
 export const CANCEL_PHRASES = ['stop listening', 'cancel that'];
 
 /**
- * Whole-utterance phrases that stop what Pipali is doing — the run in flight,
+ * Whole-utterance phrases that stop what HeyJada is doing — the run in flight,
  * or a readout the user has heard enough of. Distinct from CANCEL_PHRASES
  * (which end the user's own turn) and from stopping the voice session.
  */
@@ -99,10 +99,10 @@ export const STOP_WORK_PHRASES = [
 /** Max text length accepted by /api/voice/summarize (keep in sync with the server schema). */
 export const SUMMARIZE_TEXT_CAP = 50_000;
 
-/** The addressing word that marks open-context speech as meant for Pipali. */
-export const ADDRESS_NAME = 'pipali';
+/** The addressing word that marks open-context speech as meant for HeyJada. */
+export const ADDRESS_NAME = 'jada';
 
-/** Lead-in words allowed before the addressing word ("hey Pipali", "ok Pipali"). */
+/** Lead-in words allowed before the addressing word ("hey Jada", "ok Jada"). */
 export const ADDRESS_LEAD_INS = ['hey', 'ok', 'okay', 'hi'];
 
 /**
@@ -110,4 +110,4 @@ export const ADDRESS_LEAD_INS = ['hey', 'ok', 'okay', 'hi'];
  * to make them transcribe reliably for the given context.
  */
 export const STT_BIAS_PROMPT =
-    `A voice message snippet by the user to Pipali, an AI co-worker on their computer. Key Phrases: Pipali, Hey Pipali, ${[...END_PHRASES, ...DISCARD_PHRASES, ...CANCEL_PHRASES, ...STOP_WORK_PHRASES, ...SPEAK_FREELY_PHRASES, ...ASK_FIRST_PHRASES].join(', ')}, go ahead.`;
+    `A voice message snippet by the user to HeyJada, an AI co-worker on their computer. Key Phrases: Jada, Hey Jada, ${[...END_PHRASES, ...DISCARD_PHRASES, ...CANCEL_PHRASES, ...STOP_WORK_PHRASES, ...SPEAK_FREELY_PHRASES, ...ASK_FIRST_PHRASES].join(', ')}, go ahead.`;

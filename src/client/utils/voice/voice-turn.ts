@@ -37,7 +37,7 @@ const HALLUCINATION_PATTERNS: RegExp[] = [
     /^\[[^\]]*\]$/,
     /^you[.!]?$/i,
     /^[.\s]*$/,
-    // "hey pipali" was here as a suspected prompt echo, but it is the documented
+    // "hey jada" was here as a suspected prompt echo, but it is the documented
     // wake phrase — blocking it meant the one thing the UI teaches did nothing.
     // The min-speech gate already drops noise-only audio, and a bare address can
     // only open a listening turn: visible, and destructive of nothing.
@@ -45,12 +45,12 @@ const HALLUCINATION_PATTERNS: RegExp[] = [
 
 // The model also reads its own conditioning text back when the audio holds no
 // speech. Trigram containment rather than substring equality: one word of drift
-// ("never mind" for the prompt's "nevermind", "Pipli" for "Pipali") was enough
+// ("never mind" for the prompt's "nevermind", "Jara" for "Jada") was enough
 // for an exact match to miss a fifty-word echo entirely. Matching the prompt
 // text — not just the commands in it — is what catches an echo of the framing
 // prose, which is 30% of the prompt and carries no command phrases at all.
 // Derived from the live prompt, so rewording can't leave this behind; the token
-// floor keeps short utterances that live in it ("send it", "hey Pipali") usable.
+// floor keeps short utterances that live in it ("send it", "hey Jada") usable.
 const PROMPT_TRIGRAMS = new Set(ngrams(tokenize(STT_BIAS_PROMPT), 3));
 const PROMPT_ECHO_MIN_TOKENS = 6;
 const PROMPT_ECHO_MIN_CONTAINMENT = 0.8;
@@ -81,11 +81,11 @@ export function isImplausibleSpeechRate(text: string, durationMs: number): boole
 }
 
 /**
- * Is this transcript just Pipali hearing itself? The backstop behind the
+ * Is this transcript just HeyJada hearing itself? The backstop behind the
  * acoustic echo guard, for the moments it leaks — the start of a readout,
  * before the echo-return estimate has converged.
  *
- * The rule: an utterance made entirely of words Pipali is saying right now
+ * The rule: an utterance made entirely of words HeyJada is saying right now
  * cannot be told apart from its own echo, so it is ignored. Multi-word
  * utterances match on adjacent pairs (STT echoes arrive as contiguous
  * fragments); addressed speech is the user by construction and never echo.

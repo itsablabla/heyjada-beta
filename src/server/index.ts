@@ -59,7 +59,7 @@ function getServerConfig() {
 
     if (values.help) {
         log.info(`
-Pipali - Personal AI Assistant
+HeyJada - Personal AI Assistant
 
 Usage: pipali [options]
 

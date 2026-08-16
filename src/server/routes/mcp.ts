@@ -446,7 +446,7 @@ mcp.get('/oauth/callback', async (c) => {
 
     const server = await getFreshServer(serverId);
     if (!server) {
-        return renderOAuthCallbackPage('MCP server not found', 'Pipali could not find the MCP server for this OAuth callback.', false);
+        return renderOAuthCallbackPage('MCP server not found', 'HeyJada could not find the MCP server for this OAuth callback.', false);
     }
 
     if (error) {
@@ -487,7 +487,7 @@ mcp.get('/oauth/callback', async (c) => {
             .set({ oauthStatus: 'connected', lastError: null, updatedAt: new Date() })
             .where(eq(McpServer.id, server.id));
         await reconnectMcpServer(server.name, { oauthInteractive: false, callbackOrigin: getOrigin(c.req.url) });
-        return renderOAuthCallbackPage(`${server.name} connected`, 'Authorization complete. Returning you to Pipali — you can close this tab once the app is in focus.', true);
+        return renderOAuthCallbackPage(`${server.name} connected`, 'Authorization complete. Returning you to HeyJada — you can close this tab once the app is in focus.', true);
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         log.error({ err, server: server.name }, 'Failed to complete MCP OAuth callback');

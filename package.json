@@ -1,7 +1,7 @@
 {
-  "name": "pipali",
+  "name": "heyjada",
   "version": "0.7.0",
-  "description": "Personal AI for knowledge work. Make work easy.",
+  "description": "HeyJada — personal AI for knowledge work. Make work easy.",
   "module": "index.ts",
   "type": "module",
   "private": true,
