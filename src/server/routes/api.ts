@@ -6,7 +6,7 @@ import { cors } from 'hono/cors';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { db, getDefaultChatModel } from '../db';
-import { Automation, Conversation, ConversationStep } from '../db/schema';
+import { Automation, Conversation, ConversationStep, ConversationFolder } from '../db/schema';
 import { asc, eq, desc, and, inArray, sql } from 'drizzle-orm';
 import { AiModelApi, ChatModel, User, UserChatModel } from '../db/schema';
 import openapi from './openapi';
@@ -223,6 +223,7 @@ api.get('/conversations', async (c) => {
         automationId: Conversation.automationId,
         parentConversationId: Conversation.parentConversationId,
         isPinned: Conversation.isPinned,
+        folderId: Conversation.folderId,
     })
     .from(Conversation)
     .where(whereClause)
@@ -414,6 +415,160 @@ api.put('/conversations/:conversationId/pin', async (c) => {
         return c.json({ error: 'isPinned must be a boolean' }, 400);
     }
     await db.update(Conversation).set({ isPinned }).where(eq(Conversation.id, conversationId));
+    return c.json({ success: true });
+});
+
+// --- Conversation folders (organize chat sessions into folders and subfolders) ---
+
+async function getDefaultUserRecord() {
+    const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    return user;
+}
+
+// Would moving `folderId` under `newParentId` create a cycle?
+async function wouldCreateFolderCycle(folderId: string, newParentId: string): Promise<boolean> {
+    let currentId: string | null = newParentId;
+    const seen = new Set<string>();
+    while (currentId) {
+        if (currentId === folderId) return true;
+        if (seen.has(currentId)) return true; // defensive: existing cycle
+        seen.add(currentId);
+        const [parent] = await db.select({ parentId: ConversationFolder.parentId })
+            .from(ConversationFolder)
+            .where(eq(ConversationFolder.id, currentId));
+        currentId = parent?.parentId ?? null;
+    }
+    return false;
+}
+
+// List all folders for the user (flat list; the client assembles the tree)
+api.get('/folders', async (c) => {
+    const user = await getDefaultUserRecord();
+    if (!user) return c.json({ error: 'User not found' }, 404);
+
+    const folders = await db.select({
+        id: ConversationFolder.id,
+        name: ConversationFolder.name,
+        parentId: ConversationFolder.parentId,
+        createdAt: ConversationFolder.createdAt,
+        updatedAt: ConversationFolder.updatedAt,
+    })
+    .from(ConversationFolder)
+    .where(eq(ConversationFolder.userId, user.id))
+    .orderBy(asc(ConversationFolder.name));
+
+    return c.json({ folders });
+});
+
+const folderBodySchema = z.object({
+    name: z.string().trim().min(1).max(100),
+    parentId: z.uuid().nullish(),
+});
+
+// Create a folder (optionally nested under a parent folder)
+api.post('/folders', zValidator('json', folderBodySchema), async (c) => {
+    const user = await getDefaultUserRecord();
+    if (!user) return c.json({ error: 'User not found' }, 404);
+
+    const { name, parentId } = c.req.valid('json');
+    if (parentId) {
+        const [parent] = await db.select().from(ConversationFolder)
+            .where(and(eq(ConversationFolder.id, parentId), eq(ConversationFolder.userId, user.id)));
+        if (!parent) return c.json({ error: 'Parent folder not found' }, 404);
+    }
+
+    const [folder] = await db.insert(ConversationFolder)
+        .values({ userId: user.id, name, parentId: parentId ?? null })
+        .returning();
+    return c.json({ folder }, 201);
+});
+
+// Rename and/or move a folder
+api.patch('/folders/:folderId', zValidator('json', z.object({
+    name: z.string().trim().min(1).max(100).optional(),
+    parentId: z.uuid().nullable().optional(),
+})), async (c) => {
+    const folderId = c.req.param('folderId');
+    try {
+        z.uuid().parse(folderId);
+    } catch (e) {
+        return c.json({ error: 'Invalid folder ID' }, 400);
+    }
+    const user = await getDefaultUserRecord();
+    if (!user) return c.json({ error: 'User not found' }, 404);
+
+    const [folder] = await db.select().from(ConversationFolder)
+        .where(and(eq(ConversationFolder.id, folderId), eq(ConversationFolder.userId, user.id)));
+    if (!folder) return c.json({ error: 'Folder not found' }, 404);
+
+    const { name, parentId } = c.req.valid('json');
+    const updates: { name?: string; parentId?: string | null; updatedAt: Date } = { updatedAt: new Date() };
+    if (name !== undefined) updates.name = name;
+    if (parentId !== undefined) {
+        if (parentId !== null) {
+            if (parentId === folderId) return c.json({ error: 'A folder cannot be its own parent' }, 400);
+            const [parent] = await db.select().from(ConversationFolder)
+                .where(and(eq(ConversationFolder.id, parentId), eq(ConversationFolder.userId, user.id)));
+            if (!parent) return c.json({ error: 'Parent folder not found' }, 404);
+            if (await wouldCreateFolderCycle(folderId, parentId)) {
+                return c.json({ error: 'Cannot move a folder into its own subfolder' }, 400);
+            }
+        }
+        updates.parentId = parentId;
+    }
+
+    const [updated] = await db.update(ConversationFolder).set(updates)
+        .where(eq(ConversationFolder.id, folderId)).returning();
+    return c.json({ folder: updated });
+});
+
+// Delete a folder. Subfolders are deleted too (FK cascade); conversations in
+// deleted folders are kept and simply become unfiled (folder_id set null).
+api.delete('/folders/:folderId', async (c) => {
+    const folderId = c.req.param('folderId');
+    try {
+        z.uuid().parse(folderId);
+    } catch (e) {
+        return c.json({ error: 'Invalid folder ID' }, 400);
+    }
+    const user = await getDefaultUserRecord();
+    if (!user) return c.json({ error: 'User not found' }, 404);
+
+    const deleted = await db.delete(ConversationFolder)
+        .where(and(eq(ConversationFolder.id, folderId), eq(ConversationFolder.userId, user.id)))
+        .returning();
+    if (deleted.length === 0) {
+        return c.json({ error: 'Folder not found' }, 404);
+    }
+    return c.json({ success: true });
+});
+
+// Move a conversation into a folder (or out of any folder with folderId: null)
+api.put('/conversations/:conversationId/folder', zValidator('json', z.object({
+    folderId: z.uuid().nullable(),
+})), async (c) => {
+    const conversationId = c.req.param('conversationId');
+    try {
+        z.uuid().parse(conversationId);
+    } catch (e) {
+        return c.json({ error: 'Invalid conversation ID' }, 400);
+    }
+    const user = await getDefaultUserRecord();
+    if (!user) return c.json({ error: 'User not found' }, 404);
+
+    const { folderId } = c.req.valid('json');
+    if (folderId !== null) {
+        const [folder] = await db.select().from(ConversationFolder)
+            .where(and(eq(ConversationFolder.id, folderId), eq(ConversationFolder.userId, user.id)));
+        if (!folder) return c.json({ error: 'Folder not found' }, 404);
+    }
+
+    const updated = await db.update(Conversation).set({ folderId })
+        .where(and(eq(Conversation.id, conversationId), eq(Conversation.userId, user.id)))
+        .returning();
+    if (updated.length === 0) {
+        return c.json({ error: 'Conversation not found' }, 404);
+    }
     return c.json({ success: true });
 });
 
