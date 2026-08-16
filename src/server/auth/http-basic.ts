@@ -18,7 +18,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
+import { randomBytes, timingSafeEqual, scryptSync } from 'node:crypto';
 import { getAppConfigDir } from '../paths';
 import { createChildLogger } from '../logger';
 
@@ -26,6 +26,12 @@ const log = createChildLogger({ component: 'basic-auth' });
 
 let credentials: { username: string; password: string } | null = null;
 let initialized = false;
+
+// Per-process salt for the constant-time credential comparison below.
+const compareSalt = randomBytes(16);
+// Authorization header value that already passed verification; lets us skip
+// the (intentionally slow) scrypt check on every subsequent request.
+let verifiedAuthHeader: Buffer | null = null;
 
 function isAuthDisabled(): boolean {
     if (process.env.HEYJADA_AUTH_DISABLED === 'true') return true;
@@ -75,9 +81,10 @@ export function initBasicAuth(): void {
 }
 
 function safeEqual(a: string, b: string): boolean {
-    // Hash both sides so buffers are equal length for timingSafeEqual.
-    const ha = createHash('sha256').update(a).digest();
-    const hb = createHash('sha256').update(b).digest();
+    // Derive fixed-length keys with scrypt so the comparison is constant-time
+    // and each online guess carries a meaningful CPU cost.
+    const ha = scryptSync(a, compareSalt, 32);
+    const hb = scryptSync(b, compareSalt, 32);
     return timingSafeEqual(ha, hb);
 }
 
@@ -94,13 +101,24 @@ export function checkBasicAuth(req: Request): Response | null {
     const header = req.headers.get('authorization');
     if (header?.startsWith('Basic ')) {
         try {
+            const headerBytes = Buffer.from(header);
+            if (
+                verifiedAuthHeader &&
+                headerBytes.length === verifiedAuthHeader.length &&
+                timingSafeEqual(headerBytes, verifiedAuthHeader)
+            ) {
+                return null;
+            }
             const decoded = Buffer.from(header.slice(6), 'base64').toString('utf-8');
             const sep = decoded.indexOf(':');
             const user = decoded.slice(0, sep);
             const pass = decoded.slice(sep + 1);
             const userOk = safeEqual(user, credentials.username);
             const passOk = safeEqual(pass, credentials.password);
-            if (sep >= 0 && userOk && passOk) return null;
+            if (sep >= 0 && userOk && passOk) {
+                verifiedAuthHeader = headerBytes;
+                return null;
+            }
         } catch {
             // Malformed header: fall through to 401.
         }
