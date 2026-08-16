@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Pipali",
+  "productName": "HeyJada",
   "version": "0.7.0",
   "identifier": "ai.pipali",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Pipali",
+        "title": "HeyJada",
         "width": 1200,
         "height": 750,
         "minWidth": 800,
@@ -26,7 +26,7 @@
       },
       {
         "label": "splashscreen",
-        "title": "Pipali",
+        "title": "HeyJada",
         "url": "/splash.html",
         "width": 400,
         "height": 400,
