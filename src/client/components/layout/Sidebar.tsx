@@ -125,6 +125,7 @@ export function Sidebar({
     // null = not creating; { parentId } = creating a folder under parentId (null for root)
     const [creatingFolderIn, setCreatingFolderIn] = useState<{ parentId: string | null } | null>(null);
     const folderNameInputRef = useRef<HTMLInputElement>(null);
+    const folderSubmittingRef = useRef(false);
     const [showAllChatsModal, setShowAllChatsModal] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -474,6 +475,9 @@ export function Sidebar({
     }, [creatingFolderIn, renamingFolderId]);
 
     const submitFolderName = async () => {
+        // Guard against double submission (Enter triggers onKeyDown followed by onBlur)
+        if (folderSubmittingRef.current) return;
+        folderSubmittingRef.current = true;
         const trimmed = folderNameValue.trim();
         if (creatingFolderIn) {
             const parentId = creatingFolderIn.parentId;
@@ -486,6 +490,7 @@ export function Sidebar({
             if (trimmed && folder && folder.name !== trimmed) await onRenameFolder(id, trimmed);
         }
         setFolderNameValue('');
+        folderSubmittingRef.current = false;
     };
 
     const cancelFolderName = () => {
