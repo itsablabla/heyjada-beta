@@ -800,7 +800,7 @@ async function buildTauri(debug: boolean, platform: Platform, disableUpdaterArti
     // Skip for release builds — Tauri signs with the Developer ID certificate via
     // APPLE_SIGNING_IDENTITY and ad-hoc re-signing would destroy that signature.
     if (platform.startsWith("darwin") && debug) {
-        const appPath = path.join(ROOT_DIR, "src-tauri", "target", "debug", "bundle", "macos", "HeyJada.app");
+        const appPath = path.join(ROOT_DIR, "src-tauri", "target", "debug", "bundle", "macos", "Super Joy.app");
         const entitlements = path.join(ROOT_DIR, "src-tauri", "Entitlements.plist");
         console.log("🔏 Re-signing debug app bundle with correct bundle identifier...");
         const signProc = Bun.spawn([

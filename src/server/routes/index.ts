@@ -15,9 +15,9 @@ const app = new Hono();
 // (remote) server. Served from a constant so it works in both dev and
 // compiled-binary modes without touching the asset embedding pipeline.
 const WEB_APP_MANIFEST = {
-    name: 'HeyJada',
-    short_name: 'HeyJada',
-    description: 'HeyJada — an AI co-worker that can safely interact with files + the web to finish real work.',
+    name: 'Super Joy',
+    short_name: 'Super Joy',
+    description: 'Super Joy — an AI co-worker that can safely interact with files + the web to finish real work.',
     id: '/',
     start_url: '/',
     scope: '/',

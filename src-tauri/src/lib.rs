@@ -540,7 +540,7 @@ pub fn run() {
             });
 
             // Setup system tray menu
-            let show_item = MenuItemBuilder::with_id("show", "Show HeyJada").build(app)?;
+            let show_item = MenuItemBuilder::with_id("show", "Show Super Joy").build(app)?;
             let keep_awake_item = CheckMenuItemBuilder::with_id("keep_awake", "Keep Device Awake")
                 .checked(wake_state.is_user_enabled())
                 .build(app)?;

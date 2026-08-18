@@ -69,7 +69,7 @@ function getServerConfig() {
 
     if (values.help) {
         log.info(`
-HeyJada - Personal AI Assistant
+Super Joy - Personal AI Assistant
 
 Usage: heyjada [options]
 
@@ -324,7 +324,7 @@ async function main() {
         if (!isAuthorized(req)) {
             return new Response('Authentication required', {
                 status: 401,
-                headers: { 'WWW-Authenticate': 'Basic realm="HeyJada", charset="UTF-8"' },
+                headers: { 'WWW-Authenticate': 'Basic realm="Super Joy", charset="UTF-8"' },
             });
         }
 

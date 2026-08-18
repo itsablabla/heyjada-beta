@@ -34,7 +34,7 @@ export function RunErrorMessage({ message, onDismiss }: RunErrorMessageProps) {
                 )}
             </div>
             <p className="run-error-message-text">
-                {t('runError.message', 'HeyJada hit a model provider error and stopped before completing this response.')}
+                {t('runError.message', 'Super Joy hit a model provider error and stopped before completing this response.')}
             </p>
             <div className="run-error-message-actions">
                 <button className="run-error-message-action" onClick={copyDetails} type="button">

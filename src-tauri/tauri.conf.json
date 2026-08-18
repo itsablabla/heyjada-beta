@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "HeyJada",
+  "productName": "Super Joy",
   "version": "0.7.0",
   "identifier": "ai.pipali",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "HeyJada",
+        "title": "Super Joy",
         "width": 1200,
         "height": 750,
         "minWidth": 800,
@@ -26,7 +26,7 @@
       },
       {
         "label": "splashscreen",
-        "title": "HeyJada",
+        "title": "Super Joy",
         "url": "/splash.html",
         "width": 400,
         "height": 400,
