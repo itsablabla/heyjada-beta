@@ -80,6 +80,26 @@
         "openFolder": "Ordner öffnen: {{name}}",
         "folderNamePlaceholder": "z. B. Projekte"
     },
+    "help": {
+        "whatCanItDo": "Was kann Super Joy?",
+        "explainerTitle": "Hauptfunktionen",
+        "featureChatTitle": "Chat & Aufgaben",
+        "featureChatText": "Stelle jede Frage im Nachrichtenfeld. Super Joy recherchiert, erstellt Dokumente und erledigt echte Arbeit mit deinen Dateien und dem Web.",
+        "featureVoiceTitle": "Sprache",
+        "featureVoiceText": "Aktiviere die Sprachsteuerung und sprich freihändig, während du arbeitest.",
+        "featureSkillsTitle": "Skills",
+        "featureSkillsText": "Bringe ihm deine Arbeitsabläufe bei, damit sie jedes Mal gleich ablaufen.",
+        "featureRoutinesTitle": "Routinen",
+        "featureRoutinesText": "Plane wiederkehrende Aufgaben, die automatisch laufen.",
+        "featureToolsTitle": "Tools",
+        "featureToolsText": "Verbinde Apps wie Jira, Linear oder Slack über MCP.",
+        "featureFoldersTitle": "Ordner",
+        "featureFoldersText": "Organisiere deine Chats in Ordnern in der Seitenleiste.",
+        "howToUse": "Zum Einstieg tippe einfach dein Anliegen ins Nachrichtenfeld und drücke Enter. Super Joy plant die Arbeit, fragt vor riskanten Schritten nach und meldet sich, wenn es fertig ist.",
+        "helpChat": "Hilfe-Chat",
+        "helpChatPrompt": "Hallo! Ich bin neu hier. Kannst du mir erklären, was du kannst, und mir beim Einstieg helfen?",
+        "leaveFeedback": "Feedback geben"
+    },
     "inputArea": {
         "askAnything": "Frag irgendetwas",
         "tipBackgroundTask": "Tipp: Mit {{modKey}}Enter den Task im Hintergrund starten",

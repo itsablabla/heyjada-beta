@@ -80,6 +80,26 @@
         "openFolder": "打开文件夹：{{name}}",
         "folderNamePlaceholder": "例如：项目"
     },
+    "help": {
+        "whatCanItDo": "Super Joy 能做什么？",
+        "explainerTitle": "主要功能",
+        "featureChatTitle": "聊天与任务",
+        "featureChatText": "在消息框中提出任何请求。Super Joy 可以进行研究、创建文档，并利用您的文件和网络完成实际工作。",
+        "featureVoiceTitle": "语音",
+        "featureVoiceText": "开启语音后，工作时可以免提对话。",
+        "featureSkillsTitle": "技能",
+        "featureSkillsText": "教会它您的自定义工作流程，让它每次都以相同方式执行。",
+        "featureRoutinesTitle": "例行任务",
+        "featureRoutinesText": "安排定期任务，自动执行。",
+        "featureToolsTitle": "工具",
+        "featureToolsText": "通过 MCP 连接 Jira、Linear 或 Slack 等应用。",
+        "featureFoldersTitle": "文件夹",
+        "featureFoldersText": "在侧边栏中将聊天整理到文件夹。",
+        "howToUse": "开始使用：在消息框中输入您的需求并按回车。Super Joy 会规划工作，在执行有风险的操作前先询问，完成后向您报告。",
+        "helpChat": "帮助聊天",
+        "helpChatPrompt": "你好！我是新用户。可以介绍一下你能做什么，并帮我上手吗？",
+        "leaveFeedback": "提交反馈"
+    },
     "inputArea": {
         "askAnything": "随便问点什么",
         "tipBackgroundTask": "提示：使用 {{modKey}}Enter 在后台启动任务",

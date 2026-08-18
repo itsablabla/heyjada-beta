@@ -8,6 +8,7 @@ import { useTheme } from '../../hooks';
 import { BillingAlertBanner } from '../billing';
 import { Logo } from './Logo';
 import { FolderDialog, type FolderDialogRequest } from './FolderDialog';
+import { HelpMenu } from './HelpMenu';
 import { apiFetch } from '../../utils/api';
 
 import { MOD_KEY } from '../../utils/platform';
@@ -79,6 +80,7 @@ interface SidebarProps {
     onGoToMcpTools?: () => void;
     onGoToSettings?: () => void;
     onGoHome: () => void;
+    onStartHelpChat: () => void;
     onLogout?: () => void;
     onClose?: () => void;
     onExpand?: () => void;
@@ -115,6 +117,7 @@ export function Sidebar({
     onGoToMcpTools,
     onGoToSettings,
     onGoHome,
+    onStartHelpChat,
     onLogout,
     onClose,
     onExpand,
@@ -1069,6 +1072,9 @@ export function Sidebar({
                         )}
                     </div>
                 )}
+
+                {/* Help, feature explainer & feedback */}
+                <HelpMenu isOpen={isOpen} onStartHelpChat={onStartHelpChat} />
 
                 {/* User Profile Section */}
                 {authStatus && (authStatus.authenticated || authStatus.anonMode) && (

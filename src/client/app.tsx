@@ -1354,6 +1354,13 @@ const App = () => {
         syncSelectedModelForConversation(undefined);
     };
 
+    // Open a fresh chat pre-filled with a help question so the assistant can
+    // explain what it can do and how to use it.
+    const startHelpChat = () => {
+        startNewConversation();
+        setInput(t('help.helpChatPrompt'));
+    };
+
     const renameConversation = async (id: string, title: string): Promise<boolean> => {
         try {
             const res = await apiFetch(`/api/conversations/${id}/title`, {
@@ -1844,6 +1851,7 @@ const App = () => {
                     onGoToMcpTools={goToMcpToolsPage}
                     onGoToSettings={goToSettingsPage}
                     onGoHome={goToHomePage}
+                    onStartHelpChat={startHelpChat}
                     onLogout={handleLogout}
                     onClose={() => updateSidebarOpen(false)}
                     onExpand={() => updateSidebarOpen(true)}

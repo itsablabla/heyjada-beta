@@ -80,6 +80,26 @@
         "openFolder": "Ouvrir le dossier : {{name}}",
         "folderNamePlaceholder": "p. ex. Projets"
     },
+    "help": {
+        "whatCanItDo": "Que peut faire Super Joy ?",
+        "explainerTitle": "Fonctionnalités principales",
+        "featureChatTitle": "Chat et tâches",
+        "featureChatText": "Posez n'importe quelle question dans la zone de message. Super Joy fait des recherches, crée des documents et accomplit un vrai travail avec vos fichiers et le web.",
+        "featureVoiceTitle": "Voix",
+        "featureVoiceText": "Activez la voix et parlez en mains libres pendant que vous travaillez.",
+        "featureSkillsTitle": "Compétences",
+        "featureSkillsText": "Enseignez vos flux de travail pour qu'ils s'exécutent toujours de la même façon.",
+        "featureRoutinesTitle": "Routines",
+        "featureRoutinesText": "Planifiez des tâches récurrentes qui s'exécutent automatiquement.",
+        "featureToolsTitle": "Outils",
+        "featureToolsText": "Connectez des applications comme Jira, Linear ou Slack via MCP.",
+        "featureFoldersTitle": "Dossiers",
+        "featureFoldersText": "Organisez vos conversations en dossiers dans la barre latérale.",
+        "howToUse": "Pour commencer, tapez ce dont vous avez besoin dans la zone de message et appuyez sur Entrée. Super Joy planifie le travail, demande avant toute action risquée et vous informe une fois terminé.",
+        "helpChat": "Chat d'aide",
+        "helpChatPrompt": "Bonjour ! Je suis nouveau ici. Peux-tu m'expliquer ce que tu sais faire et m'aider à démarrer ?",
+        "leaveFeedback": "Donner un avis"
+    },
     "inputArea": {
         "askAnything": "Pose n'importe quelle question",
         "tipBackgroundTask": "Astuce : Utilise {{modKey}}Entr\u00e9e pour lancer la t\u00e2che en arri\u00e8re-plan",

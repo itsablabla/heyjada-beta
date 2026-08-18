@@ -80,6 +80,26 @@
         "openFolder": "フォルダーを開く: {{name}}",
         "folderNamePlaceholder": "例: プロジェクト"
     },
+    "help": {
+        "whatCanItDo": "Super Joyに何ができる？",
+        "explainerTitle": "主な機能",
+        "featureChatTitle": "チャットとタスク",
+        "featureChatText": "メッセージ欄に何でも入力してください。Super Joyはリサーチや文書作成など、ファイルとウェブを使って実際の作業をこなします。",
+        "featureVoiceTitle": "音声",
+        "featureVoiceText": "音声をオンにすれば、作業しながらハンズフリーで話せます。",
+        "featureSkillsTitle": "スキル",
+        "featureSkillsText": "独自のワークフローを教えれば、毎回同じ手順で実行されます。",
+        "featureRoutinesTitle": "ルーチン",
+        "featureRoutinesText": "定期的なタスクをスケジュールして自動実行できます。",
+        "featureToolsTitle": "ツール",
+        "featureToolsText": "MCP経由でJira、Linear、Slackなどのアプリを接続できます。",
+        "featureFoldersTitle": "フォルダ",
+        "featureFoldersText": "サイドバーでチャットをフォルダに整理できます。",
+        "howToUse": "使い始めるには、メッセージ欄に依頼内容を入力してEnterを押してください。Super Joyは作業を計画し、リスクのある操作の前に確認し、完了したら報告します。",
+        "helpChat": "ヘルプチャット",
+        "helpChatPrompt": "こんにちは！初めて使います。何ができるか説明して、使い始めるのを手伝ってもらえますか？",
+        "leaveFeedback": "フィードバックを送る"
+    },
     "inputArea": {
         "askAnything": "何でも聞いてください",
         "tipBackgroundTask": "ヒント: {{modKey}}Enterでバックグラウンドでタスクを開始",

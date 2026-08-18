@@ -80,6 +80,26 @@
         "openFolder": "Open folder: {{name}}",
         "folderNamePlaceholder": "e.g. Projects"
     },
+    "help": {
+        "whatCanItDo": "What can Super Joy do?",
+        "explainerTitle": "Main features",
+        "featureChatTitle": "Chat & tasks",
+        "featureChatText": "Ask anything in the message box. Super Joy can research, create documents and finish real work with your files and the web.",
+        "featureVoiceTitle": "Voice",
+        "featureVoiceText": "Turn on voice and talk hands-free while you work.",
+        "featureSkillsTitle": "Skills",
+        "featureSkillsText": "Teach your custom workflows so they run the same way every time.",
+        "featureRoutinesTitle": "Routines",
+        "featureRoutinesText": "Schedule recurring tasks that run automatically.",
+        "featureToolsTitle": "Tools",
+        "featureToolsText": "Connect apps like Jira, Linear or Slack via MCP.",
+        "featureFoldersTitle": "Folders",
+        "featureFoldersText": "Organize your chats into folders in the sidebar.",
+        "howToUse": "To get started, type what you need in the message box and press Enter. Super Joy plans the work, asks before doing anything risky, and reports back when done.",
+        "helpChat": "Help chat",
+        "helpChatPrompt": "Hi! I'm new here. Can you explain what you can do and help me get started?",
+        "leaveFeedback": "Leave feedback"
+    },
     "inputArea": {
         "askAnything": "Ask anything",
         "tipBackgroundTask": "Tip: Use {{modKey}}Enter to start task in background",

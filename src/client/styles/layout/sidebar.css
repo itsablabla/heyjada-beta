@@ -946,3 +946,106 @@
     box-shadow: 0 1px 0 var(--color-border);
     margin: 0 1px;
 }
+
+/* Help, feature explainer & feedback section */
+.sidebar-help-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--color-border-subtle);
+    margin-top: auto;
+}
+
+.sidebar.collapsed .sidebar-help-section {
+    padding: 8px;
+}
+
+/* The user section normally claims the flexible space; the help section above
+   it now does, so neutralize the duplicate auto margin. */
+.sidebar-help-section + .sidebar-user-section {
+    margin-top: 0;
+}
+
+.help-explainer-container {
+    position: relative;
+}
+
+/* Explainer popover: floats beside the sidebar so it never gets clipped */
+.help-explainer-popover {
+    position: absolute;
+    left: calc(100% + 12px);
+    bottom: 0;
+    width: 320px;
+    max-width: calc(100vw - var(--sidebar-width, 260px) - 24px);
+    padding: 14px 16px;
+    background: var(--color-bg-elevated, var(--color-bg));
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: var(--shadow-lg, 0 8px 30px rgba(0, 0, 0, 0.25));
+    z-index: 1000;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+.help-explainer-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 8px;
+}
+
+.help-explainer-features {
+    list-style: none;
+    margin: 0 0 10px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.help-explainer-features li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.45;
+}
+
+.help-explainer-features strong {
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.help-explainer-feature-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--color-text-muted);
+}
+
+.help-explainer-howto {
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border-subtle);
+    line-height: 1.45;
+}
+
+/* Make the feedback entry point stand out */
+.feedback-btn {
+    color: var(--color-accent, var(--color-text));
+    font-weight: 500;
+}
+
+.feedback-btn:hover {
+    color: var(--color-accent-hover, var(--color-text));
+}
+
+/* On narrow screens the sidebar overlays the page; keep the popover inside it */
+@media (max-width: 768px) {
+    .help-explainer-popover {
+        left: 0;
+        right: 0;
+        width: auto;
+        max-width: none;
+        bottom: calc(100% + 8px);
+    }
+}
