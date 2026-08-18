@@ -202,7 +202,10 @@
         "continueWithEmail": "メールで続行",
         "termsNotice": "続行すると、Super Joyの利用規約とプライバシーポリシーに同意したことになります。",
         "googleSignInError": "Googleサインインを開始できませんでした。もう一度お試しください。",
-        "emailSignInError": "サインインを開始できませんでした。もう一度お試しください。"
+        "emailSignInError": "サインインを開始できませんでした。もう一度お試しください。",
+        "continueWithoutAccount": "アカウントなしで続行",
+        "continueWithoutAccountHint": "独自のローカルAPIキーでSuper Joyを使用できます。後からいつでもサインインできます。",
+        "skipSignInError": "アカウントなしでの続行に失敗しました。もう一度お試しください。"
     },
     "billing": {
         "insufficientCredits": {

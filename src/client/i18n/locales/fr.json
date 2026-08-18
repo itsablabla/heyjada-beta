@@ -202,7 +202,10 @@
         "continueWithEmail": "Continuer avec Email",
         "termsNotice": "En continuant, tu acceptes les Conditions d'utilisation et la Politique de confidentialit\u00e9 de Super Joy.",
         "googleSignInError": "\u00c9chec de la connexion Google. R\u00e9essaie.",
-        "emailSignInError": "\u00c9chec de la connexion. R\u00e9essaie."
+        "emailSignInError": "\u00c9chec de la connexion. R\u00e9essaie.",
+        "continueWithoutAccount": "Continuer sans compte",
+        "continueWithoutAccountHint": "Utilisez Super Joy avec vos propres clés API locales. Vous pourrez vous connecter plus tard.",
+        "skipSignInError": "Impossible de continuer sans compte. Veuillez réessayer."
     },
     "billing": {
         "insufficientCredits": {

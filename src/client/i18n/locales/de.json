@@ -202,7 +202,10 @@
         "continueWithEmail": "Mit E-Mail fortfahren",
         "termsNotice": "Mit dem Fortfahren stimmst du den Nutzungsbedingungen und der Datenschutzerklärung von Super Joy zu.",
         "googleSignInError": "Google-Anmeldung konnte nicht gestartet werden. Bitte versuche es erneut.",
-        "emailSignInError": "Anmeldung konnte nicht gestartet werden. Bitte versuche es erneut."
+        "emailSignInError": "Anmeldung konnte nicht gestartet werden. Bitte versuche es erneut.",
+        "continueWithoutAccount": "Ohne Konto fortfahren",
+        "continueWithoutAccountHint": "Nutze Super Joy mit deinen eigenen lokalen API-Schlüsseln. Du kannst dich jederzeit später anmelden.",
+        "skipSignInError": "Fortfahren ohne Konto fehlgeschlagen. Bitte versuche es erneut."
     },
     "billing": {
         "insufficientCredits": {

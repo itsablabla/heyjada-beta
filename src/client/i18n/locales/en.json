@@ -243,7 +243,10 @@
         "continueWithEmail": "Continue with Email",
         "termsNotice": "By continuing, you agree to Super Joy's Terms of Service and Privacy Policy.",
         "googleSignInError": "Failed to start Google sign-in. Please try again.",
-        "emailSignInError": "Failed to start sign-in. Please try again."
+        "emailSignInError": "Failed to start sign-in. Please try again.",
+        "continueWithoutAccount": "Continue without an account",
+        "continueWithoutAccountHint": "Use Super Joy with your own local API keys. You can sign in anytime later.",
+        "skipSignInError": "Failed to continue without an account. Please try again."
     },
     "billing": {
         "insufficientCredits": {

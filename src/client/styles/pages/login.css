@@ -128,6 +128,15 @@
     text-align: center;
 }
 
+/* Hint under the "continue without an account" option */
+.login-skip-hint {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-align: center;
+    margin: 0;
+    line-height: 1.5;
+}
+
 .login-footer p {
     font-size: 0.75rem;
     color: var(--color-text-muted);

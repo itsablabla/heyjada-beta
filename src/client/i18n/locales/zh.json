@@ -202,7 +202,10 @@
         "continueWithEmail": "使用邮箱继续",
         "termsNotice": "继续即表示你同意 Super Joy 的服务条款和隐私政策。",
         "googleSignInError": "Google 登录失败。请重试。",
-        "emailSignInError": "登录失败。请重试。"
+        "emailSignInError": "登录失败。请重试。",
+        "continueWithoutAccount": "无需账户继续",
+        "continueWithoutAccountHint": "使用您自己的本地 API 密钥来使用 Super Joy。您可以随时登录。",
+        "skipSignInError": "无法在无账户模式下继续。请重试。"
     },
     "billing": {
         "insufficientCredits": {

@@ -141,6 +141,24 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
         }
     };
 
+    // Skip sign-in and use the app in anonymous mode with local API keys
+    const handleContinueWithoutAccount = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await apiFetch('/api/auth/anon-mode', { method: 'POST' });
+            if (!res.ok) {
+                throw new Error('Failed to enable anonymous mode');
+            }
+            onLoginSuccess();
+        } catch (err) {
+            console.error('Continue without account error:', err);
+            setError(t('auth.skipSignInError'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // Show waiting state when authenticating in external browser
     if (isWaitingForAuth) {
         return (
@@ -245,6 +263,19 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                             <span>{t('auth.continueWithEmail')}</span>
                         </button>
                     )}
+
+                    <div className="login-divider">
+                        <span>{t('common.or')}</span>
+                    </div>
+
+                    <button
+                        className="login-btn secondary"
+                        onClick={handleContinueWithoutAccount}
+                        disabled={isLoading}
+                    >
+                        <span>{t('auth.continueWithoutAccount')}</span>
+                    </button>
+                    <p className="login-skip-hint">{t('auth.continueWithoutAccountHint')}</p>
                 </div>
 
                 <div className="login-footer">

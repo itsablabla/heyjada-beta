@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import {
+    configureAuth,
     isAnonMode,
     isAuthenticated,
     storeTokens,
@@ -55,6 +56,11 @@ auth.post('/complete', async (c) => {
         await storeTokens({ accessToken, refreshToken, expiresAt });
         log.info('Tokens stored successfully');
 
+        // A completed sign-in overrides a runtime anon-mode opt-out from the
+        // login screen (but not an explicit --anon/env launch, which never
+        // reaches the login screen).
+        configureAuth({ anonMode: false });
+
         // Sync platform models and web tools in background
         syncPlatformModels().catch(err => log.error({ err }, 'Failed to sync platform models'));
         syncPlatformWebTools().catch(err => log.error({ err }, 'Failed to sync platform web tools'));
@@ -99,6 +105,16 @@ auth.get('/status', async (c) => {
         user: userInfo,
         version,
     });
+});
+
+// Skip platform sign-in and use the app without an account (anonymous mode,
+// same as launching with --anon). The app then relies on locally configured
+// API keys. Signing in remains available: enabling anon mode is reversed by
+// completing a normal sign-in, which lands tokens and takes precedence.
+auth.post('/anon-mode', async (c) => {
+    configureAuth({ anonMode: true });
+    log.info('Anonymous mode enabled from login screen (using local API keys)');
+    return c.json({ success: true, anonMode: true });
 });
 
 // Logout - clear stored tokens
