@@ -77,7 +77,8 @@
         "moveToFolder": "Move to folder",
         "noFolder": "No folder",
         "folderActions": "Folder actions",
-        "openFolder": "Open folder: {{name}}"
+        "openFolder": "Open folder: {{name}}",
+        "folderNamePlaceholder": "e.g. Projects"
     },
     "inputArea": {
         "askAnything": "Ask anything",

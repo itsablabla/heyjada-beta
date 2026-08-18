@@ -77,7 +77,8 @@
         "moveToFolder": "フォルダーに移動",
         "noFolder": "フォルダーなし",
         "folderActions": "フォルダー操作",
-        "openFolder": "フォルダーを開く: {{name}}"
+        "openFolder": "フォルダーを開く: {{name}}",
+        "folderNamePlaceholder": "例: プロジェクト"
     },
     "inputArea": {
         "askAnything": "何でも聞いてください",

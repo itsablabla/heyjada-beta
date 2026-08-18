@@ -77,7 +77,8 @@
         "moveToFolder": "In Ordner verschieben",
         "noFolder": "Kein Ordner",
         "folderActions": "Ordneraktionen",
-        "openFolder": "Ordner öffnen: {{name}}"
+        "openFolder": "Ordner öffnen: {{name}}",
+        "folderNamePlaceholder": "z. B. Projekte"
     },
     "inputArea": {
         "askAnything": "Frag irgendetwas",

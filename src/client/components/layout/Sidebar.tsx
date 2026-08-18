@@ -7,6 +7,7 @@ import type { ConversationFolder, ConversationSummary, ConversationState, Confir
 import { useTheme } from '../../hooks';
 import { BillingAlertBanner } from '../billing';
 import { Logo } from './Logo';
+import { FolderDialog, type FolderDialogRequest } from './FolderDialog';
 import { apiFetch } from '../../utils/api';
 
 import { MOD_KEY } from '../../utils/platform';
@@ -146,6 +147,7 @@ export function Sidebar({
     const [gravatarFailed, setGravatarFailed] = useState(false);
     const [showChangelog, setShowChangelog] = useState(false);
     const [changelogNotes, setChangelogNotes] = useState<string | null>(null);
+    const [folderDialog, setFolderDialog] = useState<FolderDialogRequest | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const { theme, setTheme, isDark } = useTheme();
     const { t } = useTranslation();
@@ -518,32 +520,33 @@ export function Sidebar({
         });
     };
 
-    const promptForFolderName = async (parentId: string | null = null) => {
-        const label = parentId
-            ? t('folders.subfolderNamePrompt', 'Subfolder name')
-            : t('folders.folderNamePrompt', 'Folder name');
-        const name = window.prompt(label);
-        const trimmed = name?.trim();
-        if (!trimmed) return;
-
-        if (parentId) {
-            setExpandedFolders(prev => new Set(prev).add(parentId));
-        }
-        await onCreateFolder(trimmed.slice(0, 100), parentId);
+    // window.prompt/window.confirm are unavailable in the desktop WebView, so
+    // folder create/rename/delete go through an in-app dialog instead.
+    const promptForFolderName = (parentId: string | null = null) => {
+        setFolderDialog({ mode: 'create', parentId });
     };
 
-    const promptForFolderRename = async (folder: ConversationFolder) => {
-        const name = window.prompt(t('folders.renameFolderPrompt', 'Rename folder'), folder.name);
-        const trimmed = name?.trim();
-        if (!trimmed || trimmed === folder.name) return;
-        await onRenameFolder(folder.id, trimmed.slice(0, 100));
+    const promptForFolderRename = (folder: ConversationFolder) => {
+        setFolderDialog({ mode: 'rename', folder });
     };
 
-    const handleDeleteFolder = async (folder: ConversationFolder) => {
-        if (!window.confirm(t('folders.deleteFolderConfirm', 'Delete this folder? Subfolders will be deleted and chats will become unfiled.'))) {
-            return;
+    const handleDeleteFolder = (folder: ConversationFolder) => {
+        setFolderDialog({ mode: 'delete', folder });
+    };
+
+    const handleFolderDialogSubmit = async (name: string) => {
+        if (!folderDialog) return;
+        if (folderDialog.mode === 'create') {
+            if (folderDialog.parentId) {
+                const parentId = folderDialog.parentId;
+                setExpandedFolders(prev => new Set(prev).add(parentId));
+            }
+            await onCreateFolder(name, folderDialog.parentId);
+        } else if (folderDialog.mode === 'rename') {
+            await onRenameFolder(folderDialog.folder.id, name);
+        } else {
+            await onDeleteFolder(folderDialog.folder.id);
         }
-        await onDeleteFolder(folder.id);
     };
 
     const moveConversation = async (conversationId: string, folderId: string | null) => {
@@ -1299,6 +1302,14 @@ export function Sidebar({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {folderDialog && (
+                <FolderDialog
+                    request={folderDialog}
+                    onSubmit={handleFolderDialogSubmit}
+                    onClose={() => setFolderDialog(null)}
+                />
             )}
         </>
     );

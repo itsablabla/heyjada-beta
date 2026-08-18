@@ -77,7 +77,8 @@
         "moveToFolder": "Déplacer vers un dossier",
         "noFolder": "Aucun dossier",
         "folderActions": "Actions du dossier",
-        "openFolder": "Ouvrir le dossier : {{name}}"
+        "openFolder": "Ouvrir le dossier : {{name}}",
+        "folderNamePlaceholder": "p. ex. Projets"
     },
     "inputArea": {
         "askAnything": "Pose n'importe quelle question",
