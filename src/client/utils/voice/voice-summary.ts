@@ -98,7 +98,7 @@ export function buildConfirmationSummary(req: ConfirmationRequest, spokenDetail?
 
     const ctx = req.context;
     const intent = intentPhrase(req);
-    const parts: string[] = [intent ? `HeyJada wants to ${intent}.` : req.title];
+    const parts: string[] = [intent ? `Super Joy wants to ${intent}.` : req.title];
     if (ctx?.riskLevel === 'high') parts.push('This is a high-risk operation.');
     const fileCount = ctx?.affectedFiles?.length ?? 0;
     if (fileCount > 1) parts.push(`Affects ${fileCount} files.`);
@@ -166,5 +166,5 @@ export function buildCompletionSummary(response: string): string {
         window.lastIndexOf('? '),
     );
     const cut = naturalEnd > 0 ? window.slice(0, naturalEnd + 1) : window;
-    return `${stripMarkdown(cut)} … Open HeyJada to read the full result.`;
+    return `${stripMarkdown(cut)} … Open Super Joy to read the full result.`;
 }
