@@ -41,12 +41,12 @@ export function HelpMenu({ isOpen, onStartHelpChat }: HelpMenuProps) {
     const iconOnly = (label: string) => (isOpen ? {} : { title: label, 'aria-label': label });
 
     const features = [
-        { icon: <MessagesSquare size={14} />, title: t('help.featureChatTitle'), text: t('help.featureChatText') },
-        { icon: <Mic size={14} />, title: t('help.featureVoiceTitle'), text: t('help.featureVoiceText') },
-        { icon: <ScrollText size={14} />, title: t('help.featureSkillsTitle'), text: t('help.featureSkillsText') },
-        { icon: <Clock size={14} />, title: t('help.featureRoutinesTitle'), text: t('help.featureRoutinesText') },
-        { icon: <Hammer size={14} />, title: t('help.featureToolsTitle'), text: t('help.featureToolsText') },
-        { icon: <Folder size={14} />, title: t('help.featureFoldersTitle'), text: t('help.featureFoldersText') },
+        { id: 'chat', icon: <MessagesSquare size={14} />, title: t('help.featureChatTitle'), text: t('help.featureChatText') },
+        { id: 'voice', icon: <Mic size={14} />, title: t('help.featureVoiceTitle'), text: t('help.featureVoiceText') },
+        { id: 'skills', icon: <ScrollText size={14} />, title: t('help.featureSkillsTitle'), text: t('help.featureSkillsText') },
+        { id: 'routines', icon: <Clock size={14} />, title: t('help.featureRoutinesTitle'), text: t('help.featureRoutinesText') },
+        { id: 'tools', icon: <Hammer size={14} />, title: t('help.featureToolsTitle'), text: t('help.featureToolsText') },
+        { id: 'folders', icon: <Folder size={14} />, title: t('help.featureFoldersTitle'), text: t('help.featureFoldersText') },
     ];
 
     return (
@@ -70,8 +70,8 @@ export function HelpMenu({ isOpen, onStartHelpChat }: HelpMenuProps) {
                     <div className="help-explainer-popover" role="tooltip">
                         <div className="help-explainer-title">{t('help.explainerTitle')}</div>
                         <ul className="help-explainer-features">
-                            {features.map((feature, i) => (
-                                <li key={i}>
+                            {features.map((feature) => (
+                                <li key={feature.id}>
                                     <span className="help-explainer-feature-icon">{feature.icon}</span>
                                     <span>
                                         <strong>{feature.title}</strong> — {feature.text}
