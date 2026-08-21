@@ -122,6 +122,7 @@ export class ATIFConversationService {
     modelName: string = 'unknown',
     title?: string,
     chatModelId?: number,
+    folderId?: string | null,
   ): Promise<ConversationWithTrajectory> {
     const sessionId = uuidv4();
 
@@ -141,6 +142,7 @@ export class ATIFConversationService {
       extra?: Record<string, unknown>;
       title?: string;
       chatModelId?: number;
+      folderId?: string;
     } = {
       userId: user.id,
       schemaVersion: trajectory.schema_version,
@@ -159,6 +161,9 @@ export class ATIFConversationService {
     }
     if (chatModelId) {
       insertData.chatModelId = chatModelId;
+    }
+    if (folderId) {
+      insertData.folderId = folderId;
     }
 
     log.debug({

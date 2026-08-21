@@ -72,12 +72,13 @@ async function listOpenAICompatibleModels(apiKey: string, apiBaseUrl?: string): 
 }
 
 export async function initializeDatabase() {
-    // 1. Create default local user (used to associate all local state in the embedded DB)
-    const defaultUserEmail = getDefaultUser().email;
-
-    const [existingUser] = await db.select().from(User).where(eq(User.email, defaultUserEmail));
+    // 1. Create default local user (used to associate all local state in the embedded DB).
+    // Check for any existing user (not a fixed email) so a locally registered
+    // account with a custom email/username never gets shadowed by a second user.
+    const [existingUser] = await db.select().from(User).limit(1);
 
     if (!existingUser) {
+        const defaultUserEmail = getDefaultUser().email;
         log.info(`👤 Creating default local user: ${defaultUserEmail}`);
         await db.insert(User).values({
             email: defaultUserEmail,

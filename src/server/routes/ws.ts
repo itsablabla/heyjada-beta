@@ -1,8 +1,6 @@
 import type { ServerWebSocket } from 'bun';
-import { eq } from 'drizzle-orm';
-import { db } from '../db';
 import { User } from '../db/schema';
-import { getDefaultUser } from '../utils';
+import { getLocalUserRecord } from '../auth/local';
 import { getOrCreateBus, getBus } from '../events/conversation-event-bus';
 import { executeRun } from '../events/run-executor';
 import type { ClientMessage } from './ws/message-types';
@@ -175,7 +173,7 @@ export const websocketHandler = {
 
         const getUser = async () => {
             if (connCtx.userCache !== undefined) return connCtx.userCache;
-            const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+            const user = await getLocalUserRecord();
             connCtx.userCache = user ?? null;
             return connCtx.userCache;
         };

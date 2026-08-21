@@ -1,4 +1,8 @@
 import { Hono } from 'hono';
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
+import { eq } from 'drizzle-orm';
 import {
     isAnonMode,
     isAuthenticated,
@@ -12,11 +16,34 @@ import {
     syncPlatformModels,
     syncPlatformWebTools,
 } from '../auth';
+import {
+    SESSION_COOKIE_NAME,
+    getLocalUserRecord,
+    invalidateLocalAuthCache,
+    hashPassword,
+    verifyPassword,
+    issueOtp,
+    verifyOtp,
+    createSession,
+    validateSessionToken,
+    destroySession,
+} from '../auth/local';
+import { db } from '../db';
+import { User } from '../db/schema';
 import { initializeUserContext } from '../user-context';
 import { createChildLogger } from '../logger';
 
 const log = createChildLogger({ component: 'auth' });
 const auth = new Hono();
+
+function setSessionCookie(c: Parameters<typeof setCookie>[0], token: string) {
+    setCookie(c, SESSION_COOKIE_NAME, token, {
+        httpOnly: true,
+        sameSite: 'Lax',
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60,
+    });
+}
 
 // OAuth callback - serves a page that extracts tokens from URL fragment
 // Tokens are passed via fragment (#) instead of query params (?) for security:
@@ -84,26 +111,59 @@ auth.post('/complete', async (c) => {
 // Get current auth status
 auth.get('/status', async (c) => {
     const anonMode = isAnonMode();
-    const authenticated = await isAuthenticated();
+    const localUser = await getLocalUserRecord();
+    const localEnforced = !!(localUser?.password && localUser.verifiedEmail);
+    const localAuthenticated = localEnforced
+        && await validateSessionToken(getCookie(c, SESSION_COOKIE_NAME));
 
+    const { version } = await import('../../../package.json');
+
+    // When a local account is set up, the local session decides authentication
+    if (localEnforced) {
+        return c.json({
+            anonMode: false,
+            authenticated: localAuthenticated,
+            user: localAuthenticated ? {
+                id: String(localUser.id),
+                email: localUser.email,
+                name: localUser.firstName || localUser.username,
+            } : null,
+            localAuth: {
+                enabled: true,
+                needsVerification: false,
+                authenticated: localAuthenticated,
+                username: localUser.username,
+            },
+            version,
+        });
+    }
+
+    const authenticated = await isAuthenticated();
     let userInfo = null;
     if (authenticated && !anonMode) {
         userInfo = await getPlatformUserInfo();
     }
 
-    const { version } = await import('../../../package.json');
-
     return c.json({
         anonMode,
         authenticated,
         user: userInfo,
+        localAuth: {
+            enabled: false,
+            // A password without a verified email means registration was started but not finished
+            needsVerification: !!(localUser?.password && !localUser.verifiedEmail),
+            authenticated: false,
+            username: localUser?.password ? localUser.username : null,
+        },
         version,
     });
 });
 
-// Logout - clear stored tokens
+// Logout - clear stored tokens and local session
 auth.post('/logout', async (c) => {
     try {
+        await destroySession(getCookie(c, SESSION_COOKIE_NAME));
+        deleteCookie(c, SESSION_COOKIE_NAME, { path: '/' });
         await clearTokens();
         log.info('User logged out');
         return c.json({ success: true });
@@ -111,6 +171,103 @@ auth.post('/logout', async (c) => {
         log.error({ err }, 'Logout error');
         return c.json({ error: 'Failed to logout' }, 500);
     }
+});
+
+// --- Local account (username + password, verified with a single OTP via Resend) ---
+
+const registerSchema = z.object({
+    username: z.string().trim().min(3).max(50).regex(/^[a-zA-Z0-9._-]+$/, 'Username may only contain letters, numbers, dots, dashes and underscores'),
+    email: z.string().trim().email().max(254),
+    password: z.string().min(8).max(200),
+});
+
+// Create the local account. Updates the single local user row so all existing
+// data (conversations, folders, settings) stays attached to the account.
+auth.post('/register', zValidator('json', registerSchema), async (c) => {
+    const user = await getLocalUserRecord();
+    if (!user) return c.json({ error: 'User not initialized' }, 500);
+    if (user.password && user.verifiedEmail) {
+        return c.json({ error: 'An account already exists. Please sign in.' }, 400);
+    }
+
+    const { username, email, password } = c.req.valid('json');
+    const passwordHash = await hashPassword(password);
+    const [updated] = await db.update(User).set({
+        username,
+        email,
+        password: passwordHash,
+        verifiedEmail: false,
+        updatedAt: new Date(),
+    }).where(eq(User.id, user.id)).returning();
+    invalidateLocalAuthCache();
+
+    if (!updated) return c.json({ error: 'Failed to create account' }, 500);
+
+    const otp = await issueOtp(updated);
+    if (!otp.ok) return c.json({ error: otp.error }, 500);
+
+    log.info({ username }, 'Local account registered; OTP sent');
+    return c.json({ success: true, needsVerification: true });
+});
+
+// Sign in with username (or email) + password
+auth.post('/login', zValidator('json', z.object({
+    username: z.string().trim().min(1).max(254),
+    password: z.string().min(1).max(200),
+})), async (c) => {
+    const { username, password } = c.req.valid('json');
+    const user = await getLocalUserRecord();
+    const matchesIdentity = user && (user.username === username || user.email === username);
+    if (!user?.password || !matchesIdentity || !(await verifyPassword(password, user.password))) {
+        return c.json({ error: 'Invalid username or password' }, 401);
+    }
+
+    if (!user.verifiedEmail) {
+        const otp = await issueOtp(user);
+        if (!otp.ok && otp.error !== 'Please wait before requesting another code') {
+            return c.json({ error: otp.error }, 500);
+        }
+        return c.json({ success: true, needsVerification: true });
+    }
+
+    const token = await createSession(user.id);
+    setSessionCookie(c, token);
+    await db.update(User).set({ lastLogin: new Date() }).where(eq(User.id, user.id));
+    log.info({ username: user.username }, 'Local sign-in successful');
+    return c.json({ success: true });
+});
+
+// Verify the one-time passcode that was emailed via Resend
+auth.post('/verify-otp', zValidator('json', z.object({
+    code: z.string().trim().regex(/^\d{6}$/, 'Code must be 6 digits'),
+})), async (c) => {
+    const user = await getLocalUserRecord();
+    if (!user?.password) return c.json({ error: 'No account pending verification' }, 400);
+
+    const { code } = c.req.valid('json');
+    const result = await verifyOtp(user, code);
+    if (!result.ok) return c.json({ error: result.error }, 400);
+
+    const token = await createSession(user.id);
+    setSessionCookie(c, token);
+    log.info({ username: user.username }, 'Email verified; local session created');
+
+    // Personalize the assistant with the account name in the background
+    initializeUserContext({ name: user.firstName || user.username })
+        .catch(err => log.error({ err }, 'Failed to initialize user context'));
+
+    return c.json({ success: true });
+});
+
+// Re-send the OTP email (rate limited)
+auth.post('/resend-otp', async (c) => {
+    const user = await getLocalUserRecord();
+    if (!user?.password) return c.json({ error: 'No account pending verification' }, 400);
+    if (user.verifiedEmail) return c.json({ error: 'Account already verified' }, 400);
+
+    const result = await issueOtp(user);
+    if (!result.ok) return c.json({ error: result.error }, 429);
+    return c.json({ success: true });
 });
 
 // Get OAuth URL for Google sign-in

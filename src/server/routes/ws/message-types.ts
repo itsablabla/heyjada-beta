@@ -21,6 +21,8 @@ export interface MessageCommand {
     message: string;
     conversationId?: string;
     chatModelId?: number;
+    /** Folder to place a newly created conversation into (ignored for existing conversations) */
+    folderId?: string | null;
     clientMessageId: string;  // Client-generated ID for dedup
     runId: string;            // Client-generated run ID (server may override)
 }

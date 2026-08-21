@@ -17,6 +17,7 @@ import {
 import { startAutomationSystem, stopAutomationSystem } from "./automation";
 import { loadEnabledMcpServers, closeMcpClients } from "./processor/mcp";
 import { configureAuth, isAuthenticated, getPlatformUserInfo } from "./auth";
+import { SESSION_COOKIE_NAME, isLocalAuthEnforced, validateSessionToken } from "./auth/local";
 import { createChildLogger } from './logger';
 import { initializeSandbox, shutdownSandbox } from './sandbox';
 import { killAllBackgroundProcesses } from './events/background-processes';
@@ -330,6 +331,15 @@ async function main() {
 
         // WebSocket
         if (url.pathname === "/ws/chat") {
+            // When a local account exists, the WebSocket requires the same
+            // session cookie as the API routes.
+            if (await isLocalAuthEnforced()) {
+                const cookies = req.headers.get('cookie') ?? '';
+                const match = cookies.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]+)`));
+                if (!(await validateSessionToken(match?.[1]))) {
+                    return new Response('Unauthorized', { status: 401 });
+                }
+            }
             const success = server.upgrade(req, {
                 data: {
                     // Initialize data if needed

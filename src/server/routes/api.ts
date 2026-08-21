@@ -14,7 +14,8 @@ import automations from './automations';
 import mcp from './mcp';
 import auth from './auth';
 
-import { getDefaultUser } from '../utils';
+import { SESSION_COOKIE_NAME, isLocalAuthEnforced, validateSessionToken, getLocalUserRecord } from '../auth/local';
+import { getCookie } from 'hono/cookie';
 import { atifConversationService } from '../processor/conversation/atif/atif.service';
 import { runResearchToCompletion } from '../processor/research-runner';
 import { getActiveStatus } from '../sessions';
@@ -59,6 +60,24 @@ api.use('*', cors({
 
 // Health check endpoint for Tauri sidecar readiness detection
 api.get('/health', (c) => c.json({ status: 'ok' }));
+
+// Local session gate: once a local account (username/password + verified
+// email) exists, every API route except auth and health requires a valid
+// session cookie. When no local account is set up this is a no-op, so anon
+// mode, development, and tests behave exactly as before.
+api.use('*', async (c, next) => {
+    const pathname = new URL(c.req.url).pathname;
+    if (pathname === '/api/health' || pathname.startsWith('/api/auth/')) {
+        return next();
+    }
+    if (!(await isLocalAuthEnforced())) {
+        return next();
+    }
+    if (await validateSessionToken(getCookie(c, SESSION_COOKIE_NAME))) {
+        return next();
+    }
+    return c.json({ error: 'Unauthorized' }, 401);
+});
 
 // Get release notes for current version from CHANGELOG.md
 api.get('/changelog', async (c) => {
@@ -106,9 +125,9 @@ api.post('/chat', zValidator('json', schema), async (c) => {
     log.info(`Conversation: ${conversationId || 'new'}`);
 
     // Get the user
-    const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const user = await getLocalUserRecord();
     if (!user) {
-        log.error(`❌ User not found: ${getDefaultUser().email}`);
+        log.error('❌ Local user not found');
         return c.json({ error: 'User not found' }, 404);
     }
     log.info(`User: ${user.email} (id: ${user.id})`);
@@ -189,7 +208,7 @@ api.get('/chat/:conversationId/history', async (c) => {
 
 // Get all conversations for the user (with optional full-text search via ?q=)
 api.get('/conversations', async (c) => {
-    const [adminUser] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const adminUser = await getLocalUserRecord();
     if (!adminUser) {
         return c.json({ error: 'User not found' }, 404);
     }
@@ -421,8 +440,7 @@ api.put('/conversations/:conversationId/pin', async (c) => {
 // --- Conversation folders (organize chat sessions into folders and subfolders) ---
 
 async function getDefaultUserRecord() {
-    const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
-    return user;
+    return await getLocalUserRecord();
 }
 
 // Would moving `folderId` under `newParentId` create a cycle?
@@ -683,7 +701,7 @@ api.get('/models', async (c) => {
 
 // Get user's selected model
 api.get('/user/model', async (c) => {
-    const [adminUser] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const adminUser = await getLocalUserRecord();
     if (!adminUser) {
         return c.json({ error: 'User not found' }, 404);
     }
@@ -727,7 +745,7 @@ const selectModelSchema = z.object({
 api.put('/user/model', zValidator('json', selectModelSchema), async (c) => {
     const { modelId } = c.req.valid('json');
 
-    const [adminUser] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const adminUser = await getLocalUserRecord();
     if (!adminUser) {
         return c.json({ error: 'User not found' }, 404);
     }
@@ -827,7 +845,7 @@ api.post('/conversations/import/atif', zValidator('json', importSchema), async (
     const { atifData, title } = c.req.valid('json');
 
     // Get the current user
-    const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const user = await getLocalUserRecord();
     if (!user) {
         return c.json({ error: 'User not found' }, 404);
     }

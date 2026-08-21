@@ -11,8 +11,8 @@ import type { ClientMessage, MessageCommand } from '../message-types';
 import { createSession, createRunningState } from '../session-state';
 import { createEmptyPreferences } from '../../../processor/confirmation';
 import { db, getDefaultChatModel, getChatModelById } from '../../../db';
-import { Conversation } from '../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { Conversation, ConversationFolder } from '../../../db/schema';
+import { and, eq } from 'drizzle-orm';
 import { atifConversationService } from '../../../processor/conversation/atif/atif.service';
 import { getBus } from '../../../events/conversation-event-bus';
 import { queueMessageOnActiveRun } from '../../../events/conversation-runs';
@@ -28,7 +28,7 @@ export const MessageCommandHandler: Command<MessageCommand> = {
 
     async execute(ctx: CommandContext, message: MessageCommand): Promise<void> {
         const sessions = ctx.getSessions();
-        const { message: userQuery, conversationId, chatModelId, clientMessageId, runId } = message;
+        const { message: userQuery, conversationId, chatModelId, folderId, clientMessageId, runId } = message;
 
         if (!userQuery) {
             log.warn('Received message without content');
@@ -107,6 +107,21 @@ export const MessageCommandHandler: Command<MessageCommand> = {
                 chatModelWithApi = await getDefaultChatModel(user);
             }
             const modelName = chatModelWithApi?.chatModel.name || 'unknown';
+
+            // Validate the requested folder belongs to the user before filing
+            // the new conversation into it
+            let validatedFolderId: string | null = null;
+            if (folderId) {
+                const [folder] = await db.select({ id: ConversationFolder.id })
+                    .from(ConversationFolder)
+                    .where(and(eq(ConversationFolder.id, folderId), eq(ConversationFolder.userId, user.id)));
+                if (folder) {
+                    validatedFolderId = folder.id;
+                } else {
+                    log.warn({ folderId }, 'Requested folder not found; creating conversation unfiled');
+                }
+            }
+
             conversation = await atifConversationService.createConversation(
                 user,
                 'pipali-agent',
@@ -114,6 +129,7 @@ export const MessageCommandHandler: Command<MessageCommand> = {
                 modelName,
                 undefined,
                 chatModelWithApi?.chatModel.id,
+                validatedFolderId,
             );
         }
 
