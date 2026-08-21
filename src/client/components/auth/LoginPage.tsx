@@ -9,6 +9,15 @@ interface AuthCapabilities {
     googleEnabled: boolean;
 }
 
+interface LocalAuthInfo {
+    enabled: boolean;
+    needsVerification: boolean;
+    authenticated: boolean;
+    username: string | null;
+}
+
+type LocalMode = 'signin' | 'signup' | 'verify';
+
 interface LoginPageProps {
     onLoginSuccess: () => void;
 }
@@ -19,6 +28,13 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     const [isWaitingForAuth, setIsWaitingForAuth] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [authCapabilities, setAuthCapabilities] = useState<AuthCapabilities | null>(null);
+    const [localAuth, setLocalAuth] = useState<LocalAuthInfo | null>(null);
+    const [localMode, setLocalMode] = useState<LocalMode>('signup');
+    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [otpCode, setOtpCode] = useState('');
+    const [resendCooldown, setResendCooldown] = useState(0);
     const logoUrl = `${getApiBaseUrl()}/icons/superjoy_128.png`;
     const isDesktop = isDesktopMode();
 
@@ -32,6 +48,124 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 setAuthCapabilities({ emailEnabled: true, googleEnabled: true });
             });
     }, []);
+
+    // Fetch local account state so we know whether to offer sign-in or account creation
+    useEffect(() => {
+        apiFetch('/api/auth/status')
+            .then(res => res.ok ? res.json() : Promise.reject())
+            .then(data => {
+                const info: LocalAuthInfo | null = data.localAuth ?? null;
+                setLocalAuth(info);
+                if (info?.enabled) setLocalMode('signin');
+                else if (info?.needsVerification) setLocalMode('verify');
+            })
+            .catch(() => setLocalAuth(null));
+    }, []);
+
+    // Countdown for the OTP resend button
+    useEffect(() => {
+        if (resendCooldown <= 0) return;
+        const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [resendCooldown]);
+
+    const handleLocalRegister = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await apiFetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ username: username.trim(), email: email.trim(), password }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || t('auth.localAuthError', 'Something went wrong. Please try again.'));
+                return;
+            }
+            setLocalMode('verify');
+            setResendCooldown(30);
+        } catch (err) {
+            console.error('Registration error:', err);
+            setError(t('auth.localAuthError', 'Something went wrong. Please try again.'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleLocalSignIn = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await apiFetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ username: username.trim(), password }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || t('auth.localAuthError', 'Something went wrong. Please try again.'));
+                return;
+            }
+            if (data.needsVerification) {
+                setLocalMode('verify');
+                setResendCooldown(30);
+                return;
+            }
+            onLoginSuccess();
+        } catch (err) {
+            console.error('Sign-in error:', err);
+            setError(t('auth.localAuthError', 'Something went wrong. Please try again.'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleVerifyOtp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await apiFetch('/api/auth/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ code: otpCode.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || t('auth.invalidOtp', 'Invalid verification code.'));
+                return;
+            }
+            onLoginSuccess();
+        } catch (err) {
+            console.error('Verification error:', err);
+            setError(t('auth.localAuthError', 'Something went wrong. Please try again.'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResendOtp = async () => {
+        if (resendCooldown > 0) return;
+        setError(null);
+        try {
+            const res = await apiFetch('/api/auth/resend-otp', { method: 'POST', credentials: 'include' });
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || t('auth.localAuthError', 'Something went wrong. Please try again.'));
+                return;
+            }
+            setResendCooldown(30);
+        } catch (err) {
+            console.error('Resend OTP error:', err);
+            setError(t('auth.localAuthError', 'Something went wrong. Please try again.'));
+        }
+    };
 
     // Poll for auth status when waiting for external browser auth
     const checkAuthStatus = useCallback(async () => {
@@ -189,6 +323,125 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     </div>
                 )}
 
+                {/* Local account: username + password with a one-time email code */}
+                {localMode === 'verify' ? (
+                    <form className="login-local-form" onSubmit={handleVerifyOtp}>
+                        <div className="form-group">
+                            <label htmlFor="login-otp">{t('auth.otpLabel', 'Verification code')}</label>
+                            <input
+                                id="login-otp"
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                maxLength={6}
+                                placeholder="123456"
+                                value={otpCode}
+                                onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                autoFocus
+                            />
+                            <span className="form-hint">{t('auth.otpHint', 'We emailed you a 6-digit code. Enter it to verify your account.')}</span>
+                        </div>
+                        <button className="login-btn email" type="submit" disabled={isLoading || otpCode.length !== 6}>
+                            {isLoading ? <Loader2 size={20} className="spinning" /> : <span>{t('auth.verify', 'Verify')}</span>}
+                        </button>
+                        <button
+                            className="login-btn secondary"
+                            type="button"
+                            onClick={handleResendOtp}
+                            disabled={resendCooldown > 0}
+                        >
+                            {resendCooldown > 0
+                                ? t('auth.resendIn', { seconds: resendCooldown, defaultValue: 'Resend code in {{seconds}}s' })
+                                : t('auth.resendCode', 'Resend code')}
+                        </button>
+                        <button className="login-link-btn" type="button" onClick={() => { setLocalMode(localAuth?.enabled ? 'signin' : 'signup'); setError(null); }}>
+                            {t('common.back', 'Back')}
+                        </button>
+                    </form>
+                ) : localMode === 'signin' ? (
+                    <form className="login-local-form" onSubmit={handleLocalSignIn}>
+                        <div className="form-group">
+                            <label htmlFor="login-username">{t('auth.username', 'Username')}</label>
+                            <input
+                                id="login-username"
+                                type="text"
+                                autoComplete="username"
+                                value={username}
+                                onChange={e => setUsername(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="login-password">{t('auth.password', 'Password')}</label>
+                            <input
+                                id="login-password"
+                                type="password"
+                                autoComplete="current-password"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                            />
+                        </div>
+                        <button className="login-btn email" type="submit" disabled={isLoading || !username.trim() || !password}>
+                            {isLoading ? <Loader2 size={20} className="spinning" /> : <span>{t('auth.signIn', 'Sign in')}</span>}
+                        </button>
+                        {!localAuth?.enabled && (
+                            <button className="login-link-btn" type="button" onClick={() => { setLocalMode('signup'); setError(null); }}>
+                                {t('auth.needAccount', "Don't have an account? Create one")}
+                            </button>
+                        )}
+                    </form>
+                ) : (
+                    <form className="login-local-form" onSubmit={handleLocalRegister}>
+                        <div className="form-group">
+                            <label htmlFor="signup-username">{t('auth.username', 'Username')}</label>
+                            <input
+                                id="signup-username"
+                                type="text"
+                                autoComplete="username"
+                                value={username}
+                                onChange={e => setUsername(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="signup-email">{t('auth.email', 'Email')}</label>
+                            <input
+                                id="signup-email"
+                                type="email"
+                                autoComplete="email"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                            />
+                            <span className="form-hint">{t('auth.emailHint', "We'll send a one-time code to verify your email.")}</span>
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="signup-password">{t('auth.password', 'Password')}</label>
+                            <input
+                                id="signup-password"
+                                type="password"
+                                autoComplete="new-password"
+                                minLength={8}
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                            />
+                            <span className="form-hint">{t('auth.passwordHint', 'At least 8 characters.')}</span>
+                        </div>
+                        <button className="login-btn email" type="submit" disabled={isLoading || !username.trim() || !email.trim() || password.length < 8}>
+                            {isLoading ? <Loader2 size={20} className="spinning" /> : <span>{t('auth.createAccount', 'Create account')}</span>}
+                        </button>
+                        <button className="login-link-btn" type="button" onClick={() => { setLocalMode('signin'); setError(null); }}>
+                            {t('auth.haveAccount', 'Already have an account? Sign in')}
+                        </button>
+                    </form>
+                )}
+
+                {(authCapabilities?.googleEnabled || authCapabilities?.emailEnabled) && !localAuth?.enabled && localMode !== 'verify' && (
+                    <div className="login-divider">
+                        <span>{t('common.or')}</span>
+                    </div>
+                )}
+
+                {!localAuth?.enabled && localMode !== 'verify' && (
                 <div className="login-buttons">
                     {authCapabilities?.googleEnabled && (
                         <button
@@ -246,6 +499,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                         </button>
                     )}
                 </div>
+                )}
 
                 <div className="login-footer">
                     <p>

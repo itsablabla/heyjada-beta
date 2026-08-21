@@ -86,6 +86,8 @@ export interface SendMessageOptions {
     runId?: string;
     optimistic?: boolean;
     chatModelId?: number;
+    /** Folder to file a newly created conversation into (ignored for existing conversations) */
+    folderId?: string | null;
 }
 
 export interface StopOptions {
@@ -1738,6 +1740,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
             message: content,
             conversationId,
             ...(options?.chatModelId !== undefined ? { chatModelId: options.chatModelId } : {}),
+            ...(options?.folderId ? { folderId: options.folderId } : {}),
             clientMessageId,
             runId,
         }));

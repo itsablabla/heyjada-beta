@@ -34,5 +34,7 @@ export function apiFetch(
     init?: RequestInit
 ): Promise<Response> {
     const url = `${apiBaseUrl}${path}`;
-    return fetch(url, init);
+    // Include credentials so the local-auth session cookie is sent in Tauri
+    // desktop mode, where API requests are cross-origin to the sidecar.
+    return fetch(url, { credentials: 'include', ...init });
 }

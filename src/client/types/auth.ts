@@ -12,5 +12,11 @@ export interface AuthStatus {
     anonMode: boolean;
     authenticated: boolean;
     user: PlatformUser | null;
+    localAuth?: {
+        enabled: boolean;
+        needsVerification: boolean;
+        authenticated: boolean;
+        username: string | null;
+    };
     version?: string;
 }
