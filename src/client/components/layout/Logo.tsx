@@ -1,4 +1,4 @@
-// Clickable HeyJada wordmark - lives in the sidebar on desktop, the header on mobile
+// Clickable Super Joy wordmark - lives in the sidebar on desktop, the header on mobile
 
 import { useTranslation } from 'react-i18next';
 import { getApiBaseUrl } from '../../utils/api';
@@ -22,7 +22,7 @@ export function Logo({ onClick }: LogoProps) {
                 }
             }}
         >
-            <img src={`${getApiBaseUrl()}/icons/pipali_64.png`} alt={t('common.pipali')} className="logo-icon" />
+            <img src={`${getApiBaseUrl()}/icons/superjoy_64.png`} alt={t('common.pipali')} className="logo-icon" />
             <span className="logo-text">{t('common.pipali')}</span>
         </div>
     );

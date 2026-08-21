@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" role="img" aria-label="Super Joy">
+  <defs>
+    <style>
+      .sj-text{font-family:'Gambetta','GT Sectra','Playfair Display','Times New Roman',serif;font-weight:600;letter-spacing:-2}
+      .sj-italic{font-family:'Gambetta','GT Sectra','Playfair Display','Times New Roman',serif;font-style:italic;font-weight:600;letter-spacing:-3}
+    </style>
+  </defs>
+  <text class="sj-text" x="0" y="160" font-size="180" fill="currentColor">Super</text>
+  <text class="sj-italic" x="530" y="160" font-size="180" fill="#FF2D87">Joy</text>
+</svg>

@@ -96,6 +96,12 @@ export function EmptyHomeState({ userFirstName, hasInput = false }: EmptyHomeSta
 
     return (
         <div className="empty-state home-empty">
+            <img
+                src="/brand/hero.jpg"
+                alt=""
+                aria-hidden="true"
+                className="empty-state-hero"
+            />
             <RibbonAnimation resolved={hasInput} />
             <h2>{greeting}</h2>
         </div>
