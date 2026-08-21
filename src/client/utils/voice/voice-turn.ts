@@ -50,7 +50,7 @@ const HALLUCINATION_PATTERNS: RegExp[] = [
 // text — not just the commands in it — is what catches an echo of the framing
 // prose, which is 30% of the prompt and carries no command phrases at all.
 // Derived from the live prompt, so rewording can't leave this behind; the token
-// floor keeps short utterances that live in it ("send it", "hey Superjoy") usable.
+// floor keeps short utterances that live in it ("send it", "hey Jada") usable.
 const PROMPT_TRIGRAMS = new Set(ngrams(tokenize(STT_BIAS_PROMPT), 3));
 const PROMPT_ECHO_MIN_TOKENS = 6;
 const PROMPT_ECHO_MIN_CONTAINMENT = 0.8;

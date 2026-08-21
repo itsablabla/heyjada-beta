@@ -19,7 +19,7 @@
  * bare reply, then lapses back to open.
  *
  * Voice mode sets Superjoy's speaking etiquette — when it speaks:
- * - `ask_first`: requires go-ahead from user to speak ("Superjoy, go ahead" or a
+ * - `ask_first`: requires go-ahead from user to speak ("Hey Jada, go ahead" or a
  *    tap). Announcements chime when ready, then wait — minutes if need be.
  *    A polite, low-interruption mode when user is auditorily engaged elsewhere.
  * - `speak_freely`: speaks when it wants — the same chime, then it reads on.
@@ -763,12 +763,12 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 }
 
                 if (pending && (!payload || parseGoAhead(payload))) {
-                    // "Superjoy, go ahead" — acknowledge the waiting announcement.
+                    // "Hey Jada, go ahead" — acknowledge the waiting announcement.
                     void speakPendingAndListen(pending);
                     return;
                 }
                 if (!payload) {
-                    // Bare "Superjoy" with nothing pending: start dictating.
+                    // Bare "Hey Jada" with nothing pending: start dictating.
                     openComposedTurn();
                     return;
                 }
@@ -808,7 +808,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 const payload = addr.addressed ? addr.payload : text;
                 const pending = pendingRef.current;
                 if (!payload) {
-                    openReplyTurn();          // bare "Superjoy": floor taken, nothing said yet
+                    openReplyTurn();          // bare "Hey Jada": floor taken, nothing said yet
                     return;
                 }
                 const command = classifySpokenCommand(payload, pending?.kind ?? null);

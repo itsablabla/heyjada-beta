@@ -17,7 +17,7 @@ export const VOICE_TUNABLES = {
     /**
      * Onset window size (frames). Majority voting (3 of 4) instead of strictly
      * consecutive frames, so the consonant dips in short commands ("send it",
-     * "Superjoy") don't keep resetting onset at normal speaking volume.
+     * "Hey Jada") don't keep resetting onset at normal speaking volume.
      */
     speechStartWindow: 4,
     /** Trailing silence that closes a segment — a pause, never the turn. */
