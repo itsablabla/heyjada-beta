@@ -19,7 +19,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     const [isWaitingForAuth, setIsWaitingForAuth] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [authCapabilities, setAuthCapabilities] = useState<AuthCapabilities | null>(null);
-    const logoUrl = `${getApiBaseUrl()}/icons/pipali_128.png`;
+    const logoUrl = `${getApiBaseUrl()}/icons/superjoy_128.png`;
     const isDesktop = isDesktopMode();
 
     // Fetch auth capabilities from platform on mount

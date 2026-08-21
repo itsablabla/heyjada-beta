@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### 🎁 New
+- Rebrand to **Superjoy**: new name across the app, new hot-pink orb icon set, wordmark, hero, avatar and status imagery
+- Superjoy orb avatar on assistant messages, brand state indicators on task cards and while responses stream in, and an ambient neural-mesh backdrop behind conversations
+- Brand color tokens (`--color-brand-accent: #FF2D87`) applied to the design system
+
+### 🧪 Improve
+- Desktop, Android, iOS and web app icons regenerated from the Superjoy brand mark
+- Internal identifiers, the voice wake word ("Hey Jada"), data paths and the `ai.pipali` bundle id are unchanged, so existing installs keep working
+
 ## 0.7.0
 
 ### 🎁 New

@@ -6,6 +6,7 @@ import {
     EMBEDDED_STYLES_CSS,
     EMBEDDED_APP_JS,
     EMBEDDED_ICONS,
+    EMBEDDED_BRAND,
     IS_COMPILED_BINARY,
 } from '../embedded-assets';
 
@@ -15,9 +16,9 @@ const app = new Hono();
 // (remote) server. Served from a constant so it works in both dev and
 // compiled-binary modes without touching the asset embedding pipeline.
 const WEB_APP_MANIFEST = {
-    name: 'HeyJada',
-    short_name: 'HeyJada',
-    description: 'HeyJada — an AI co-worker that can safely interact with files + the web to finish real work.',
+    name: 'Superjoy',
+    short_name: 'Superjoy',
+    description: 'Superjoy — an AI co-worker that can safely interact with files + the web to finish real work.',
     id: '/',
     start_url: '/',
     scope: '/',
@@ -25,10 +26,10 @@ const WEB_APP_MANIFEST = {
     background_color: '#1a1a1a',
     theme_color: '#1a1a1a',
     icons: [
-        { src: '/icons/pipali_64.png', sizes: '64x64', type: 'image/png' },
-        { src: '/icons/pipali_128.png', sizes: '128x128', type: 'image/png' },
-        { src: '/icons/pipali_256.png', sizes: '256x256', type: 'image/png' },
-        { src: '/icons/pipali_512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/icons/superjoy_64.png', sizes: '64x64', type: 'image/png' },
+        { src: '/icons/superjoy_128.png', sizes: '128x128', type: 'image/png' },
+        { src: '/icons/superjoy_256.png', sizes: '256x256', type: 'image/png' },
+        { src: '/icons/superjoy_512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
     ],
 };
 
@@ -70,6 +71,20 @@ if (IS_COMPILED_BINARY) {
         return c.notFound();
     });
 
+    // Serve embedded Superjoy brand images
+    app.get('/brand/:filename', (c) => {
+        const filename = c.req.param('filename');
+        const brandData = EMBEDDED_BRAND[filename];
+        if (brandData) {
+            const buffer = Buffer.from(brandData, 'base64');
+            return c.body(buffer, 200, {
+                'Content-Type': 'image/jpeg',
+                'Cache-Control': 'public, max-age=31536000',
+            });
+        }
+        return c.notFound();
+    });
+
     // Fallback for any other routes - serve index.html for SPA routing
     app.get('*', (c) => {
         return c.html(EMBEDDED_INDEX_HTML);
@@ -82,6 +97,8 @@ if (IS_COMPILED_BINARY) {
     app.get('/', serveStatic({ path: path.join(clientRoot, 'index.html') }));
     // Serve public assets (icons, etc.)
     app.get('/icons/*', serveStatic({ root: path.join(clientRoot, 'public') }));
+    // Serve Superjoy brand images
+    app.get('/brand/*', serveStatic({ root: path.join(clientRoot, 'public') }));
     // Serve static files (CSS, JS, etc.)
     app.get('*', serveStatic({ root: clientRoot }));
     // Fallback for SPA routing - serve index.html for any unmatched routes

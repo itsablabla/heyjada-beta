@@ -51,7 +51,7 @@ export function MessageList({
     );
 
     return (
-        <main className="main-content" ref={mainContentRef}>
+        <main className={`main-content${messages.length > 0 ? ' chat-ambient' : ''}`} ref={mainContentRef}>
             <div className="messages-container">
                 {messages.length === 0 ? (
                     <EmptyHomeState userFirstName={userFirstName} hasInput={hasInput} />

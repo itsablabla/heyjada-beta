@@ -10,6 +10,22 @@
     background: var(--color-bg-elevated);
 }
 
+/* Superjoy ambient neural mesh — full-bleed layer behind long-running
+   conversations. The near-opaque gradient overlay keeps text contrast intact;
+   background-attachment defaults to `scroll`, which pins the mesh to the
+   scroll viewport rather than the content. */
+.main-content.chat-ambient {
+    background-image:
+        linear-gradient(
+            color-mix(in srgb, var(--color-bg-elevated) 94%, transparent),
+            color-mix(in srgb, var(--color-bg-elevated) 94%, transparent)
+        ),
+        url('/brand/bg-neural.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
 .messages-container {
     min-height: 100%;
     display: flex;

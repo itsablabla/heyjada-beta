@@ -1,4 +1,4 @@
-# Super Joy Brand Assets
+# Superjoy Brand Assets
 
 Generated with Nano Banana Pro (`gpt_image_2` / `nano_banana_2`). All images are
 JPEG at 85% quality with progressive encoding for fast first-paint.
@@ -14,14 +14,14 @@ JPEG at 85% quality with progressive encoding for fast first-paint.
 
 ## Color tokens
 
-- `--color-brand-accent: #FF2D87` — primary Super Joy accent (hot pink)
+- `--color-brand-accent: #FF2D87` — primary Superjoy accent (hot pink)
 - `--color-brand-accent-bright: #FF5BA1` — hover / highlight
 - Base: pure black `#050205`
 - Text: `#F2ECEF` primary, `rgba(242,236,239,0.6)` muted
 
 ## Voice
 
-- Product name: **Super Joy** (display) / `pipali` (internal identifier, unchanged)
+- Product name: **Superjoy** (display) / `pipali` (internal identifier, unchanged)
 - Assistant persona: **Joy**
 - Tagline: *"Joy doesn't stop. Joy will keep going until it gives you what you asked for."*
 - Sign-off: *"Say the word."*

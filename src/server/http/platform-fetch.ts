@@ -1,7 +1,7 @@
 /**
  * Platform Fetch Utility
  *
- * A fetch wrapper that handles 401 errors from the HeyJada Platform API
+ * A fetch wrapper that handles 401 errors from the Superjoy Platform API
  * by automatically refreshing the access token and retrying the request.
  *
  * This provides transparent token refresh for all platform API calls:

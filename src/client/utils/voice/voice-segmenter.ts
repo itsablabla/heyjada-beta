@@ -7,7 +7,7 @@
  * where the address lives), and applies hysteresis + a minimum voiced duration
  * so keyboard clatter doesn't produce segments.
  *
- * While HeyJada is speaking the voiced threshold is raised, so its own residual
+ * While Superjoy is speaking the voiced threshold is raised, so its own residual
  * echo does not open a segment. Closed segments are stamped with whether they
  * caught any of that speech, since the transcript-level self-echo check needs to
  * know and cannot ask afterwards — a segment closes ~900ms after the voice in it
@@ -21,7 +21,7 @@
 import { VOICE_TUNABLES } from './voice-config';
 
 export interface VadEngine {
-    /** `overSpeech` raises the bar: HeyJada is audible, so quiet energy is likely its echo. */
+    /** `overSpeech` raises the bar: Superjoy is audible, so quiet energy is likely its echo. */
     isVoiced(frame: Float32Array, overSpeech?: boolean): boolean;
 }
 
@@ -58,9 +58,9 @@ export interface SegmenterConfig {
 export type SegmenterEvent =
     | { type: 'speech_start' }
     /**
-     * `overlappedPlayback` marks audio captured while HeyJada was sounding. A
+     * `overlappedPlayback` marks audio captured while Superjoy was sounding. A
      * segment closes ~900ms after the voice in it stops, so one that caught the
-     * tail of a readout arrives well after playback ended — by then "is HeyJada
+     * tail of a readout arrives well after playback ended — by then "is Superjoy
      * speaking?" reads false, and the echo check would be skipped exactly when
      * it is needed. The flag travels with the audio instead.
      */
@@ -184,7 +184,7 @@ export class SpeechSegmenter {
             samples.set(f, offset);
             offset += f.length;
         }
-        // `frames` spans the pre-roll too, so this asks whether HeyJada spoke at
+        // `frames` spans the pre-roll too, so this asks whether Superjoy spoke at
         // any point in the audio being handed over — not whether it is speaking
         // now, which by here it usually is not.
         return { type: 'segment', samples, overlappedPlayback: this.framesSinceSpeech <= frames.length };

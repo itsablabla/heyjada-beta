@@ -3,8 +3,11 @@
  */
 
 :root {
-  /* Brand */
-  --color-brand: #e63946;
+  /* Brand — Superjoy hot pink (see src/client/public/brand/README.md) */
+  --color-brand-accent: #FF2D87;
+  --color-brand-accent-bright: #FF5BA1;
+  --color-brand-base: #050205;
+  --color-brand: var(--color-brand-accent);
 
   /* Backgrounds */
   --color-bg: #fafafa;

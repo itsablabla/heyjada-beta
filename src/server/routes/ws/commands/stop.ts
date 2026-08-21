@@ -51,7 +51,7 @@ export const StopCommandHandler: Command<StopCommand> = {
         suspendAutoStart(conversationId);
         stopConversationRun(conversationId);
 
-        // Stopping is the user's only handle on work HeyJada started on its own, so it
+        // Stopping is the user's only handle on work Superjoy started on its own, so it
         // reaches delegated children too. Soft interrupts and normal completion do not.
         const stoppedChildren = await stopDelegatedChildren(conversationId);
         if (stoppedChildren.length > 0) {

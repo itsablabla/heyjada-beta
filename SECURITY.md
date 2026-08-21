@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in HeyJada, please report it via [GitHub Security Advisories](https://github.com/khoj-ai/pipali/security/advisories/new).
+If you discover a security vulnerability in Superjoy, please report it via [GitHub Security Advisories](https://github.com/khoj-ai/pipali/security/advisories/new).
 
 Please include:
 - Description of the vulnerability
@@ -13,7 +13,7 @@ We will acknowledge your report within 72 hours and aim to provide a fix timelin
 
 ## Scope
 
-This policy applies to the HeyJada open-source application. For issues related to the HeyJada Platform service, please report via the same channel.
+This policy applies to the Superjoy open-source application. For issues related to the Superjoy Platform service, please report via the same channel.
 
 ## Responsible Disclosure
 

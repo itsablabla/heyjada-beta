@@ -70,6 +70,17 @@
     max-width: 100%;
 }
 
+/* Superjoy orb avatar on assistant messages */
+.message-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    user-select: none;
+    pointer-events: none;
+}
+
 /* Message action buttons - horizontal bar at bottom-right */
 .message-actions {
     position: absolute;
@@ -494,8 +505,21 @@
 /* Streaming Animation */
 .streaming {
     display: flex;
+    align-items: center;
     gap: 4px;
     padding: 4px 0;
+}
+
+/* Superjoy "thinking" state orbs shown while a response streams in */
+.streaming-brand-state {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 4px;
+    animation: pulse 1.4s ease-in-out infinite;
+    user-select: none;
+    pointer-events: none;
 }
 
 .streaming-dot {

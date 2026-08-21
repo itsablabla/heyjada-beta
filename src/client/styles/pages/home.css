@@ -16,7 +16,7 @@
     overflow: hidden;
 }
 
-/* Super Joy hero orb — ambient watermark behind the greeting */
+/* Superjoy hero orb — ambient watermark behind the greeting */
 .empty-state-hero {
     position: absolute;
     inset: 0;
@@ -183,6 +183,21 @@
 
 .task-status-icon.stopped {
     color: var(--color-warning);
+}
+
+/* Superjoy brand state pills (working / done) */
+.task-status-brand-image {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    user-select: none;
+    pointer-events: none;
+}
+
+.task-status-brand-image.running {
+    animation: pulse 1.4s ease-in-out infinite;
 }
 
 .task-status-text {

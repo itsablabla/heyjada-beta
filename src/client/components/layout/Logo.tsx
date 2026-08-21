@@ -1,4 +1,4 @@
-// Clickable Super Joy wordmark - lives in the sidebar on desktop, the header on mobile
+// Clickable Superjoy wordmark - lives in the sidebar on desktop, the header on mobile
 
 import { useTranslation } from 'react-i18next';
 import { getApiBaseUrl } from '../../utils/api';

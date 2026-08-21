@@ -75,6 +75,14 @@ export function MessageItem({ message, platformFrontendUrl, onDelete, onBillingC
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
+            {!isUser && (
+                <img
+                    src="/brand/avatar.jpg"
+                    alt=""
+                    aria-hidden="true"
+                    className="message-avatar"
+                />
+            )}
             {isHovered && canDelete && (
                 <div className="message-actions">
                     <button

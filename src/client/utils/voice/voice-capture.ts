@@ -7,9 +7,9 @@
  * spliced from a ring buffer and mid-stream MediaRecorder chunks lack container
  * headers; WKWebView supports worklets (Safari 14.1+).
  *
- * Capture keeps running while HeyJada speaks (full duplex). The platform's own
+ * Capture keeps running while Superjoy speaks (full duplex). The platform's own
  * echo cancellation is what makes that possible — measured on macOS, it drops
- * HeyJada's voice at the mic to well under the voiced threshold. `setSpeaking`
+ * Superjoy's voice at the mic to well under the voiced threshold. `setSpeaking`
  * tells the segmenter when a readout is on so it can raise that threshold for
  * the residual, and mark the segments that caught any of it.
  */
@@ -36,7 +36,7 @@ export interface CapturedSegment {
     wav: Blob;
     seq: number;
     /**
-     * Audio that caught HeyJada's own voice, which stays true after playback
+     * Audio that caught Superjoy's own voice, which stays true after playback
      * has ended — see SegmenterEvent.
      */
     overlappedPlayback: boolean;

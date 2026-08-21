@@ -3,7 +3,7 @@
  *
  * Rendered in the system browser (not the React app), so it can't use the
  * design system directly — instead it mirrors the app's design tokens as CSS
- * variables (light + dark) to feel like a trusted, native part of HeyJada.
+ * variables (light + dark) to feel like a trusted, native part of Superjoy.
  *
  * On success it can auto-foreground the desktop app via a `pipali://` deep
  * link (the same UX pattern as VS Code), with a manual button as fallback.
@@ -184,7 +184,7 @@ export interface StatusPageOptions {
     title: string;
     message: string;
     status: 'success' | 'error';
-    /** When set, shows an "Open HeyJada" button and (on success) auto-opens it. */
+    /** When set, shows an "Open Superjoy" button and (on success) auto-opens it. */
     deepLink?: string;
     /** Optional secondary same-tab link, e.g. a web fallback to a route. */
     link?: { href: string; label: string };
@@ -198,7 +198,7 @@ export function renderStatusPage(opts: StatusPageOptions): string {
     const icon = status === 'success' ? SUCCESS_ICON : ERROR_ICON;
 
     const button = deepLink
-        ? `<a href="${escapeHtml(deepLink)}" class="btn" id="open-app">Open HeyJada</a>`
+        ? `<a href="${escapeHtml(deepLink)}" class="btn" id="open-app">Open Superjoy</a>`
         : '';
     const secondaryLink = link
         ? `<p class="secondary-link"><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></p>`
@@ -213,17 +213,17 @@ export function renderStatusPage(opts: StatusPageOptions): string {
 <html>
 <head>
     <meta charset="utf-8">
-    <title>HeyJada - ${safeTitle}</title>
-    <link rel="icon" type="image/png" href="/icons/pipali_64.png">
-    <link rel="apple-touch-icon" href="/icons/pipali_128.png">
+    <title>Superjoy - ${safeTitle}</title>
+    <link rel="icon" type="image/png" href="/icons/superjoy_64.png">
+    <link rel="apple-touch-icon" href="/icons/superjoy_128.png">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>${getStatusPageStyles()}</style>
 </head>
 <body>
     <header class="page-header">
         <div class="brand">
-            <img src="/icons/pipali_128.png" alt="HeyJada" />
-            <span class="app-name">HeyJada</span>
+            <img src="/icons/superjoy_128.png" alt="Superjoy" />
+            <span class="app-name">Superjoy</span>
         </div>
     </header>
     <main class="main-content">

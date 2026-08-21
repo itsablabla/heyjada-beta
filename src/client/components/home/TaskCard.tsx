@@ -16,10 +16,10 @@ const CATEGORY_ICONS: Record<ToolCategory, React.ComponentType<{ size?: number }
 
 const CATEGORY_ORDER: ToolCategory[] = ['web', 'read', 'write', 'execute', 'other'];
 
-const statusConfig: Record<TaskStatus, { labelKey: string; className: string; Icon: typeof Loader2 }> = {
-    running: { labelKey: 'tasks.running', className: 'running', Icon: Loader2 },
+const statusConfig: Record<TaskStatus, { labelKey: string; className: string; Icon: typeof Loader2; brandImage?: string }> = {
+    running: { labelKey: 'tasks.running', className: 'running', Icon: Loader2, brandImage: '/brand/state-working.jpg' },
     needs_input: { labelKey: 'tasks.needsInput', className: 'needs-input', Icon: AlertCircle },
-    completed: { labelKey: 'tasks.completed', className: 'completed', Icon: CheckCircle },
+    completed: { labelKey: 'tasks.completed', className: 'completed', Icon: CheckCircle, brandImage: '/brand/state-done.jpg' },
     stopped: { labelKey: 'tasks.stopped', className: 'stopped', Icon: AlertCircle },
     pinned: { labelKey: 'tasks.pinned', className: 'pinned', Icon: Pin },
 };
@@ -36,7 +36,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         ? task.reasoning.split('\n')[0]?.slice(0, 100) + (task.reasoning.length > 100 ? '...' : '')
         : undefined;
 
-    const { labelKey, className, Icon } = statusConfig[task.status];
+    const { labelKey, className, Icon, brandImage } = statusConfig[task.status];
 
     return (
         <div
@@ -52,7 +52,11 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
             }}
         >
             <div className="task-card-header">
-                <Icon size={16} className={`task-status-icon ${className}`} />
+                {brandImage ? (
+                    <img src={brandImage} alt="" aria-hidden="true" className={`task-status-brand-image ${className}`} />
+                ) : (
+                    <Icon size={16} className={`task-status-icon ${className}`} />
+                )}
                 <span className={`task-status-text ${className}`}>
                     {t(labelKey as any)}
                 </span>

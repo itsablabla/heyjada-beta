@@ -1,7 +1,7 @@
 /**
  * Voice service: speech-to-text and text-to-speech.
  *
- * Authenticated → proxy to the HeyJada Platform audio routes (centralized
+ * Authenticated → proxy to the Superjoy Platform audio routes (centralized
  * billing). Anon/local-key mode → call a locally-configured OpenAI-compatible
  * provider directly. The director/actor loop is untouched; this is a transport
  * layer for the client voice companion.
@@ -47,7 +47,7 @@ export class VoiceUnavailableError extends Error {
 
 /**
  * Resolve a locally-configured OpenAI-compatible provider for anon mode.
- * Picks a provider backing an `openai` chat model, excluding the HeyJada platform proxy.
+ * Picks a provider backing an `openai` chat model, excluding the Superjoy platform proxy.
  */
 async function getLocalOpenAi(): Promise<OpenAI> {
     const [row] = await db
@@ -70,7 +70,7 @@ export async function transcribeAudio(params: {
     file: File;
     model?: string;
     language?: string;
-    /** Vocabulary-bias prompt (e.g. "HeyJada" + command phrases) for reliable proper-noun transcription. */
+    /** Vocabulary-bias prompt (e.g. "Superjoy" + command phrases) for reliable proper-noun transcription. */
     prompt?: string;
 }): Promise<TranscribeResult> {
     if (await isAuthenticated()) {

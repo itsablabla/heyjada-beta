@@ -212,7 +212,7 @@ async function searchWithSerper(
 }
 
 /**
- * Search using HeyJada Platform API
+ * Search using Superjoy Platform API
  * Uses platformFetch for automatic token refresh on 401 errors
  */
 async function searchWithPlatform(
@@ -230,7 +230,7 @@ async function searchWithPlatform(
         country_code: countryCode,
     };
 
-    log.debug(`Search using HeyJada Platform for: "${query.slice(0, 100)}${query.length > 100 ? '...' : ''}"`);
+    log.debug(`Search using Superjoy Platform for: "${query.slice(0, 100)}${query.length > 100 ? '...' : ''}"`);
 
     interface PlatformSearchResponse {
         results?: Array<{ title?: string; link?: string; snippet?: string }>;

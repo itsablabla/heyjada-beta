@@ -69,9 +69,9 @@ function getServerConfig() {
 
     if (values.help) {
         log.info(`
-HeyJada - Personal AI Assistant
+Superjoy - Personal AI Assistant
 
-Usage: heyjada [options]
+Usage: superjoy [options]
 
 Options:
   -h, --host <host>        Host to bind to (default: 127.0.0.1, env: HEYJADA_HOST)
@@ -83,10 +83,10 @@ Options:
       --help               Show this help message
 
 Examples:
-  heyjada                       # Start with platform authentication
-  heyjada --anon                # Start without authentication (use local API keys)
-  heyjada -p 8080               # Start on 127.0.0.1:8080
-  heyjada --host 0.0.0.0        # Start on all interfaces (remote server / web app)
+  superjoy                       # Start with platform authentication
+  superjoy --anon                # Start without authentication (use local API keys)
+  superjoy -p 8080               # Start on 127.0.0.1:8080
+  superjoy --host 0.0.0.0        # Start on all interfaces (remote server / web app)
 `);
         process.exit(0);
     }
@@ -324,7 +324,7 @@ async function main() {
         if (!isAuthorized(req)) {
             return new Response('Authentication required', {
                 status: 401,
-                headers: { 'WWW-Authenticate': 'Basic realm="HeyJada", charset="UTF-8"' },
+                headers: { 'WWW-Authenticate': 'Basic realm="Superjoy", charset="UTF-8"' },
             });
         }
 

@@ -1,7 +1,7 @@
 /**
  * Image Generation Actor Tool
  *
- * Generates images from text prompts using the HeyJada Platform's image generation service.
+ * Generates images from text prompts using the Superjoy Platform's image generation service.
  * Saves the generated image to disk and returns it as multimodal content.
  */
 
