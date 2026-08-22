@@ -120,7 +120,7 @@ export class DbMcpOAuthProvider implements OAuthClientProvider {
     get clientMetadata(): OAuthClientMetadata {
         const scope = cleanOAuthScopes(this.server.oauthScopes);
         return {
-            client_name: 'HeyJada',
+            client_name: 'Superjoy',
             redirect_uris: [this.redirectUrl],
             grant_types: ['authorization_code', 'refresh_token'],
             response_types: ['code'],

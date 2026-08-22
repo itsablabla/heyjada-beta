@@ -9,16 +9,16 @@ const RECITED_COMMANDS = 'Hey Jadda. Hey Jada, over to you. Send it. Scratch tha
 const RECITED_COMMANDS_UNADDRESSED = 'over to you. Send it. Scratch that. Clear that. Stop listening. Cancel that. Stop. Stop that. Stop it. Stop working. Hold on. Wait. Hang on. Abort. Cancel. Cancel that. Never mind. Never mind. That\'s enough. Enough. Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.';
 
 describe('isSelfEcho', () => {
-    const readout = 'HeyJada wants to edit Tasks.org under the Documents folder. Say yes to continue.';
+    const readout = 'Superjoy wants to edit Tasks.org under the Documents folder. Say yes to continue.';
 
-    test('flags a fragment of what HeyJada is saying right now', () => {
+    test('flags a fragment of what Superjoy is saying right now', () => {
         for (const s of ['under the Documents folder', 'wants to edit Tasks.org']) {
             expect(isSelfEcho(s, readout)).toBe(true);
         }
     });
 
-    test('flags a single word HeyJada is saying — including a decisive one', () => {
-        // A bare "yes" that HeyJada itself just said cannot be told from an echo,
+    test('flags a single word Superjoy is saying — including a decisive one', () => {
+        // A bare "yes" that Superjoy itself just said cannot be told from an echo,
         // and acting on it would approve an operation nobody asked for.
         expect(isSelfEcho('yes', readout)).toBe(true);
         expect(isSelfEcho('Documents', readout)).toBe(true);
@@ -91,7 +91,7 @@ describe('isHallucination', () => {
     test('flags a partial echo too short for the speech-rate check to see', () => {
         // A 9-16 word fragment fits its clip honestly, so only the wording
         // check stands between it and the transcript.
-        expect(isHallucination('A voice message snippet by the user to HeyJada')).toBe(true);
+        expect(isHallucination('A voice message snippet by the user to Superjoy')).toBe(true);
         expect(isHallucination('Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.')).toBe(true);
     });
 

@@ -402,7 +402,7 @@ function startInBackground(
  * A tool rather than a `kill` the agent could run itself: the sandbox permits signals
  * only within the same sandbox instance, and each shell_command is its own, so a
  * sandboxed kill fails with "Operation not permitted". The alternative would be
- * escalating to direct mode and prompting the user to stop HeyJada's own process.
+ * escalating to direct mode and prompting the user to stop Superjoy's own process.
  */
 export function stopProcess(args: StopProcessArgs): { compiled: string } {
     const pid = Number(args?.pid);

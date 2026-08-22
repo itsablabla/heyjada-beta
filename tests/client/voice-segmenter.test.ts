@@ -110,10 +110,10 @@ describe('SpeechSegmenter', () => {
     });
 });
 
-describe('listening through HeyJada speaking', () => {
+describe('listening through Superjoy speaking', () => {
     const quiet = () => new Float32Array(480).fill(0.025);   // between the two thresholds
 
-    test('a raised bar applies while HeyJada speaks', () => {
+    test('a raised bar applies while Superjoy speaks', () => {
         const vad = new EnergyVad();
         expect(vad.isVoiced(quiet())).toBe(true);            // ordinary listening
         expect(vad.isVoiced(quiet(), true)).toBe(false);     // could be its own echo
@@ -123,7 +123,7 @@ describe('listening through HeyJada speaking', () => {
     test('a segment that caught the tail of a readout is flagged', () => {
         // The flag has to travel with the audio: a segment closes ~900ms after
         // the voice in it stops, so by the time it is handed over the readout
-        // has usually ended and "is HeyJada speaking?" reads false.
+        // has usually ended and "is Superjoy speaking?" reads false.
         const s = makeSegmenter();
         s.setSpeaking(true);
         feed(s, [voiced(), voiced(), voiced()]);

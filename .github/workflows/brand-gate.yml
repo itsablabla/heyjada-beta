@@ -1,0 +1,36 @@
+name: brand-gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  brand-gate:
+    name: 🚧 Brand Regression Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: ⬇️ Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Block old brand-name regressions
+        run: |
+          # Pattern is split so this workflow file doesn't match itself.
+          # Allowed survivors: HEYJADA_* env fallbacks (uppercase) and the
+          # "Hey Jada" voice wake word (with a space) don't match these tokens.
+          PATTERN="$(printf '%s|%s' 'Hey''Jada' 'Super'' Joy')"
+          MATCHES=$(grep -rInE "$PATTERN" . \
+            --exclude-dir=.git \
+            --exclude-dir=node_modules \
+            --exclude-dir=dist \
+            --exclude-dir=dist-preview \
+            || true)
+          if [ -n "$MATCHES" ]; then
+            echo "❌ Old brand names found. Use 'Superjoy' instead:"
+            echo "$MATCHES"
+            exit 1
+          fi
+          echo "✅ No brand regressions found"

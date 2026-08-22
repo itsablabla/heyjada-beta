@@ -437,7 +437,7 @@ export const McpOAuthState = pgTable('mcp_oauth_state', {
 }));
 
 // Platform Authentication Token Storage
-// Stores tokens for authenticated sessions with the HeyJada Platform
+// Stores tokens for authenticated sessions with the Superjoy Platform
 export const PlatformAuth = pgTable('platform_auth', {
     id: serial('id').primaryKey(),
     userId: integer('user_id').notNull().references(() => User.id, { onDelete: 'cascade' }),

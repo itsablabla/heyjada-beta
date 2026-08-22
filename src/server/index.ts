@@ -22,13 +22,14 @@ import { initializeSandbox, shutdownSandbox } from './sandbox';
 import { killAllBackgroundProcesses } from './events/background-processes';
 import { initPlatformTransport, shutdownPlatformTransport } from './telemetry/platform-transport';
 import { setServer } from './server-instance';
+import { getBrandedEnv } from './env';
 import { timingSafeEqual } from 'node:crypto';
 
 const log = createChildLogger({ component: 'server' });
 
 // Parse CLI arguments
 function getServerConfig() {
-    const env = (name: string) => process.env[`HEYJADA_${name}`] ?? process.env[`PIPALI_${name}`];
+    const env = getBrandedEnv;
     const { values } = parseArgs({
         args: Bun.argv.slice(2),
         options: {
@@ -69,24 +70,26 @@ function getServerConfig() {
 
     if (values.help) {
         log.info(`
-HeyJada - Personal AI Assistant
+Superjoy - Personal AI Assistant
 
-Usage: heyjada [options]
+Usage: superjoy [options]
 
 Options:
-  -h, --host <host>        Host to bind to (default: 127.0.0.1, env: HEYJADA_HOST)
-  -p, --port <port>        Port to listen on (default: 6464, env: HEYJADA_PORT)
-      --anon               Skip platform authentication, use local API keys (env: HEYJADA_ANON_MODE)
-      --platform-url <url> Platform URL for authentication (env: HEYJADA_PLATFORM_URL)
-      --auth-username <u>  Username for HTTP Basic Auth (env: HEYJADA_AUTH_USERNAME)
-      --auth-password <p>  Password for HTTP Basic Auth (env: HEYJADA_AUTH_PASSWORD)
+  -h, --host <host>        Host to bind to (default: 127.0.0.1, env: SUPERJOY_HOST)
+  -p, --port <port>        Port to listen on (default: 6464, env: SUPERJOY_PORT)
+      --anon               Skip platform authentication, use local API keys (env: SUPERJOY_ANON_MODE)
+      --platform-url <url> Platform URL for authentication (env: SUPERJOY_PLATFORM_URL)
+      --auth-username <u>  Username for HTTP Basic Auth (env: SUPERJOY_AUTH_USERNAME)
+      --auth-password <p>  Password for HTTP Basic Auth (env: SUPERJOY_AUTH_PASSWORD)
       --help               Show this help message
 
+Deprecated: HEYJADA_* environment variables still work as fallbacks but emit a warning.
+
 Examples:
-  heyjada                       # Start with platform authentication
-  heyjada --anon                # Start without authentication (use local API keys)
-  heyjada -p 8080               # Start on 127.0.0.1:8080
-  heyjada --host 0.0.0.0        # Start on all interfaces (remote server / web app)
+  superjoy                       # Start with platform authentication
+  superjoy --anon                # Start without authentication (use local API keys)
+  superjoy -p 8080               # Start on 127.0.0.1:8080
+  superjoy --host 0.0.0.0        # Start on all interfaces (remote server / web app)
 `);
         process.exit(0);
     }
@@ -289,7 +292,7 @@ async function main() {
   const QUIETER_PATHS = new Set(['/api/automations/confirmations/pending']);
 
   // HTTP Basic Auth — enabled when both a username and password are configured
-  // (via --auth-username/--auth-password or HEYJADA_AUTH_USERNAME/HEYJADA_AUTH_PASSWORD).
+  // (via --auth-username/--auth-password or SUPERJOY_AUTH_USERNAME/SUPERJOY_AUTH_PASSWORD).
   // Guards every route, including the WebSocket upgrade, the API and static assets.
   const basicAuthEnabled = !!(config.authUsername && config.authPassword);
   const expectedAuthHeader = basicAuthEnabled
@@ -308,7 +311,7 @@ async function main() {
   if (basicAuthEnabled) {
       log.info('🔒 HTTP Basic Auth enabled - all routes require a username and password');
   } else if (config.host !== '127.0.0.1' && config.host !== 'localhost') {
-      log.warn('⚠️  Server is exposed beyond localhost without Basic Auth. Set HEYJADA_AUTH_USERNAME and HEYJADA_AUTH_PASSWORD to protect it.');
+      log.warn('⚠️  Server is exposed beyond localhost without Basic Auth. Set SUPERJOY_AUTH_USERNAME and SUPERJOY_AUTH_PASSWORD to protect it.');
   }
 
   const server = Bun.serve<WebSocketData, any>({
@@ -324,7 +327,7 @@ async function main() {
         if (!isAuthorized(req)) {
             return new Response('Authentication required', {
                 status: 401,
-                headers: { 'WWW-Authenticate': 'Basic realm="HeyJada", charset="UTF-8"' },
+                headers: { 'WWW-Authenticate': 'Basic realm="Superjoy", charset="UTF-8"' },
             });
         }
 

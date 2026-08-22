@@ -1,6 +1,6 @@
-# Contributing to HeyJada
+# Contributing to Superjoy
 
-Thanks for your interest in improving HeyJada! To keep the project maintainable, we follow a lightweight process. Reading this first will save everyone time — including you.
+Thanks for your interest in improving Superjoy! To keep the project maintainable, we follow a lightweight process. Reading this first will save everyone time — including you.
 
 ## Contribution Process
 
@@ -32,7 +32,7 @@ Good first contributions are labelled [`good first issue`](https://github.com/kh
 ### Prerequisites
 
 - [Bun](https://bun.sh) v1.2.19+
-- A [HeyJada](https://pipali.ai) account
+- A [Superjoy](https://pipali.ai) account
 
 ### Install and Run
 
@@ -67,7 +67,7 @@ bun run test:e2e     # E2E tests (Playwright)
 
 ### Database
 
-HeyJada uses [PGlite](https://pglite.dev) (embedded Postgres) with [Drizzle ORM](https://orm.drizzle.team/). The database is stored locally at `./pipali.db/`.
+Superjoy uses [PGlite](https://pglite.dev) (embedded Postgres) with [Drizzle ORM](https://orm.drizzle.team/). The database is stored locally at `./pipali.db/`.
 
 ```bash
 bun run db:generate  # Generate migration from schema changes
@@ -102,7 +102,7 @@ drizzle/             # Database migrations
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    HeyJada App (Local)                    │
+│                    Superjoy App (Local)                    │
 │                                                          │
 │  ┌────────────┐   WebSocket    ┌───────────────────────┐ │
 │  │   React    │◄──────────────►│    Bun + Hono Server  │ │
@@ -125,7 +125,7 @@ drizzle/             # Database migrations
 └────────────────────────────────────────────┼─────────────┘
                                              │
                           ┌──────────────────▼─────────────────────┐
-                          │        HeyJada Platform (Remote)        │
+                          │        Superjoy Platform (Remote)        │
                           │                                        │
                           │  • LLM API (Manage Context, Routing)   │
                           │  • Remote AI Tools (Browse Web)        │

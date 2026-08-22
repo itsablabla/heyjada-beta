@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.tauri.app/config/capability",
   "identifier": "default",
-  "description": "Default capability set for HeyJada",
+  "description": "Default capability set for Superjoy",
   "windows": ["main", "splashscreen"],
   "permissions": [
     "core:default",
