@@ -237,6 +237,15 @@
     }
   },
   "confirmation": {
+    "showDetails": "Afficher les détails",
+    "hideDetails": "Masquer les détails",
+    "operation": "Opération",
+    "toolArgs": "Arguments de l'outil",
+    "risk": {
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé"
+    },
     "titles": {
       "edit_file": "Confirmer la modification du fichier",
       "write_file": "Confirmer l'écriture du fichier",
@@ -330,6 +339,10 @@
     "failedToSave": "Échec de l'enregistrement des paramètres",
     "sandbox": "Bac à sable",
     "sandboxDescription": "Lorsqu'activé, les commandes s'exécutent dans un bac à sable sécurisé sans confirmation.",
+    "pushNotifications": "Notifications push lorsqu'une approbation est requise",
+    "pushNotificationsDescription": "Notifier ce navigateur si Superjoy attend toujours votre approbation après le délai.",
+    "pushDelay": "Seuil de délai (secondes)",
+    "pushDelayHint": "Par défaut : 10 secondes. Superjoy n'enverra pas de notification si vous répondez avant le délai.",
     "filePermissions": "Permissions de fichiers",
     "filePermissionsDescription": "Contrôlez quels fichiers et dossiers Superjoy peut lire ou modifier sans demander.",
     "allowedWriteDirectories": "Dossiers en écriture autorisés",

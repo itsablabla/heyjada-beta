@@ -49,9 +49,7 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--color-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.35;
 }
 
 /* Question badge for agent questions */
@@ -65,6 +63,31 @@
     background: var(--color-info-bg);
     color: var(--color-info-text);
     flex-shrink: 0;
+}
+
+.risk-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.risk-badge.low {
+    background: var(--color-info-bg);
+    color: var(--color-info-text);
+}
+
+.risk-badge.medium {
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
+.risk-badge.high {
+    background: var(--color-error-bg);
+    color: var(--color-error-text);
 }
 
 /* Agent question title styling */
@@ -162,6 +185,60 @@
     color: var(--color-text);
     font-weight: 600;
     word-break: break-all;
+}
+
+.confirmation-details-toggle-row {
+    padding: 8px 12px 0;
+}
+
+.confirmation-details-toggle {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.confirmation-details-toggle:hover {
+    color: var(--color-text);
+}
+
+.confirmation-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.confirmation-detail-row,
+.confirmation-detail-section {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.confirmation-detail-section {
+    flex-direction: column;
+    gap: 4px;
+}
+
+.confirmation-detail-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.confirmation-operation-code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-elevated);
+    padding: 1px 5px;
+    border-radius: 3px;
 }
 
 /* Command execution confirmation styles */
@@ -639,11 +716,10 @@
 }
 
 .toast-title {
-    font-size: 11px;
-    color: var(--color-text-secondary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+    line-height: 1.35;
 }
 
 .toast-preview {
@@ -682,6 +758,17 @@
     transition: all var(--transition);
 }
 
+.toast-expand-btn {
+    width: auto;
+    gap: 4px;
+    padding: 0 6px;
+    font-size: 11px;
+}
+
+.toast-close-btn {
+    width: 24px;
+}
+
 .toast-expand-btn:hover,
 .toast-close-btn:hover {
     background: var(--color-bg-elevated);
@@ -689,6 +776,9 @@
 }
 
 .toast-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     padding: 12px 14px;
     max-height: 200px;
     overflow-y: auto;

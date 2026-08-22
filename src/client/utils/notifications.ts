@@ -5,6 +5,7 @@
  */
 
 import { isTauri } from './tauri';
+import { apiFetch } from './api';
 import type { ConfirmationRequest } from '../../server/processor/confirmation/confirmation.types';
 import i18n from '../i18n';
 import { VOICE_EARCONS, TRANSCRIPT_TICK, clampTickCount, tickBurstDurationMs, type EarconNote, type VoiceCueProfile } from './voice/voice-earcons';
@@ -251,6 +252,147 @@ const activeWebNotifications: Map<string, Notification> = new Map();
 // Callback for when a notification is clicked (used for navigation)
 type NotificationClickHandler = (conversationId: string) => void;
 let notificationClickHandler: NotificationClickHandler | null = null;
+
+const APPROVAL_PUSH_SETTINGS_KEY = 'pipali.approvalPushNotifications.v1';
+const DEFAULT_APPROVAL_PUSH_DELAY_SECONDS = 10;
+
+export interface ApprovalPushNotificationSettings {
+    enabled: boolean;
+    delaySeconds: number;
+}
+
+function normalizeApprovalPushDelay(delaySeconds: unknown): number {
+    const numeric = typeof delaySeconds === 'number' && Number.isFinite(delaySeconds)
+        ? Math.round(delaySeconds)
+        : DEFAULT_APPROVAL_PUSH_DELAY_SECONDS;
+    return Math.min(3600, Math.max(1, numeric));
+}
+
+export function getApprovalPushNotificationSettings(): ApprovalPushNotificationSettings {
+    try {
+        const parsed = JSON.parse(window.localStorage.getItem(APPROVAL_PUSH_SETTINGS_KEY) || 'null') as Partial<ApprovalPushNotificationSettings> | null;
+        return {
+            enabled: parsed?.enabled !== false,
+            delaySeconds: normalizeApprovalPushDelay(parsed?.delaySeconds),
+        };
+    } catch {
+        return { enabled: true, delaySeconds: DEFAULT_APPROVAL_PUSH_DELAY_SECONDS };
+    }
+}
+
+function persistApprovalPushNotificationSettings(settings: ApprovalPushNotificationSettings): void {
+    try {
+        window.localStorage.setItem(APPROVAL_PUSH_SETTINGS_KEY, JSON.stringify({
+            enabled: settings.enabled,
+            delaySeconds: normalizeApprovalPushDelay(settings.delaySeconds),
+        }));
+    } catch {
+        // ignore quota / private-mode failures
+    }
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+
+function pushKeyMatches(subscription: PushSubscription, applicationServerKey: Uint8Array): boolean {
+    const existingKey = subscription.options.applicationServerKey;
+    if (!existingKey) return false;
+    const existing = new Uint8Array(existingKey);
+    return existing.length === applicationServerKey.length &&
+        existing.every((value, index) => value === applicationServerKey[index]);
+}
+
+export async function registerApprovalPushNotifications(): Promise<boolean> {
+    if (isTauri()) return false;
+
+    const settings = getApprovalPushNotificationSettings();
+    if (!settings.enabled) {
+        await unregisterApprovalPushNotifications();
+        return false;
+    }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('[notifications] Web Push not supported');
+        return false;
+    }
+
+    if (notificationPermissionGranted === null) await initNotifications();
+    if (!notificationPermissionGranted) return false;
+
+    try {
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        const keyRes = await apiFetch('/api/push/vapid-public-key');
+        if (!keyRes.ok) throw new Error('Failed to load VAPID public key');
+        const { publicKey } = await keyRes.json() as { publicKey?: string };
+        if (!publicKey) throw new Error('Missing VAPID public key');
+
+        const applicationServerKey = urlBase64ToUint8Array(publicKey);
+        let subscription = await registration.pushManager.getSubscription();
+        if (subscription && !pushKeyMatches(subscription, applicationServerKey)) {
+            await subscription.unsubscribe();
+            subscription = null;
+        }
+        if (!subscription) {
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey,
+            });
+        }
+
+        const res = await apiFetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                subscription: subscription.toJSON(),
+                enabled: settings.enabled,
+                delaySeconds: settings.delaySeconds,
+            }),
+        });
+        if (!res.ok) throw new Error('Failed to save push subscription');
+        return true;
+    } catch (err) {
+        console.warn('[notifications] Failed to register push subscription:', err);
+        return false;
+    }
+}
+
+export async function unregisterApprovalPushNotifications(): Promise<void> {
+    if (isTauri() || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    try {
+        const registration = await navigator.serviceWorker.getRegistration('/sw.js');
+        const subscription = await registration?.pushManager.getSubscription();
+        if (!subscription) return;
+        const endpoint = subscription.endpoint;
+        await subscription.unsubscribe();
+        await apiFetch('/api/push/unsubscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint }),
+        });
+    } catch (err) {
+        console.warn('[notifications] Failed to unregister push subscription:', err);
+    }
+}
+
+export async function saveApprovalPushNotificationSettings(
+    settings: ApprovalPushNotificationSettings
+): Promise<void> {
+    const normalized = {
+        enabled: settings.enabled,
+        delaySeconds: normalizeApprovalPushDelay(settings.delaySeconds),
+    };
+    persistApprovalPushNotificationSettings(normalized);
+    if (normalized.enabled) {
+        await registerApprovalPushNotifications();
+    } else {
+        await unregisterApprovalPushNotifications();
+    }
+}
 
 /**
  * Register a handler for notification clicks.

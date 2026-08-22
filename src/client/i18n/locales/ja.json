@@ -237,6 +237,15 @@
     }
   },
   "confirmation": {
+    "showDetails": "詳細を表示",
+    "hideDetails": "詳細を非表示",
+    "operation": "操作",
+    "toolArgs": "ツール引数",
+    "risk": {
+      "low": "低",
+      "medium": "中",
+      "high": "高"
+    },
     "titles": {
       "edit_file": "ファイル編集の確認",
       "write_file": "ファイル書き込みの確認",
@@ -330,6 +339,10 @@
     "failedToSave": "設定の保存に失敗しました",
     "sandbox": "サンドボックス",
     "sandboxDescription": "有効にすると、シェルコマンドはOSで強制されたサンドボックス内で確認なしに実行されます。",
+    "pushNotifications": "承認が必要なときのプッシュ通知",
+    "pushNotificationsDescription": "遅延時間を過ぎてもSuperjoyが承認を待っている場合、このブラウザに通知します。",
+    "pushDelay": "遅延しきい値（秒）",
+    "pushDelayHint": "デフォルトは10秒です。遅延前に応答した場合、プッシュ通知は送信されません。",
     "filePermissions": "ファイル権限",
     "filePermissionsDescription": "Superjoyが確認なしで読み書きできるファイルとフォルダを制御します。",
     "allowedWriteDirectories": "書き込みを許可するディレクトリ",

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { eq } from 'drizzle-orm';
 import {
     isAnonMode,
     isAuthenticated,
@@ -14,6 +15,9 @@ import {
 } from '../auth';
 import { initializeUserContext } from '../user-context';
 import { createChildLogger } from '../logger';
+import { localAuth, getLocalAuthStatus, verifyLocalSessionFromRequest } from '../auth/local-auth';
+import { db } from '../db';
+import { User } from '../db/schema';
 
 const log = createChildLogger({ component: 'auth' });
 const auth = new Hono();
@@ -84,10 +88,27 @@ auth.post('/complete', async (c) => {
 // Get current auth status
 auth.get('/status', async (c) => {
     const anonMode = isAnonMode();
-    const authenticated = await isAuthenticated();
+    const localStatus = await getLocalAuthStatus();
+    const localSession = localStatus.enabled ? await verifyLocalSessionFromRequest(c.req.raw) : null;
+    const platformAuthenticated = localStatus.enabled ? false : await isAuthenticated();
+    const authenticated = localStatus.enabled ? !!localSession : platformAuthenticated;
 
     let userInfo = null;
-    if (authenticated && !anonMode) {
+    if (localSession) {
+        const [localUser] = await db
+            .select()
+            .from(User)
+            .where(eq(User.id, localSession.userId))
+            .limit(1);
+        userInfo = localUser
+            ? {
+                id: String(localUser.id),
+                email: localUser.email || '',
+                name: [localUser.firstName, localUser.lastName].filter(Boolean).join(' ') || localUser.username,
+                isServerOwner: true,
+            }
+            : { id: String(localSession.userId), email: '', isServerOwner: true };
+    } else if (platformAuthenticated && !anonMode) {
         userInfo = await getPlatformUserInfo();
     }
 
@@ -97,6 +118,10 @@ auth.get('/status', async (c) => {
         anonMode,
         authenticated,
         user: userInfo,
+        localAuth: {
+            ...localStatus,
+            authenticated: !!localSession,
+        },
         version,
     });
 });
@@ -146,6 +171,8 @@ auth.get('/config', async (c) => {
     const capabilities = await getPlatformAuthCapabilities();
     return c.json(capabilities);
 });
+
+auth.route('/local', localAuth);
 
 // HTML templates for OAuth callback
 

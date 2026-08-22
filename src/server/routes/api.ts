@@ -34,6 +34,7 @@ import {
     isSandboxEnabled,
     isSandboxSupported,
 } from '../sandbox';
+import { getVapidPublicKey, removePushSubscription, savePushSubscription } from '../push';
 
 const log = createChildLogger({ component: 'api' });
 
@@ -59,6 +60,43 @@ api.use('*', cors({
 
 // Health check endpoint for Tauri sidecar readiness detection
 api.get('/health', (c) => c.json({ status: 'ok' }));
+
+const pushSubscriptionSchema = z.object({
+    endpoint: z.string().url(),
+    expirationTime: z.number().nullable().optional(),
+    keys: z.object({
+        p256dh: z.string().min(1),
+        auth: z.string().min(1),
+    }),
+});
+
+const pushSubscribeSchema = z.object({
+    subscription: pushSubscriptionSchema,
+    enabled: z.boolean().optional(),
+    delaySeconds: z.number().int().min(1).max(3600).optional(),
+});
+
+const pushUnsubscribeSchema = z.object({
+    endpoint: z.string().url(),
+});
+
+api.get('/push/vapid-public-key', (c) => {
+    return c.json({ publicKey: getVapidPublicKey() });
+});
+
+api.post('/push/subscribe', zValidator('json', pushSubscribeSchema), async (c) => {
+    const stored = await savePushSubscription(c.req.valid('json'));
+    return c.json({
+        ok: true,
+        enabled: stored.enabled,
+        delaySeconds: stored.delaySeconds,
+    });
+});
+
+api.post('/push/unsubscribe', zValidator('json', pushUnsubscribeSchema), async (c) => {
+    await removePushSubscription(c.req.valid('json').endpoint);
+    return c.json({ ok: true });
+});
 
 // Get release notes for current version from CHANGELOG.md
 api.get('/changelog', async (c) => {
@@ -348,6 +386,7 @@ api.get('/conversations', async (c) => {
             isAutomation: !!conv.automationId,
             parentConversationId: conv.parentConversationId,
             isPinned: conv.isPinned,
+            folderId: conv.folderId,
             latestReasoning,
             ...(matchSnippet !== undefined && { matchSnippet }),
         };

@@ -237,6 +237,15 @@
     }
   },
   "confirmation": {
+    "showDetails": "显示详情",
+    "hideDetails": "隐藏详情",
+    "operation": "操作",
+    "toolArgs": "工具参数",
+    "risk": {
+      "low": "低",
+      "medium": "中",
+      "high": "高"
+    },
     "titles": {
       "edit_file": "确认编辑文件",
       "write_file": "确认写入文件",
@@ -330,6 +339,10 @@
     "failedToSave": "保存设置失败",
     "sandbox": "沙盒",
     "sandboxDescription": "启用后，Shell 命令将在安全沙盒中运行，无需确认。",
+    "pushNotifications": "需要批准时推送通知",
+    "pushNotificationsDescription": "如果 Superjoy 在延迟时间后仍在等待您的批准，则通知此浏览器。",
+    "pushDelay": "延迟阈值（秒）",
+    "pushDelayHint": "默认为 10 秒。如果您在延迟前作出回应，将不会发送推送。",
     "filePermissions": "文件权限",
     "filePermissionsDescription": "控制 Superjoy 可以无需询问即可读写的文件和文件夹。",
     "allowedWriteDirectories": "允许写入的目录",

@@ -16,6 +16,7 @@ import {
     CONFIRMATION_OPTIONS,
     createStandardConfirmationOptions,
 } from './confirmation.types';
+import { scheduleConfirmationPush } from '../../push';
 
 /**
  * How long an unanswered confirmation blocks its run before it is given up on.
@@ -42,6 +43,18 @@ export interface ConfirmationContext {
     preferences: ConfirmationPreferences;
     /** Session ID for tracking */
     sessionId?: string;
+}
+
+export async function requestConfirmationWithPush(
+    context: ConfirmationContext,
+    request: ConfirmationRequest
+): Promise<ConfirmationResponse> {
+    const scheduledPush = scheduleConfirmationPush(context.sessionId, request);
+    try {
+        return await context.requestConfirmation(request);
+    } finally {
+        scheduledPush.cancel();
+    }
 }
 
 /**
@@ -103,6 +116,87 @@ function getRiskLevel(
     return defaultRiskLevels[operation];
 }
 
+function ensureQuestion(text: string): string {
+    const firstSentence = text.trim().replace(/\s+/g, ' ').match(/^[^.!?]+[.!?]?/)?.[0] || text.trim();
+    return `${firstSentence.replace(/[.!?]+$/, '')}?`;
+}
+
+function formatDisplayName(value: string): string {
+    const normalized = value
+        .split(/[\\/]/)
+        .filter(Boolean)
+        .at(-1) || value;
+
+    return normalized || 'this file';
+}
+
+function formatMcpToolName(toolName: string): string {
+    const serverName = toolName.includes('__') ? toolName.split('__')[0] : toolName;
+    const normalized = (serverName || toolName)
+        .replace(/[-_]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (!normalized) return toolName;
+    if (normalized.toLowerCase() === 'gmail') return 'your Gmail';
+
+    return normalized.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function getReasonQuestion(reason?: string): string | undefined {
+    const firstSentence = reason?.trim().replace(/\s+/g, ' ').match(/^[^.!?]+[.!?]?/)?.[0];
+    if (!firstSentence || firstSentence.length > 120 || /[`$;&|<>]/.test(firstSentence)) {
+        return undefined;
+    }
+
+    const phrase = firstSentence
+        .replace(/[.!?]+$/, '')
+        .replace(/^(i|we)\s+need\s+to\s+/i, '')
+        .replace(/^need\s+to\s+/i, '')
+        .replace(/^to\s+/i, '')
+        .replace(/^this\s+(command\s+)?will\s+/i, '')
+        .trim();
+
+    if (!phrase) return undefined;
+
+    return ensureQuestion(`Do you want to let Superjoy ${phrase.charAt(0).toLowerCase()}${phrase.slice(1)}`);
+}
+
+function createConfirmationQuestion(
+    operation: ConfirmableOperation,
+    filePath: string,
+    title: string,
+    details: {
+        toolName: string;
+        commandInfo?: CommandExecutionInfo;
+    }
+): string {
+    switch (operation) {
+        case 'execute_command': {
+            const reasonQuestion = getReasonQuestion(details.commandInfo?.reason);
+            if (reasonQuestion) return reasonQuestion;
+
+            const workdir = details.commandInfo?.workdir || filePath;
+            return ensureQuestion(`Do you want to run a command in ${workdir || 'the terminal'}`);
+        }
+        case 'edit_file':
+        case 'write_file':
+            return ensureQuestion(`Do you want to let Superjoy edit ${formatDisplayName(filePath)}`);
+        case 'delete_file':
+            return ensureQuestion(`Do you want to let Superjoy delete ${formatDisplayName(filePath)}`);
+        case 'read_sensitive_file':
+            return ensureQuestion(`Do you want to let Superjoy read ${formatDisplayName(filePath)}`);
+        case 'grep_sensitive_path':
+            return ensureQuestion(`Do you want to let Superjoy search ${formatDisplayName(filePath)}`);
+        case 'fetch_internal_url':
+            return ensureQuestion('Do you want to let Superjoy access an internal network address');
+        case 'mcp_tool_call':
+            return ensureQuestion(`Do you want to let Superjoy use ${formatMcpToolName(details.toolName)}`);
+        default:
+            return ensureQuestion(title);
+    }
+}
+
 /**
  * Create a new confirmation request for a file operation
  */
@@ -129,11 +223,13 @@ export function createFileOperationConfirmation(
         grep_sensitive_path: 'Confirm Sensitive Path Search',
         fetch_internal_url: 'Confirm Internal Network Access',
     };
+    const title = titles[operation];
 
     return {
         requestId: crypto.randomUUID(),
         inputType: 'choice',
-        title: titles[operation],
+        title,
+        question: createConfirmationQuestion(operation, filePath, title, details),
         message: details.additionalMessage,
         operation,
         context: {
@@ -249,7 +345,7 @@ export async function requestOperationConfirmation(
     const request = createFileOperationConfirmation(operation, filePath, details);
 
     // Request confirmation from user via callback
-    const response = await context.requestConfirmation(request);
+    const response = await requestConfirmationWithPush(context, request);
 
     // Process the response
     const result = processConfirmationResponse(response);

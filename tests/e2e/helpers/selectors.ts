@@ -81,10 +81,12 @@ export const Selectors = {
     confirmationBtnPrimary: '.confirmation-btn.primary',
     confirmationBtnSecondary: '.confirmation-btn.secondary',
     confirmationBtnDanger: '.confirmation-btn.danger',
+    confirmationDetailsToggle: '.confirmation-details-toggle',
     operationTypePill: '.operation-type-pill',
 
     // Confirmation Toast
     confirmationToast: '.confirmation-toast',
+    toastExpandBtn: '.toast-expand-btn',
     toastBtn: '.toast-btn',
 
     // Skills Page

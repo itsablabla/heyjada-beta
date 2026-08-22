@@ -67,6 +67,8 @@ export interface ConfirmationRequest {
     inputType: ConfirmationInputType;
     /** Title/header for the confirmation dialog */
     title: string;
+    /** Plain-language, one-sentence question shown by default */
+    question?: string;
     /** Detailed message explaining what will happen */
     message?: string;
     /** The operation being confirmed (for logging/tracking) */

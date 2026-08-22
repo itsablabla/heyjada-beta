@@ -278,6 +278,8 @@ async function generateEmbeddedAssets(
     indexHtml: string,
     stylesCss: string,
     appJs: string,
+    webManifest: string,
+    serviceWorkerJs: string,
     icons: { [key: string]: string },
     brand: { [key: string]: string },
     builtinSkills: { [path: string]: { content: string; binary: boolean } },
@@ -331,6 +333,10 @@ export const EMBEDDED_STYLES_CSS = \`${escapeForTemplate(stylesCss)}\`;
 
 export const EMBEDDED_APP_JS = \`${escapeForTemplate(appJs)}\`;
 
+export const EMBEDDED_WEB_MANIFEST = \`${escapeForTemplate(webManifest)}\`;
+
+export const EMBEDDED_SERVICE_WORKER_JS = \`${escapeForTemplate(serviceWorkerJs)}\`;
+
 export const EMBEDDED_ICONS: { [key: string]: string } = {
 ${iconsObject}
 };
@@ -375,9 +381,14 @@ export const EMBEDDED_MAINTENANCE_MIGRATIONS: { sql: string; tag: string }[] = [
 export const EMBEDDED_INDEX_HTML = "";
 export const EMBEDDED_STYLES_CSS = "";
 export const EMBEDDED_APP_JS = "";
+export const EMBEDDED_WEB_MANIFEST = "";
+export const EMBEDDED_SERVICE_WORKER_JS = "";
 
 // Icon assets (base64 encoded)
 export const EMBEDDED_ICONS: { [key: string]: string } = {};
+
+// Brand image assets (base64 encoded)
+export const EMBEDDED_BRAND: { [key: string]: string } = {};
 
 // Builtin skills (path -> content, binary files are base64 encoded)
 export const EMBEDDED_BUILTIN_SKILLS: { [path: string]: { content: string; binary: boolean } } = {};
@@ -455,10 +466,12 @@ async function main() {
         const brand = await readBrand();
         const builtinSkills = await readBuiltinSkills();
         const indexHtml = await fs.readFile(path.join(CLIENT_SRC, "index.html"), "utf-8");
+        const webManifest = await fs.readFile(path.join(CLIENT_SRC, "public", "manifest.webmanifest"), "utf-8");
+        const serviceWorkerJs = await fs.readFile(path.join(CLIENT_SRC, "public", "sw.js"), "utf-8");
         const changelog = await readChangelog();
 
         // Generate embedded assets module
-        await generateEmbeddedAssets(migrations, maintenanceMigrations, indexHtml, stylesCss, appJs, icons, brand, builtinSkills, changelog);
+        await generateEmbeddedAssets(migrations, maintenanceMigrations, indexHtml, stylesCss, appJs, webManifest, serviceWorkerJs, icons, brand, builtinSkills, changelog);
 
         // Compile
         await compile(target);

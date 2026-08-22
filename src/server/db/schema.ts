@@ -91,7 +91,8 @@ export const User = pgTable('user', {
   username: text('username').notNull().unique(),
   firstName: text('first_name'),
   lastName: text('last_name'),
-  email: text('email'),
+  email: text('email').unique(),
+  passwordHash: text('password_hash'),
   phoneNumber: text('phone_number'),
   verifiedPhoneNumber: boolean('verified_phone_number').default(false).notNull(),
   verifiedEmail: boolean('verified_email').default(false).notNull(),
@@ -100,6 +101,19 @@ export const User = pgTable('user', {
   lastLogin: timestamp('last_login'),
   ...dbBaseModel,
 });
+
+export const LoginOtp = pgTable('login_otp', {
+    id: uuid('id').defaultRandom().notNull().primaryKey(),
+    userId: integer('user_id').notNull().references(() => User.id, { onDelete: 'cascade' }),
+    codeHash: text('code_hash').notNull(),
+    expiresAt: timestamp('expires_at').notNull(),
+    consumedAt: timestamp('consumed_at'),
+    attempts: integer('attempts').default(0).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+    index('login_otp_user_id_idx').on(table.userId),
+    index('login_otp_user_pending_idx').on(table.userId, table.consumedAt, table.expiresAt),
+]);
 
 export const GoogleUser = pgTable('google_user', {
     id: serial('id').primaryKey(),

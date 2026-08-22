@@ -23,6 +23,7 @@ import { killAllBackgroundProcesses } from './events/background-processes';
 import { initPlatformTransport, shutdownPlatformTransport } from './telemetry/platform-transport';
 import { setServer } from './server-instance';
 import { getBrandedEnv } from './env';
+import { getLocalAuthStatus, verifyLocalSessionFromRequest } from './auth/local-auth';
 import { timingSafeEqual } from 'node:crypto';
 
 const log = createChildLogger({ component: 'server' });
@@ -81,6 +82,8 @@ Options:
       --platform-url <url> Platform URL for authentication (env: SUPERJOY_PLATFORM_URL)
       --auth-username <u>  Username for HTTP Basic Auth (env: SUPERJOY_AUTH_USERNAME)
       --auth-password <p>  Password for HTTP Basic Auth (env: SUPERJOY_AUTH_PASSWORD)
+                            Basic Auth is only active when SUPERJOY_BASIC_AUTH=true
+                            Local username/password + email OTP is enabled by SUPERJOY_LOCAL_AUTH=true
       --help               Show this help message
 
 Deprecated: HEYJADA_* environment variables still work as fallbacks but emit a warning.
@@ -291,10 +294,10 @@ async function main() {
   // Paths for quieter logging (e.g frequent polling endpoints)
   const QUIETER_PATHS = new Set(['/api/automations/confirmations/pending']);
 
-  // HTTP Basic Auth — enabled when both a username and password are configured
-  // (via --auth-username/--auth-password or SUPERJOY_AUTH_USERNAME/SUPERJOY_AUTH_PASSWORD).
-  // Guards every route, including the WebSocket upgrade, the API and static assets.
-  const basicAuthEnabled = !!(config.authUsername && config.authPassword);
+  // HTTP Basic Auth is opt-in for headless use. Local auth below is the default
+  // browser-oriented protection when configured or after first-run setup.
+  const basicAuthRequested = getBrandedEnv('BASIC_AUTH') === 'true';
+  const basicAuthEnabled = basicAuthRequested && !!(config.authUsername && config.authPassword);
   const expectedAuthHeader = basicAuthEnabled
       ? new TextEncoder().encode(`Basic ${Buffer.from(`${config.authUsername}:${config.authPassword}`).toString('base64')}`)
       : null;
@@ -310,8 +313,17 @@ async function main() {
 
   if (basicAuthEnabled) {
       log.info('🔒 HTTP Basic Auth enabled - all routes require a username and password');
+  } else if (basicAuthRequested) {
+      log.warn('⚠️  SUPERJOY_BASIC_AUTH=true was set, but Basic Auth credentials are missing.');
+  }
+
+  const initialLocalAuthStatus = await getLocalAuthStatus();
+  if (initialLocalAuthStatus.enabled) {
+      log.info(initialLocalAuthStatus.needsSetup
+          ? '🔐 Local auth enabled - first-run account setup is required'
+          : '🔐 Local auth enabled - browser sessions require username, password, and email OTP');
   } else if (config.host !== '127.0.0.1' && config.host !== 'localhost') {
-      log.warn('⚠️  Server is exposed beyond localhost without Basic Auth. Set SUPERJOY_AUTH_USERNAME and SUPERJOY_AUTH_PASSWORD to protect it.');
+      log.warn('⚠️  Server is exposed beyond localhost without local auth. Set SUPERJOY_LOCAL_AUTH=true or SUPERJOY_BASIC_AUTH=true to protect it.');
   }
 
   const server = Bun.serve<WebSocketData, any>({
@@ -323,12 +335,26 @@ async function main() {
             log.info(`[${req.method}] ${url.pathname}`);
         }
 
-        // HTTP Basic Auth challenge (when enabled)
-        if (!isAuthorized(req)) {
-            return new Response('Authentication required', {
-                status: 401,
-                headers: { 'WWW-Authenticate': 'Basic realm="Superjoy", charset="UTF-8"' },
-            });
+        const authExempt = isLocalAuthExempt(url.pathname, req.method);
+
+        if (!authExempt) {
+            const localAuthStatus = await getLocalAuthStatus();
+            const basicAuthorized = basicAuthEnabled && isAuthorized(req);
+            const localSession = localAuthStatus.enabled && !basicAuthorized
+                ? await verifyLocalSessionFromRequest(req)
+                : null;
+            const authorized = basicAuthorized || !!localSession;
+
+            if (!authorized) {
+                if (localAuthStatus.enabled) {
+                    if (url.pathname === "/ws/chat" || url.pathname.startsWith("/api")) {
+                        return new Response('Authentication required', { status: 401 });
+                    }
+                    // Let the SPA shell and login assets load; the client renders login.
+                } else if (basicAuthEnabled) {
+                    return basicAuthChallenge();
+                }
+            }
         }
 
         // WebSocket
@@ -401,6 +427,20 @@ async function main() {
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
   process.on('SIGHUP', () => void shutdown('SIGHUP'));
   process.on('SIGQUIT', () => void shutdown('SIGQUIT'));
+}
+
+function basicAuthChallenge(): Response {
+    return new Response('Authentication required', {
+        status: 401,
+        headers: { 'WWW-Authenticate': 'Basic realm="Superjoy", charset="UTF-8"' },
+    });
+}
+
+function isLocalAuthExempt(pathname: string, method: string): boolean {
+    if (method === 'OPTIONS') return true;
+    if (pathname === '/api/health' || pathname === '/health') return true;
+    if (pathname === '/api/auth/status') return true;
+    return pathname.startsWith('/api/auth/local/');
 }
 
 main();

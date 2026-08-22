@@ -34,5 +34,8 @@ export function apiFetch(
     init?: RequestInit
 ): Promise<Response> {
     const url = `${apiBaseUrl}${path}`;
-    return fetch(url, init);
+    return fetch(url, {
+        credentials: 'include',
+        ...init,
+    });
 }

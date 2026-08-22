@@ -95,7 +95,7 @@ export async function stopAllActiveRunsFromHome(page: Page, opts?: { maxPasses?:
             } else if (cardTitle) {
                 const toast = page.locator(Selectors.confirmationToast, { hasText: cardTitle }).first();
                 if (await toast.isVisible()) {
-                    const noBtn = toast.locator('.toast-actions .toast-btn.danger');
+                    const noBtn = toast.locator('.toast-actions .toast-btn:has-text("No")');
                     await noBtn.evaluate((el: HTMLElement) => el.click());
                     await toast.waitFor({ state: 'hidden', timeout: 15000 });
                     // Let the run proceed to completion if it was blocked.

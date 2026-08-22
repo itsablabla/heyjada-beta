@@ -13,6 +13,8 @@ export const EMBEDDED_MAINTENANCE_MIGRATIONS: { sql: string; tag: string }[] = [
 export const EMBEDDED_INDEX_HTML = "";
 export const EMBEDDED_STYLES_CSS = "";
 export const EMBEDDED_APP_JS = "";
+export const EMBEDDED_WEB_MANIFEST = "";
+export const EMBEDDED_SERVICE_WORKER_JS = "";
 
 // Icon assets (base64 encoded)
 export const EMBEDDED_ICONS: { [key: string]: string } = {};
