@@ -263,7 +263,7 @@
     "sendGuidance": "Envoyer des instructions (annule l'opération en cours)"
   },
   "notifications": {
-    "questionFromHeyJada": "Question de Superjoy",
+    "questionFromSuperjoy": "Question de Superjoy",
     "actionRequired": "Action requise",
     "taskComplete": "Tâche terminée",
     "taskFinished": "Ta tâche est terminée"

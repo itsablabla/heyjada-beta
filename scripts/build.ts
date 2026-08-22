@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Build script for creating a TRUE single-file executable of HeyJada
+ * Build script for creating a TRUE single-file executable of Superjoy
  *
  * This script:
  * 1. Builds the frontend (React app)
@@ -179,6 +179,25 @@ async function readIcons(): Promise<{ [key: string]: string }> {
     return icons;
 }
 
+async function readBrand(): Promise<{ [key: string]: string }> {
+    console.log("🖼️  Reading brand assets...");
+
+    const brandDir = path.join(ROOT_DIR, "src/client/public", "brand");
+    const brand: { [key: string]: string } = {};
+
+    const files = await fs.readdir(brandDir);
+    for (const file of files) {
+        if (file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')) {
+            const filePath = path.join(brandDir, file);
+            const buffer = await fs.readFile(filePath);
+            brand[file] = buffer.toString('base64');
+        }
+    }
+
+    console.log(`✅ Read ${Object.keys(brand).length} brand asset(s)`);
+    return brand;
+}
+
 // Binary file extensions that should be base64 encoded
 const BINARY_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.ico', '.webp', '.pdf', '.zip', '.tar', '.gz']);
 
@@ -260,6 +279,7 @@ async function generateEmbeddedAssets(
     stylesCss: string,
     appJs: string,
     icons: { [key: string]: string },
+    brand: { [key: string]: string },
     builtinSkills: { [path: string]: { content: string; binary: boolean } },
     changelog: string,
 ) {
@@ -278,6 +298,10 @@ async function generateEmbeddedAssets(
     ).join(",\n");
 
     const iconsObject = Object.entries(icons).map(([name, data]) =>
+        `  "${name}": "${data}"`
+    ).join(",\n");
+
+    const brandObject = Object.entries(brand).map(([name, data]) =>
         `  "${name}": "${data}"`
     ).join(",\n");
 
@@ -309,6 +333,10 @@ export const EMBEDDED_APP_JS = \`${escapeForTemplate(appJs)}\`;
 
 export const EMBEDDED_ICONS: { [key: string]: string } = {
 ${iconsObject}
+};
+
+export const EMBEDDED_BRAND: { [key: string]: string } = {
+${brandObject}
 };
 
 export const EMBEDDED_BUILTIN_SKILLS: { [path: string]: { content: string; binary: boolean } } = {
@@ -412,7 +440,7 @@ async function main() {
     const startTime = Date.now();
     const { target } = await parseArgs();
 
-    console.log("🍞 HeyJada Single-File Build Script");
+    console.log("🍞 Superjoy Single-File Build Script");
     console.log("=".repeat(40));
 
     try {
@@ -424,12 +452,13 @@ async function main() {
         const { migrations } = await readMigrations();
         const { maintenanceMigrations } = await readMaintenanceMigrations();
         const icons = await readIcons();
+        const brand = await readBrand();
         const builtinSkills = await readBuiltinSkills();
         const indexHtml = await fs.readFile(path.join(CLIENT_SRC, "index.html"), "utf-8");
         const changelog = await readChangelog();
 
         // Generate embedded assets module
-        await generateEmbeddedAssets(migrations, maintenanceMigrations, indexHtml, stylesCss, appJs, icons, builtinSkills, changelog);
+        await generateEmbeddedAssets(migrations, maintenanceMigrations, indexHtml, stylesCss, appJs, icons, brand, builtinSkills, changelog);
 
         // Compile
         await compile(target);

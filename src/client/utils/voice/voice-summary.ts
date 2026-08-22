@@ -55,7 +55,7 @@ export function speakablePath(path: string): string {
 }
 
 /**
- * The operation as a spoken verb phrase completing "HeyJada wants to …".
+ * The operation as a spoken verb phrase completing "Superjoy wants to …".
  * The shell command itself is never spoken — syntax is unfollowable by ear
  * (the dialog shows it exactly); the agent's justification carries the intent.
  */
@@ -86,7 +86,7 @@ function intentPhrase(req: ConfirmationRequest): string | null {
 
 /**
  * A concise spoken description of a confirmation. One natural intent sentence
- * — "HeyJada wants to edit X." — then the deterministic facts (risk, file
+ * — "Superjoy wants to edit X." — then the deterministic facts (risk, file
  * count) as follow-ons; `spokenDetail` (the fast model's description of what
  * the change does, when available) is woven in before the decision trailer.
  */
@@ -98,7 +98,7 @@ export function buildConfirmationSummary(req: ConfirmationRequest, spokenDetail?
 
     const ctx = req.context;
     const intent = intentPhrase(req);
-    const parts: string[] = [intent ? `HeyJada wants to ${intent}.` : req.title];
+    const parts: string[] = [intent ? `Superjoy wants to ${intent}.` : req.title];
     if (ctx?.riskLevel === 'high') parts.push('This is a high-risk operation.');
     const fileCount = ctx?.affectedFiles?.length ?? 0;
     if (fileCount > 1) parts.push(`Affects ${fileCount} files.`);
@@ -166,5 +166,5 @@ export function buildCompletionSummary(response: string): string {
         window.lastIndexOf('? '),
     );
     const cut = naturalEnd > 0 ? window.slice(0, naturalEnd + 1) : window;
-    return `${stripMarkdown(cut)} … Open HeyJada to read the full result.`;
+    return `${stripMarkdown(cut)} … Open Superjoy to read the full result.`;
 }

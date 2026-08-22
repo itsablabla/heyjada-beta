@@ -116,10 +116,10 @@ function editDistance(a: string, b: string): number {
 const LEAD_INS = new Set(ADDRESS_LEAD_INS);
 
 /**
- * Does this open-context utterance address HeyJada? Matches the address word as
+ * Does this open-context utterance address Superjoy? Matches the address word as
  * the first token (after optional lead-ins like "hey"), fuzzily — STT mangles
  * the proper noun ("Bipali") and may split it ("Pip ali"). Returns the payload
- * after the address word: "HeyJada, also check the logs" → "also check the logs".
+ * after the address word: "Hey Jada, also check the logs" → "also check the logs".
  */
 export function parseAddressing(text: string): { addressed: boolean; payload: string } {
     const rawTokens = text.trim().split(/\s+/).filter(Boolean);

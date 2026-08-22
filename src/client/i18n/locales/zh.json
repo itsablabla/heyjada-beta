@@ -263,7 +263,7 @@
     "sendGuidance": "发送指导（取消当前操作）"
   },
   "notifications": {
-    "questionFromHeyJada": "来自 Superjoy 的问题",
+    "questionFromSuperjoy": "来自 Superjoy 的问题",
     "actionRequired": "需要操作",
     "taskComplete": "任务完成",
     "taskFinished": "你的任务已完成"

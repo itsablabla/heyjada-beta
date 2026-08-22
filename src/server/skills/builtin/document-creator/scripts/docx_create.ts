@@ -657,7 +657,7 @@ async function createDocument(spec: DocSpec): Promise<Document> {
     );
 
     return new Document({
-        creator: spec.properties?.creator || 'HeyJada.ai',
+        creator: spec.properties?.creator || 'Superjoy.ai',
         title: spec.properties?.title,
         description: spec.properties?.description,
         subject: spec.properties?.subject,
@@ -745,7 +745,7 @@ Options:
 
 Example spec.json:
 {
-  "properties": { "title": "My Document", "creator": "HeyJada.ai" },
+  "properties": { "title": "My Document", "creator": "Superjoy.ai" },
   "sections": [{
     "children": [
       { "type": "heading", "level": 1, "text": "Title" },

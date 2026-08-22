@@ -1,5 +1,5 @@
 /**
- * API client utilities for making requests to the HeyJada server.
+ * API client utilities for making requests to the Superjoy server.
  *
  * In web mode, requests go to relative URLs (same origin).
  * In Tauri mode, requests go to the sidecar's localhost URL.

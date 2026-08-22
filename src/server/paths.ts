@@ -6,6 +6,7 @@
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
+import { getBrandedEnv } from './env';
 
 const APP_NAME = 'pipali';
 
@@ -16,7 +17,7 @@ const APP_NAME = 'pipali';
  * - Linux: ~/.local/share/pipali (or XDG_DATA_HOME/pipali)
  */
 export function getAppDataDir(): string {
-    const overrideDataDir = process.env.HEYJADA_DATA_DIR || process.env.PIPALI_DATA_DIR;
+    const overrideDataDir = getBrandedEnv('DATA_DIR');
     if (overrideDataDir) {
         return overrideDataDir;
     }
@@ -43,7 +44,7 @@ export function getAppDataDir(): string {
  * - Linux: ~/.config/pipali (or XDG_CONFIG_HOME/pipali)
  */
 export function getAppConfigDir(): string {
-    const overrideConfigDir = process.env.HEYJADA_CONFIG_DIR || process.env.PIPALI_CONFIG_DIR;
+    const overrideConfigDir = getBrandedEnv('CONFIG_DIR');
     if (overrideConfigDir) {
         return overrideConfigDir;
     }
@@ -70,7 +71,7 @@ export function getAppConfigDir(): string {
  * - Linux: ~/.cache/pipali (or XDG_CACHE_HOME/pipali)
  */
 export function getAppCacheDir(): string {
-    const overrideCacheDir = process.env.HEYJADA_CACHE_DIR || process.env.PIPALI_CACHE_DIR;
+    const overrideCacheDir = getBrandedEnv('CACHE_DIR');
     if (overrideCacheDir) {
         return overrideCacheDir;
     }
@@ -101,7 +102,7 @@ export function getAppCacheDir(): string {
  * - Linux: ~/.local/state/pipali/logs (or XDG_STATE_HOME/pipali/logs)
  */
 export function getAppLogsDir(): string {
-    const overrideLogsDir = process.env.HEYJADA_LOGS_DIR || process.env.PIPALI_LOGS_DIR;
+    const overrideLogsDir = getBrandedEnv('LOGS_DIR');
     if (overrideLogsDir) {
         return overrideLogsDir;
     }
@@ -141,7 +142,7 @@ export function getDatabaseDir(): string {
  * This will be migrated to use getAppDataDir() in a future release
  */
 export function getSkillsDir(): string {
-    const overrideSkillsDir = process.env.HEYJADA_SKILLS_DIR || process.env.PIPALI_SKILLS_DIR;
+    const overrideSkillsDir = getBrandedEnv('SKILLS_DIR');
     if (overrideSkillsDir) {
         return overrideSkillsDir;
     }

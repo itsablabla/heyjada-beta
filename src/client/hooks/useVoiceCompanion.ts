@@ -9,23 +9,23 @@
  * Contexts decide what bare (unaddressed) speech means. Every closed segment
  * falls into exactly one, checked in this order (see handleSegment):
  * - *engaged* — a turn is open, so the speech belongs to it.
- * - *barge-in* over HeyJada's speech — it takes the floor: playback stops and
+ * - *barge-in* over Superjoy's speech — it takes the floor: playback stops and
  *   a reply turn opens, once the transcript has cleared the self-echo check.
  * - *open* (the session default) — it means nothing unless it starts with the
- *   addressing phrase ("HeyJada, ..."); the rest is ambient and discarded.
+ *   addressing phrase ("Superjoy, ..."); the rest is ambient and discarded.
  *
- * Engagement is always opened by the user — by addressing HeyJada, by tapping,
- * or by HeyJada speaking: once it has spoken, a short reply invitation accepts a
+ * Engagement is always opened by the user — by addressing Superjoy, by tapping,
+ * or by Superjoy speaking: once it has spoken, a short reply invitation accepts a
  * bare reply, then lapses back to open.
  *
- * Voice mode sets HeyJada's speaking etiquette — when it speaks:
- * - `ask_first`: requires go-ahead from user to speak ("HeyJada, go ahead" or a
+ * Voice mode sets Superjoy's speaking etiquette — when it speaks:
+ * - `ask_first`: requires go-ahead from user to speak ("Superjoy, go ahead" or a
  *    tap). Announcements chime when ready, then wait — minutes if need be.
  *    A polite, low-interruption mode when user is auditorily engaged elsewhere.
  * - `speak_freely`: speaks when it wants — the same chime, then it reads on.
  *    A standing consent for when user is auditorily available.
- * HeyJada can always be interrupted - while it is working or speaking.
- * Modes switch at any moment, decoupled from companion state: spoken ("HeyJada,
+ * Superjoy can always be interrupted - while it is working or speaking.
+ * Modes switch at any moment, decoupled from companion state: spoken ("Superjoy,
  * speak freely" / "ask first" / "stop listening") in every parser context, or via UI.
  *
  * Turns use the segmented model: pauses close STT segments, never the turn;
@@ -89,7 +89,7 @@ export interface UseVoiceCompanionParams {
     activeConversationId: string | undefined;
     sendMessage: (text: string, conversationId?: string) => void;
     respondToConfirmation: (conversationId: string, runId: string, requestId: string, optionId: string, guidance?: string) => void;
-    /** Stop in flight run via voice command ("HeyJada, stop"), equivalent of clicking stop button. */
+    /** Stop in flight run via voice command ("Superjoy, stop"), equivalent of clicking stop button. */
     stopRun?: () => void;
     onError?: (message: string) => void;
     /** Persist a mode change via voice commands. */
@@ -167,7 +167,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     const inviteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const speakingRef = useRef(0);
-    /** The readout HeyJada is (or just was) speaking — what a barge-in is checked against. */
+    /** The readout Superjoy is (or just was) speaking — what a barge-in is checked against. */
     const spokenTextRef = useRef('');
     const busyRef = useRef(false);
     // Late-bound functions, breaking cycles like segment → route → speak → listen → segment.
@@ -321,7 +321,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     useEffect(() => { goDormantRef.current = goDormant; }, [goDormant]);
 
     // ------------------------------------------------------------------
-    // Reply turns (engaged exchange after HeyJada speaks)
+    // Reply turns (engaged exchange after Superjoy speaks)
     // ------------------------------------------------------------------
     const lapseReply = useCallback((turn: ActiveTurn) => {
         releaseTurn(turn);
@@ -372,7 +372,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             endSpeaking();
         }
         // A barge-in — tap or spoken — may already have opened the reply turn;
-        // and an interruption that made HeyJada speak again (a mode-switch ack)
+        // and an interruption that made Superjoy speak again (a mode-switch ack)
         // owns the channel now, so this readout no longer invites a reply.
         if (!turnRef.current && speakingRef.current === 0) openReplyTurn();
     }, [startSession, beginSpeaking, endSpeaking, openReplyTurn]);
@@ -676,7 +676,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             cancelTurn(turn);
         } else {
             // Re-addressing inside a turn is a command, not dictation. Without
-            // this, "HeyJada, stop" spoken over a readout lands in the transcript
+            // this, "Superjoy, stop" spoken over a readout lands in the transcript
             // of the reply turn that just opened and sits there — it parses as
             // guidance, which is deliberately not decisive, so nothing happens.
             const addr = parseAddressing(turn.transcript.text);
@@ -723,8 +723,8 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         // and may land out of order, and the base fixes the transcript's origin.
         if (turn.baseSeq === null) turn.baseSeq = seq;
         turn.inFlight++;
-        // A turn can be open while HeyJada speaks (tap barge-in, an interruption
-        // HeyJada answered aloud, the reply invitation that opens the moment a
+        // A turn can be open while Superjoy speaks (tap barge-in, an interruption
+        // Superjoy answered aloud, the reply invitation that opens the moment a
         // readout ends), so an open turn is not on its own proof the mic is
         // hearing the user. Echo lands as an empty segment rather than a
         // dropped one, so the sequence bookkeeping still closes the turn.
@@ -763,12 +763,12 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 }
 
                 if (pending && (!payload || parseGoAhead(payload))) {
-                    // "HeyJada, go ahead" — acknowledge the waiting announcement.
+                    // "Superjoy, go ahead" — acknowledge the waiting announcement.
                     void speakPendingAndListen(pending);
                     return;
                 }
                 if (!payload) {
-                    // Bare "HeyJada" with nothing pending: start dictating.
+                    // Bare "Hey Jada" with nothing pending: start dictating.
                     openComposedTurn();
                     return;
                 }
@@ -780,10 +780,10 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
     }, [transcribeSegment, markAddressed, runSpokenCommand, speakPendingAndListen, openComposedTurn, beginTurn]);
 
     /**
-     * Speech captured while HeyJada is talking (full duplex only). Playback has
+     * Speech captured while Superjoy is talking (full duplex only). Playback has
      * already ducked on onset; this decides whether that was the user taking the
-     * floor — in which case HeyJada stops and the utterance opens a reply — or
-     * HeyJada's own voice leaking past the echo guard, and it resumes.
+     * floor — in which case Superjoy stops and the utterance opens a reply — or
+     * Superjoy's own voice leaking past the echo guard, and it resumes.
      */
     const handleBargeInSegment = useCallback((segment: CapturedSegment) => {
         const { seq } = segment;
@@ -808,7 +808,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 const payload = addr.addressed ? addr.payload : text;
                 const pending = pendingRef.current;
                 if (!payload) {
-                    openReplyTurn();          // bare "HeyJada": floor taken, nothing said yet
+                    openReplyTurn();          // bare "Hey Jada": floor taken, nothing said yet
                     return;
                 }
                 const command = classifySpokenCommand(payload, pending?.kind ?? null);
@@ -830,7 +830,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
 
     // ------------------------------------------------------------------
     // Working heartbeat: a soft pulse per agent step (tool call / mid-run
-    // message), throttled so step bursts don't drum. The user hears HeyJada's
+    // message), throttled so step bursts don't drum. The user hears Superjoy's
     // actual work cadence, and the pulses stopping is itself a signal — the
     // completion cue then lands with contrast.
     // ------------------------------------------------------------------
@@ -839,7 +839,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
         if (cbRef.current.mode === 'off' || !supported) return;
         if (convId !== activeConvRef.current) return;        // active-conversation gate
         if (!captureRef.current || turnRef.current) return;  // session dormant, or mid-exchange
-        if (speakingRef.current > 0) return;                 // HeyJada audio already playing
+        if (speakingRef.current > 0) return;                 // Superjoy audio already playing
         const now = Date.now();
         if (now - lastWorkPulseRef.current < VOICE_TUNABLES.workPulseMinIntervalMs) return;
         lastWorkPulseRef.current = now;

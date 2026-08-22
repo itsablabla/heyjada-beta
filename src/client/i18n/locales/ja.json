@@ -263,7 +263,7 @@
     "sendGuidance": "指示を送信（現在の操作を辞退）"
   },
   "notifications": {
-    "questionFromHeyJada": "Superjoyからの質問",
+    "questionFromSuperjoy": "Superjoyからの質問",
     "actionRequired": "対応が必要です",
     "taskComplete": "タスク完了",
     "taskFinished": "タスクが完了しました"

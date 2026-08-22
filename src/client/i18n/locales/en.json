@@ -304,7 +304,7 @@
     "sendGuidance": "Send guidance (declines current operation)"
   },
   "notifications": {
-    "questionFromHeyJada": "Question from Superjoy",
+    "questionFromSuperjoy": "Question from Superjoy",
     "actionRequired": "Action Required",
     "taskComplete": "Task Complete",
     "taskFinished": "Your task has finished"
