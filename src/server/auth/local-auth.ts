@@ -183,9 +183,9 @@ localAuth.post('/login', async (c) => {
         return c.json({ error: 'Too many login attempts. Please try again later.' }, 429);
     }
 
-    const resendApiKey = process.env.RESEND_API_KEY || getBrandedEnv('RESEND_API_KEY');
-    const resendFrom = getBrandedEnv('OTP_FROM');
-    const otpEmailConfigured = !!resendApiKey && !!resendFrom;
+    const resendApiKey = process.env.RESEND_API_KEY || getBrandedEnv('RESEND_API_KEY') || '';
+    const resendFrom = getBrandedEnv('OTP_FROM') || '';
+    const otpEmailConfigured = isOtpEmailConfigured();
 
     try {
         const body = await readJson(c.req.raw);
