@@ -286,23 +286,23 @@
     },
     "modeMenu": {
       "title": "Sprachmodus",
-      "spokenHint": "Sage jederzeit \"Hey Jada, speak freely\" oder \"Hey Jada, ask first\""
+      "spokenHint": "Sage jederzeit \"Hey Superjoy, speak freely\" oder \"Hey Superjoy, ask first\""
     },
     "enabledHint": "Solange der Sprachmodus aktiv ist, wird Sprache in der Nähe dieses Geräts transkribiert, um zu prüfen, ob du Superjoy ansprichst; nicht adressierte Sprache wird verworfen und nie gespeichert.",
     "status": {
-      "idle": "Wartet auf \"Hey Jada…\" – zum Sprechen tippen",
+      "idle": "Wartet auf \"Hey Superjoy…\" – zum Sprechen tippen",
       "dormant": "Sprachmodus schläft – zum Aufwecken tippen",
-      "announced": "Superjoy möchte etwas sagen – sage \"Hey Jada, go ahead\" oder tippe",
+      "announced": "Superjoy möchte etwas sagen – sage \"Hey Superjoy, go ahead\" oder tippe",
       "speaking": "Spricht – zum Antworten tippen",
       "listening": "Hört zu – zum Senden tippen",
       "transcribing": "Transkribiert…"
     },
     "coach": {
-      "idle": "Sage \"Hey Jada…\" zum Sprechen – oder tippe hier",
-      "idleWorking": "Arbeitet – sage \"Hey Jada…\" zum Umlenken, \"Hey Jada, stop\" zum Abbrechen",
+      "idle": "Sage \"Hey Superjoy…\" zum Sprechen – oder tippe hier",
+      "idleWorking": "Arbeitet – sage \"Hey Superjoy…\" zum Umlenken, \"Hey Superjoy, stop\" zum Abbrechen",
       "dormant": "Sprachmodus schläft – tippe auf das Mikrofon zum Aufwecken",
-      "goAheadPending": "Superjoy hat etwas für dich – sage \"Hey Jada, go ahead\"",
-      "goAheadResult": "Deine Ergebnisse sind fertig – sage \"Hey Jada, go ahead\" zum Anhören",
+      "goAheadPending": "Superjoy hat etwas für dich – sage \"Hey Superjoy, go ahead\"",
+      "goAheadResult": "Deine Ergebnisse sind fertig – sage \"Hey Superjoy, go ahead\" zum Anhören",
       "speaking": "Sprich einfach los, um zu unterbrechen – oder sage \"stop\" für Ruhe",
       "listening": "Sage \"send it\", wenn du fertig bist, \"scratch that\" zum Neuanfangen",
       "listeningDecision": "Sage \"yes\", \"no\" oder gib eigene Anweisungen",

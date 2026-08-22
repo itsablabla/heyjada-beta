@@ -286,23 +286,23 @@
     },
     "modeMenu": {
       "title": "语音模式",
-      "spokenHint": "随时可以说 \"Hey Jada, speak freely\" 或 \"Hey Jada, ask first\""
+      "spokenHint": "随时可以说 \"Hey Superjoy, speak freely\" 或 \"Hey Superjoy, ask first\""
     },
     "enabledHint": "语音模式开启期间，设备附近的语音会被转写，以判断你是否在呼唤 Superjoy；未呼唤 Superjoy 的语音会被丢弃，绝不存储。",
     "status": {
-      "idle": "等待 \"Hey Jada…\" 唤醒——点按说话",
+      "idle": "等待 \"Hey Superjoy…\" 唤醒——点按说话",
       "dormant": "语音已休眠——点按唤醒",
-      "announced": "Superjoy 有话要说——说 \"Hey Jada, go ahead\" 或点按",
+      "announced": "Superjoy 有话要说——说 \"Hey Superjoy, go ahead\" 或点按",
       "speaking": "正在朗读——点按回复",
       "listening": "正在聆听——点按发送",
       "transcribing": "转写中…"
     },
     "coach": {
-      "idle": "说 \"Hey Jada…\" 开始说话——也可以直接输入",
-      "idleWorking": "正在处理——说 \"Hey Jada…\" 可调整方向，说 \"Hey Jada, stop\" 可中止",
+      "idle": "说 \"Hey Superjoy…\" 开始说话——也可以直接输入",
+      "idleWorking": "正在处理——说 \"Hey Superjoy…\" 可调整方向，说 \"Hey Superjoy, stop\" 可中止",
       "dormant": "语音已休眠——点击麦克风唤醒",
-      "goAheadPending": "Superjoy 有事要告诉你——说 \"Hey Jada, go ahead\"",
-      "goAheadResult": "结果已就绪——说 \"Hey Jada, go ahead\" 收听",
+      "goAheadPending": "Superjoy 有事要告诉你——说 \"Hey Superjoy, go ahead\"",
+      "goAheadResult": "结果已就绪——说 \"Hey Superjoy, go ahead\" 收听",
       "speaking": "直接说话即可打断——或说 \"stop\" 让它安静",
       "listening": "说完后说 \"send it\"，想重说就说 \"scratch that\"",
       "listeningDecision": "说 \"yes\"、\"no\"，或给出你自己的指示",

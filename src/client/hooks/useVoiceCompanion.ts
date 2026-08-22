@@ -12,20 +12,20 @@
  * - *barge-in* over Superjoy's speech — it takes the floor: playback stops and
  *   a reply turn opens, once the transcript has cleared the self-echo check.
  * - *open* (the session default) — it means nothing unless it starts with the
- *   addressing phrase ("Hey Jada, ..."); the rest is ambient and discarded.
+ *   addressing phrase ("Hey Superjoy, ..."); the rest is ambient and discarded.
  *
  * Engagement is always opened by the user — by addressing Superjoy, by tapping,
  * or by Superjoy speaking: once it has spoken, a short reply invitation accepts a
  * bare reply, then lapses back to open.
  *
  * Voice mode sets Superjoy's speaking etiquette — when it speaks:
- * - `ask_first`: requires go-ahead from user to speak ("Hey Jada, go ahead" or a
+ * - `ask_first`: requires go-ahead from user to speak ("Hey Superjoy, go ahead" or a
  *    tap). Announcements chime when ready, then wait — minutes if need be.
  *    A polite, low-interruption mode when user is auditorily engaged elsewhere.
  * - `speak_freely`: speaks when it wants — the same chime, then it reads on.
  *    A standing consent for when user is auditorily available.
  * Superjoy can always be interrupted - while it is working or speaking.
- * Modes switch at any moment, decoupled from companion state: spoken ("Hey Jada,
+ * Modes switch at any moment, decoupled from companion state: spoken ("Hey Superjoy,
  * speak freely" / "ask first" / "stop listening") in every parser context, or via UI.
  *
  * Turns use the segmented model: pauses close STT segments, never the turn;
@@ -89,7 +89,7 @@ export interface UseVoiceCompanionParams {
     activeConversationId: string | undefined;
     sendMessage: (text: string, conversationId?: string) => void;
     respondToConfirmation: (conversationId: string, runId: string, requestId: string, optionId: string, guidance?: string) => void;
-    /** Stop in flight run via voice command ("Hey Jada, stop"), equivalent of clicking stop button. */
+    /** Stop in flight run via voice command ("Hey Superjoy, stop"), equivalent of clicking stop button. */
     stopRun?: () => void;
     onError?: (message: string) => void;
     /** Persist a mode change via voice commands. */
@@ -676,7 +676,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             cancelTurn(turn);
         } else {
             // Re-addressing inside a turn is a command, not dictation. Without
-            // this, "Hey Jada, stop" spoken over a readout lands in the transcript
+            // this, "Hey Superjoy, stop" spoken over a readout lands in the transcript
             // of the reply turn that just opened and sits there — it parses as
             // guidance, which is deliberately not decisive, so nothing happens.
             const addr = parseAddressing(turn.transcript.text);
@@ -763,12 +763,12 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 }
 
                 if (pending && (!payload || parseGoAhead(payload))) {
-                    // "Hey Jada, go ahead" — acknowledge the waiting announcement.
+                    // "Hey Superjoy, go ahead" — acknowledge the waiting announcement.
                     void speakPendingAndListen(pending);
                     return;
                 }
                 if (!payload) {
-                    // Bare "Hey Jada" with nothing pending: start dictating.
+                    // Bare "Hey Superjoy" with nothing pending: start dictating.
                     openComposedTurn();
                     return;
                 }
@@ -808,7 +808,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
                 const payload = addr.addressed ? addr.payload : text;
                 const pending = pendingRef.current;
                 if (!payload) {
-                    openReplyTurn();          // bare "Hey Jada": floor taken, nothing said yet
+                    openReplyTurn();          // bare "Hey Superjoy": floor taken, nothing said yet
                     return;
                 }
                 const command = classifySpokenCommand(payload, pending?.kind ?? null);

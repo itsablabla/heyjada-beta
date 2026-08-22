@@ -4,7 +4,7 @@
  * The chat input placeholder is the one always-visible line of text in the
  * composer, so it — not a hover tooltip — is where coaching belongs. What makes
  * a hint correct is the addressing rule: in open context only speech starting
- * with "Hey Jada" is heard, while inside an open turn raw speech is the message
+ * with "Hey Superjoy" is heard, while inside an open turn raw speech is the message
  * and tail phrases end it. So the same intent needs different words per state,
  * which is exactly what one static tooltip cannot express.
  *

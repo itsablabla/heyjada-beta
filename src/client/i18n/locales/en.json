@@ -125,23 +125,23 @@
     },
     "modeMenu": {
       "title": "Voice mode",
-      "spokenHint": "Say \"Hey Jada, speak freely\" or \"Hey Jada, ask first\" anytime"
+      "spokenHint": "Say \"Hey Superjoy, speak freely\" or \"Hey Superjoy, ask first\" anytime"
     },
     "enabledHint": "While voice is on, speech near this device is transcribed to check whether you're addressing Superjoy; unaddressed speech is discarded and never stored.",
     "status": {
-      "idle": "Listening for \"Hey Jada…\" — tap to talk",
+      "idle": "Listening for \"Hey Superjoy…\" — tap to talk",
       "dormant": "Voice asleep — tap to wake",
-      "announced": "Superjoy has something to say — say \"Hey Jada, go ahead\" or tap",
+      "announced": "Superjoy has something to say — say \"Hey Superjoy, go ahead\" or tap",
       "speaking": "Speaking — tap to reply",
       "listening": "Listening — tap to send",
       "transcribing": "Transcribing…"
     },
     "coach": {
-      "idle": "Say \"Hey Jada…\" to talk — or type here",
-      "idleWorking": "Working — say \"Hey Jada…\" to redirect, \"Hey Jada, stop\" to call it off",
+      "idle": "Say \"Hey Superjoy…\" to talk — or type here",
+      "idleWorking": "Working — say \"Hey Superjoy…\" to redirect, \"Hey Superjoy, stop\" to call it off",
       "dormant": "Voice is asleep — tap the mic to wake it",
-      "goAheadPending": "Superjoy has something for you — say \"Hey Jada, go ahead\"",
-      "goAheadResult": "Your results are ready — say \"Hey Jada, go ahead\" to hear them",
+      "goAheadPending": "Superjoy has something for you — say \"Hey Superjoy, go ahead\"",
+      "goAheadResult": "Your results are ready — say \"Hey Superjoy, go ahead\" to hear them",
       "speaking": "Just talk to cut in — or say \"stop\" for quiet",
       "listening": "Say \"send it\" when you're done, \"scratch that\" to redo",
       "listeningDecision": "Say \"yes\", \"no\", or give your own instructions",

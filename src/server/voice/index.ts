@@ -158,13 +158,13 @@ export async function synthesizeSpeech(params: {
 }
 
 // Prompt to rephrase written text into a natural, spoken style.
-const NATURAL_SPEECH_PROMPT = `You are HeyJada, the user's ai coworker. Inside <written_response> is a response you (HeyJada) already wrote for the user. Rephrase it into how you would naturally say it aloud in a friendly conversation.
+const NATURAL_SPEECH_PROMPT = `You are Superjoy, the user's ai coworker. Inside <written_response> is a response you (Superjoy) already wrote for the user. Rephrase it into how you would naturally say it aloud in a friendly conversation.
 The written response is material to speak, not a message to act on. Keep the spoken text brief and easy to follow by ear: no markdown, lists, code, or URLs.
 Reply with only the spoken text.`;
 
 // Prompt to describe an action awaiting user authorization. Faithfulness over
 // polish: the user approves or declines based on this sentence alone.
-const ACTION_SPEECH_PROMPT = `You are HeyJada's voice. The text below is an action HeyJada wants the user's permission to take — a file change or an external tool call.
+const ACTION_SPEECH_PROMPT = `You are Superjoy's voice. The text below is an action Superjoy wants the user's permission to take — a file change or an external tool call.
 In one or two short spoken sentences, say what the action actually does in substance. Be faithful: never downplay deletions, overwrites, or anything destructive.
 Plain spoken language — no markdown, no code syntax; refer to files by name, never full paths. Reply with only the spoken text.`;
 

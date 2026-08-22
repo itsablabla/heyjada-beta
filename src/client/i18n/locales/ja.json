@@ -286,23 +286,23 @@
     },
     "modeMenu": {
       "title": "音声モード",
-      "spokenHint": "いつでも「Hey Jada, speak freely」または「Hey Jada, ask first」と言えます"
+      "spokenHint": "いつでも「Hey Superjoy, speak freely」または「Hey Superjoy, ask first」と言えます"
     },
     "enabledHint": "音声モードが有効な間、この端末の近くの音声は、Superjoyへの呼びかけかどうかを確認するために文字起こしされます。呼びかけでない音声は破棄され、保存されることはありません。",
     "status": {
-      "idle": "「Hey Jada…」の呼びかけを待機中 — タップして話す",
+      "idle": "「Hey Superjoy…」の呼びかけを待機中 — タップして話す",
       "dormant": "音声モードは休止中 — タップして再開",
-      "announced": "Superjoyからお知らせがあります — 「Hey Jada, go ahead」と言うかタップ",
+      "announced": "Superjoyからお知らせがあります — 「Hey Superjoy, go ahead」と言うかタップ",
       "speaking": "読み上げ中 — タップして返答",
       "listening": "聞き取り中 — タップして送信",
       "transcribing": "文字起こし中…"
     },
     "coach": {
-      "idle": "「Hey Jada…」と話しかけてください — 入力もできます",
-      "idleWorking": "作業中 — 「Hey Jada…」で軌道修正、「Hey Jada, stop」で中止",
+      "idle": "「Hey Superjoy…」と話しかけてください — 入力もできます",
+      "idleWorking": "作業中 — 「Hey Superjoy…」で軌道修正、「Hey Superjoy, stop」で中止",
       "dormant": "音声モードは休止中 — マイクをタップして再開",
-      "goAheadPending": "Superjoyからお知らせがあります — 「Hey Jada, go ahead」と言ってください",
-      "goAheadResult": "結果ができました — 「Hey Jada, go ahead」で読み上げます",
+      "goAheadPending": "Superjoyからお知らせがあります — 「Hey Superjoy, go ahead」と言ってください",
+      "goAheadResult": "結果ができました — 「Hey Superjoy, go ahead」で読み上げます",
       "speaking": "そのまま話すと割り込めます — 「stop」で停止",
       "listening": "終わったら「send it」、やり直すなら「scratch that」",
       "listeningDecision": "「yes」「no」、または自由に指示してください",

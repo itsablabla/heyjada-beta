@@ -4,8 +4,8 @@ import { STT_BIAS_PROMPT } from '../../src/client/utils/voice/voice-config';
 
 // Verbatim from dogfooding: what STT returned for segments where nothing was
 // said. Both are the prompt's command list read back, and neither matched it
-// exactly — "nevermind" came back as "Never mind", "Jada" as "Jadda".
-const RECITED_COMMANDS = 'Hey Jadda. Hey Jada, over to you. Send it. Scratch that. Clear that. Stop listening. Cancel that. Stop. Stop that. Stop it. Stop working. Hold on. Wait. Hang on. Abort. Cancel. Cancel that. Never mind. Never mind. That\'s enough. Enough. Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.';
+// exactly — "nevermind" came back as "Never mind", "Superjoy" as "Superjoi".
+const RECITED_COMMANDS = 'Hey Superjoi. Hey Superjoy, over to you. Send it. Scratch that. Clear that. Stop listening. Cancel that. Stop. Stop that. Stop it. Stop working. Hold on. Wait. Hang on. Abort. Cancel. Cancel that. Never mind. Never mind. That\'s enough. Enough. Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.';
 const RECITED_COMMANDS_UNADDRESSED = 'over to you. Send it. Scratch that. Clear that. Stop listening. Cancel that. Stop. Stop that. Stop it. Stop working. Hold on. Wait. Hang on. Abort. Cancel. Cancel that. Never mind. Never mind. That\'s enough. Enough. Speak freely. Talk freely. Ask first. Ask before speaking. Ask to speak. Go ahead.';
 
 describe('isSelfEcho', () => {
@@ -31,7 +31,7 @@ describe('isSelfEcho', () => {
     });
 
     test('addressed speech is the user by construction', () => {
-        expect(isSelfEcho('Jada, the Documents folder', readout)).toBe(false);
+        expect(isSelfEcho('Superjoy, the Documents folder', readout)).toBe(false);
     });
 
     test('words in common are not enough without the phrasing', () => {
@@ -71,14 +71,14 @@ describe('isHallucination', () => {
     });
 
     test('short command words contained in the prompt stay usable', () => {
-        for (const s of ['Send it.', 'go ahead', 'scratch that', 'Jada']) {
+        for (const s of ['Send it.', 'go ahead', 'scratch that', 'Superjoy']) {
             expect(isHallucination(s)).toBe(false);
         }
     });
 
     test('the wake phrase itself is never treated as noise', () => {
         // It was, which meant the one phrase the UI teaches did nothing.
-        for (const s of ['Hey Jada', 'hey jada', 'Hey Jada!']) {
+        for (const s of ['Hey Superjoy', 'hey superjoy', 'Hey Superjoy!']) {
             expect(isHallucination(s)).toBe(false);
         }
     });
@@ -97,8 +97,8 @@ describe('isHallucination', () => {
 
     test('leaves a real utterance built around a command alone', () => {
         for (const s of [
-            'Hey Jada, over to you',
-            'Jada, hold on, wait',
+            'Hey Superjoy, over to you',
+            'Superjoy, hold on, wait',
             'stop working on the report and send it over to you',
             'Ask first before speaking to the vendor about the delay',
         ]) {

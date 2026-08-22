@@ -17,7 +17,7 @@ export const VOICE_TUNABLES = {
     /**
      * Onset window size (frames). Majority voting (3 of 4) instead of strictly
      * consecutive frames, so the consonant dips in short commands ("send it",
-     * "Hey Jada") don't keep resetting onset at normal speaking volume.
+     * "Hey Superjoy") don't keep resetting onset at normal speaking volume.
      */
     speechStartWindow: 4,
     /** Trailing silence that closes a segment — a pause, never the turn. */
@@ -100,9 +100,9 @@ export const STOP_WORK_PHRASES = [
 export const SUMMARIZE_TEXT_CAP = 50_000;
 
 /** The addressing word that marks open-context speech as meant for Superjoy. */
-export const ADDRESS_NAME = 'jada';
+export const ADDRESS_NAME = 'superjoy';
 
-/** Lead-in words allowed before the addressing word ("hey Jada", "ok Jada"). */
+/** Lead-in words allowed before the addressing word ("hey Superjoy", "ok Superjoy"). */
 export const ADDRESS_LEAD_INS = ['hey', 'ok', 'okay', 'hi'];
 
 /**
@@ -110,4 +110,4 @@ export const ADDRESS_LEAD_INS = ['hey', 'ok', 'okay', 'hi'];
  * to make them transcribe reliably for the given context.
  */
 export const STT_BIAS_PROMPT =
-    `A voice message snippet by the user to Superjoy, an AI co-worker on their computer. Key Phrases: Jada, Hey Jada, ${[...END_PHRASES, ...DISCARD_PHRASES, ...CANCEL_PHRASES, ...STOP_WORK_PHRASES, ...SPEAK_FREELY_PHRASES, ...ASK_FIRST_PHRASES].join(', ')}, go ahead.`;
+    `A voice message snippet by the user to Superjoy, an AI co-worker on their computer. Key Phrases: Superjoy, Hey Superjoy, ${[...END_PHRASES, ...DISCARD_PHRASES, ...CANCEL_PHRASES, ...STOP_WORK_PHRASES, ...SPEAK_FREELY_PHRASES, ...ASK_FIRST_PHRASES].join(', ')}, go ahead.`;

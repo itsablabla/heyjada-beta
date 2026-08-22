@@ -286,23 +286,23 @@
     },
     "modeMenu": {
       "title": "Mode vocal",
-      "spokenHint": "Dis \"Hey Jada, speak freely\" ou \"Hey Jada, ask first\" à tout moment"
+      "spokenHint": "Dis \"Hey Superjoy, speak freely\" ou \"Hey Superjoy, ask first\" à tout moment"
     },
     "enabledHint": "Quand le mode vocal est actif, la parole captée près de cet appareil est transcrite pour vérifier si tu t'adresses à Superjoy ; la parole non adressée est ignorée et jamais conservée.",
     "status": {
-      "idle": "À l'écoute de \"Hey Jada…\" — appuie pour parler",
+      "idle": "À l'écoute de \"Hey Superjoy…\" — appuie pour parler",
       "dormant": "Mode vocal en veille — appuie pour le réveiller",
-      "announced": "Superjoy a quelque chose à dire — dis \"Hey Jada, go ahead\" ou appuie",
+      "announced": "Superjoy a quelque chose à dire — dis \"Hey Superjoy, go ahead\" ou appuie",
       "speaking": "Lecture en cours — appuie pour répondre",
       "listening": "À l'écoute — appuie pour envoyer",
       "transcribing": "Transcription…"
     },
     "coach": {
-      "idle": "Dis \"Hey Jada…\" pour parler — ou écris ici",
-      "idleWorking": "En cours — dis \"Hey Jada…\" pour réorienter, \"Hey Jada, stop\" pour tout arrêter",
+      "idle": "Dis \"Hey Superjoy…\" pour parler — ou écris ici",
+      "idleWorking": "En cours — dis \"Hey Superjoy…\" pour réorienter, \"Hey Superjoy, stop\" pour tout arrêter",
       "dormant": "Le mode vocal dort — touche le micro pour le réveiller",
-      "goAheadPending": "Superjoy a quelque chose pour toi — dis \"Hey Jada, go ahead\"",
-      "goAheadResult": "Tes résultats sont prêts — dis \"Hey Jada, go ahead\" pour les entendre",
+      "goAheadPending": "Superjoy a quelque chose pour toi — dis \"Hey Superjoy, go ahead\"",
+      "goAheadResult": "Tes résultats sont prêts — dis \"Hey Superjoy, go ahead\" pour les entendre",
       "speaking": "Parle pour interrompre — ou dis \"stop\" pour le silence",
       "listening": "Dis \"send it\" quand tu as fini, \"scratch that\" pour recommencer",
       "listeningDecision": "Dis \"yes\", \"no\", ou donne tes propres instructions",

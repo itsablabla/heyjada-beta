@@ -42,19 +42,19 @@ describe('parseGoAhead', () => {
 
 describe('parseAddressing', () => {
     test('matches the address word with payload extraction', () => {
-        expect(parseAddressing('Jada, also check the logs')).toEqual({ addressed: true, payload: 'also check the logs' });
-        expect(parseAddressing('jada go ahead')).toEqual({ addressed: true, payload: 'go ahead' });
+        expect(parseAddressing('Superjoy, also check the logs')).toEqual({ addressed: true, payload: 'also check the logs' });
+        expect(parseAddressing('superjoy go ahead')).toEqual({ addressed: true, payload: 'go ahead' });
     });
 
     test('allows lead-ins like hey/ok', () => {
-        expect(parseAddressing('Hey Jada, what is pending?')).toEqual({ addressed: true, payload: 'what is pending?' });
-        expect(parseAddressing('Okay Jada')).toEqual({ addressed: true, payload: '' });
+        expect(parseAddressing('Hey Superjoy, what is pending?')).toEqual({ addressed: true, payload: 'what is pending?' });
+        expect(parseAddressing('Okay Superjoy')).toEqual({ addressed: true, payload: '' });
     });
 
     test('tolerates STT mangling of the proper noun', () => {
-        expect(parseAddressing('Jadda, summarize this').addressed).toBe(true);
-        expect(parseAddressing('Jaba check the deploy').addressed).toBe(true);
-        expect(parseAddressing('Ja da, run the report').addressed).toBe(true);
+        expect(parseAddressing('Superjoi, summarize this').addressed).toBe(true);
+        expect(parseAddressing('Superjay check the deploy').addressed).toBe(true);
+        expect(parseAddressing('Super joy, run the report').addressed).toBe(true);
     });
 
     test('rejects unaddressed ambient speech', () => {
@@ -64,7 +64,7 @@ describe('parseAddressing', () => {
     });
 
     test('requires the address word at the start, not mid-sentence', () => {
-        expect(parseAddressing('I told Jada to check it').addressed).toBe(false);
+        expect(parseAddressing('I told Superjoy to check it').addressed).toBe(false);
     });
 });
 
@@ -115,7 +115,7 @@ describe('parseConfirmationIntent (non-question)', () => {
     test('stop-listening requires the whole utterance, not a substring', () => {
         // Hallucinated/ambient sentences containing the phrase must not kill voice.
         for (const s of [
-            'key phrases: jada, over to you, stop listening, cancel that',
+            'key phrases: superjoy, over to you, stop listening, cancel that',
             'you should stop listening to that podcast',
         ]) {
             expect(parseConfirmationIntent(s, opts)).toEqual({ type: 'guidance', text: s });
