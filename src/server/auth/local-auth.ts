@@ -38,6 +38,12 @@ const dummyHashPromise = Bun.password.hash('invalid-password', { algorithm: 'arg
 
 export const localAuth = new Hono();
 
+export function isOtpEmailConfigured(): boolean {
+    const resendApiKey = process.env.RESEND_API_KEY || getBrandedEnv('RESEND_API_KEY');
+    const resendFrom = getBrandedEnv('OTP_FROM');
+    return !!resendApiKey && !!resendFrom;
+}
+
 export async function getLocalAuthStatus(options: { fresh?: boolean } = {}): Promise<{ enabled: boolean; needsSetup: boolean }> {
     const now = Date.now();
     if (!options.fresh && localAuthStatusCache && localAuthStatusCache.expiresAt > now) {
@@ -76,7 +82,8 @@ export function clearLocalSessionCookie(): string {
 }
 
 localAuth.get('/status', async (c) => {
-    return c.json(await getLocalAuthStatus());
+    const status = await getLocalAuthStatus();
+    return c.json({ ...status, otpEmailConfigured: isOtpEmailConfigured() });
 });
 
 localAuth.post('/setup', async (c) => {
@@ -178,14 +185,46 @@ localAuth.post('/login', async (c) => {
 
     const resendApiKey = process.env.RESEND_API_KEY || getBrandedEnv('RESEND_API_KEY');
     const resendFrom = getBrandedEnv('OTP_FROM');
-    if (!resendApiKey || !resendFrom) {
-        return c.json({ error: 'Local login email delivery is not configured' }, 503);
-    }
+    const otpEmailConfigured = !!resendApiKey && !!resendFrom;
 
     try {
         const body = await readJson(c.req.raw);
         const email = normalizeEmail(body.email);
         const password = typeof body.password === 'string' ? body.password : '';
+
+        // Without email delivery configured, OTP codes cannot be sent, so fall
+        // back to password-only login instead of locking the server owner out.
+        if (!otpEmailConfigured) {
+            if (!email || !password) {
+                return c.json({ error: 'Invalid email or password' }, 401);
+            }
+
+            const [user] = await db
+                .select()
+                .from(User)
+                .where(sql`lower(${User.email}) = ${email}`)
+                .limit(1);
+
+            const passwordHash = user?.passwordHash || await dummyHashPromise;
+            const passwordOk = await Bun.password.verify(password, passwordHash);
+            if (!user || !user.passwordHash || !passwordOk) {
+                return c.json({ error: 'Invalid email or password' }, 401);
+            }
+
+            const now = new Date();
+            await db
+                .update(User)
+                .set({ lastLogin: now, updatedAt: now })
+                .where(eq(User.id, user.id));
+
+            const token = signSessionToken({
+                userId: user.id,
+                exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+            });
+            const response = c.json({ success: true, authenticated: true });
+            response.headers.append('Set-Cookie', buildSessionCookie(token, c.req.raw));
+            return response;
+        }
 
         if (!email || !password) {
             return c.json({ message: GENERIC_LOGIN_MESSAGE });
@@ -242,6 +281,9 @@ localAuth.post('/login', async (c) => {
         return c.json({ message: GENERIC_LOGIN_MESSAGE });
     } catch (err) {
         log.error({ err }, 'Local login failed');
+        if (!otpEmailConfigured) {
+            return c.json({ error: 'Login failed. Please try again.' }, 500);
+        }
         return c.json({ message: GENERIC_LOGIN_MESSAGE });
     }
 });

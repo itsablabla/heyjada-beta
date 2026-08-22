@@ -18,12 +18,14 @@ export function LocalLoginPage({ onLoginSuccess }: LocalLoginPageProps) {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [resendCountdown, setResendCountdown] = useState(0);
+    const [otpEmailConfigured, setOtpEmailConfigured] = useState(true);
     const logoUrl = `${getApiBaseUrl()}/icons/pipali_128.png`;
 
     useEffect(() => {
         apiFetch('/api/auth/local/status')
             .then((res) => res.ok ? res.json() : Promise.reject())
-            .then((status: { enabled: boolean; needsSetup: boolean }) => {
+            .then((status: { enabled: boolean; needsSetup: boolean; otpEmailConfigured?: boolean }) => {
+                setOtpEmailConfigured(status.otpEmailConfigured !== false);
                 setMode(status.needsSetup ? 'setup' : 'login');
             })
             .catch(() => {
@@ -87,7 +89,13 @@ export function LocalLoginPage({ onLoginSuccess }: LocalLoginPageProps) {
                     setMode('otp');
                     return;
                 }
-                throw new Error(data.error || 'Unable to request a verification code');
+                throw new Error(data.error || (otpEmailConfigured ? 'Unable to request a verification code' : 'Unable to sign in'));
+            }
+
+            // Password-only login (OTP email delivery not configured on the server)
+            if (data.authenticated) {
+                onLoginSuccess();
+                return;
             }
 
             setMessage(data.message || 'If the credentials are valid, a verification code will be emailed shortly.');
@@ -132,7 +140,9 @@ export function LocalLoginPage({ onLoginSuccess }: LocalLoginPageProps) {
         ? 'Create the first local account for this server.'
         : mode === 'otp'
             ? 'Check your email for a 6-digit code.'
-            : 'Use your local account password to receive an email code.';
+            : otpEmailConfigured
+                ? 'Use your local account password to receive an email code.'
+                : 'Use your local account email and password.';
 
     return (
         <div className="login-page">
@@ -215,7 +225,7 @@ export function LocalLoginPage({ onLoginSuccess }: LocalLoginPageProps) {
                             />
                         </label>
                         <button className="login-btn email" type="submit" disabled={isLoading}>
-                            {isLoading ? <Loader2 size={20} className="spinning" /> : 'Email verification code'}
+                            {isLoading ? <Loader2 size={20} className="spinning" /> : otpEmailConfigured ? 'Email verification code' : 'Sign in'}
                         </button>
                     </form>
                 )}

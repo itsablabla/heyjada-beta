@@ -5,7 +5,7 @@ import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { db, getDefaultChatModel } from '../db';
+import { db, getDefaultChatModel, getDefaultUserRecord } from '../db';
 import { Automation, Conversation, ConversationStep, ConversationFolder } from '../db/schema';
 import { asc, eq, desc, and, inArray, sql } from 'drizzle-orm';
 import { AiModelApi, ChatModel, User, UserChatModel } from '../db/schema';
@@ -14,7 +14,6 @@ import automations from './automations';
 import mcp from './mcp';
 import auth from './auth';
 
-import { getDefaultUser } from '../utils';
 import { atifConversationService } from '../processor/conversation/atif/atif.service';
 import { runResearchToCompletion } from '../processor/research-runner';
 import { getActiveStatus } from '../sessions';
@@ -144,9 +143,9 @@ api.post('/chat', zValidator('json', schema), async (c) => {
     log.info(`Conversation: ${conversationId || 'new'}`);
 
     // Get the user
-    const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const user = await getDefaultUserRecord();
     if (!user) {
-        log.error(`❌ User not found: ${getDefaultUser().email}`);
+        log.error('❌ Default user not found');
         return c.json({ error: 'User not found' }, 404);
     }
     log.info(`User: ${user.email} (id: ${user.id})`);
@@ -227,7 +226,7 @@ api.get('/chat/:conversationId/history', async (c) => {
 
 // Get all conversations for the user (with optional full-text search via ?q=)
 api.get('/conversations', async (c) => {
-    const [adminUser] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const adminUser = await getDefaultUserRecord();
     if (!adminUser) {
         return c.json({ error: 'User not found' }, 404);
     }
@@ -458,11 +457,6 @@ api.put('/conversations/:conversationId/pin', async (c) => {
 });
 
 // --- Conversation folders (organize chat sessions into folders and subfolders) ---
-
-async function getDefaultUserRecord() {
-    const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
-    return user;
-}
 
 // Would moving `folderId` under `newParentId` create a cycle?
 async function wouldCreateFolderCycle(folderId: string, newParentId: string): Promise<boolean> {
@@ -722,7 +716,7 @@ api.get('/models', async (c) => {
 
 // Get user's selected model
 api.get('/user/model', async (c) => {
-    const [adminUser] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const adminUser = await getDefaultUserRecord();
     if (!adminUser) {
         return c.json({ error: 'User not found' }, 404);
     }
@@ -766,7 +760,7 @@ const selectModelSchema = z.object({
 api.put('/user/model', zValidator('json', selectModelSchema), async (c) => {
     const { modelId } = c.req.valid('json');
 
-    const [adminUser] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const adminUser = await getDefaultUserRecord();
     if (!adminUser) {
         return c.json({ error: 'User not found' }, 404);
     }
@@ -866,7 +860,7 @@ api.post('/conversations/import/atif', zValidator('json', importSchema), async (
     const { atifData, title } = c.req.valid('json');
 
     // Get the current user
-    const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const user = await getDefaultUserRecord();
     if (!user) {
         return c.json({ error: 'User not found' }, 404);
     }
