@@ -322,6 +322,10 @@ async function main() {
       log.info(initialLocalAuthStatus.needsSetup
           ? '🔐 Local auth enabled - first-run account setup is required'
           : '🔐 Local auth enabled - browser sessions require username, password, and email OTP');
+      const resendConfigured = !!(process.env.RESEND_API_KEY || getBrandedEnv('RESEND_API_KEY')) && !!getBrandedEnv('OTP_FROM');
+      if (!resendConfigured) {
+          log.warn('⚠️  Local auth is enabled but email delivery is not configured. Set RESEND_API_KEY and SUPERJOY_OTP_FROM, or login OTP emails cannot be sent.');
+      }
   } else if (config.host !== '127.0.0.1' && config.host !== 'localhost') {
       log.warn('⚠️  Server is exposed beyond localhost without local auth. Set SUPERJOY_LOCAL_AUTH=true or SUPERJOY_BASIC_AUTH=true to protect it.');
   }

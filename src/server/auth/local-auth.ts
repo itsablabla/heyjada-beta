@@ -105,6 +105,7 @@ localAuth.post('/setup', async (c) => {
             .where(sql`lower(${User.email}) = ${email}`)
             .limit(1);
 
+        let setupUserId: number;
         if (existingByEmail) {
             await db
                 .update(User)
@@ -118,6 +119,7 @@ localAuth.post('/setup', async (c) => {
                     updatedAt: now,
                 })
                 .where(eq(User.id, existingByEmail.id));
+            setupUserId = existingByEmail.id;
         } else {
             const [firstUser] = await db.select().from(User).orderBy(User.id).limit(1);
             if (firstUser) {
@@ -133,20 +135,36 @@ localAuth.post('/setup', async (c) => {
                         updatedAt: now,
                     })
                     .where(eq(User.id, firstUser.id));
+                setupUserId = firstUser.id;
             } else {
-                await db.insert(User).values({
+                const [createdUser] = await db.insert(User).values({
                     email,
                     username: email,
                     firstName: firstName || undefined,
                     lastName: lastNameParts.join(' ') || undefined,
                     passwordHash,
                     verifiedEmail: true,
-                });
+                }).returning({ id: User.id });
+                if (!createdUser) {
+                    throw new Error('Failed to create local auth user');
+                }
+                setupUserId = createdUser.id;
             }
         }
 
         invalidateLocalAuthStatusCache();
-        return c.json({ success: true });
+
+        // Sign the user in immediately after first-run setup. Setup is only
+        // reachable while no password user exists, so the caller just proved
+        // ownership of this fresh install; requiring an email OTP here would
+        // lock out installs where email delivery is not configured yet.
+        const token = signSessionToken({
+            userId: setupUserId,
+            exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+        });
+        const response = c.json({ success: true, authenticated: true });
+        response.headers.append('Set-Cookie', buildSessionCookie(token, c.req.raw));
+        return response;
     } catch (err) {
         log.error({ err }, 'Local auth setup failed');
         return c.json({ error: 'Failed to complete local auth setup' }, 500);
@@ -210,12 +228,16 @@ localAuth.post('/login', async (c) => {
             attempts: 0,
         });
 
-        await sendOtpEmail({
+        const sent = await sendOtpEmail({
             apiKey: resendApiKey,
             from: resendFrom,
             to: email,
             code,
         });
+
+        if (!sent) {
+            return c.json({ error: 'Failed to send the verification email. Please check the server email configuration and try again.' }, 502);
+        }
 
         return c.json({ message: GENERIC_LOGIN_MESSAGE });
     } catch (err) {
@@ -289,7 +311,7 @@ localAuth.post('/verify-otp', async (c) => {
         });
 
         const response = c.json({ success: true });
-        response.headers.append('Set-Cookie', buildSessionCookie(token, c.req.url));
+        response.headers.append('Set-Cookie', buildSessionCookie(token, c.req.raw));
         return response;
     } catch (err) {
         log.error({ err }, 'Local OTP verification failed');
@@ -329,23 +351,31 @@ function constantTimeEqualHex(left: string, right: string): boolean {
     return timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-async function sendOtpEmail(args: { apiKey: string; from: string; to: string; code: string }): Promise<void> {
-    const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-            Authorization: ['Bearer', args.apiKey].join(' '),
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            from: args.from,
-            to: args.to,
-            subject: 'Your Superjoy verification code',
-            text: `Your Superjoy verification code is ${args.code}. It expires in 10 minutes.`,
-        }),
-    });
+async function sendOtpEmail(args: { apiKey: string; from: string; to: string; code: string }): Promise<boolean> {
+    try {
+        const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                Authorization: ['Bearer', args.apiKey].join(' '),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                from: args.from,
+                to: args.to,
+                subject: 'Your Superjoy verification code',
+                text: `Your Superjoy verification code is ${args.code}. It expires in 10 minutes.`,
+            }),
+        });
 
-    if (!response.ok) {
-        log.error({ status: response.status }, 'Resend OTP email failed');
+        if (!response.ok) {
+            const body = await response.text().catch(() => '');
+            log.error({ status: response.status, body: body.slice(0, 500) }, 'Resend OTP email failed');
+            return false;
+        }
+        return true;
+    } catch (err) {
+        log.error({ err }, 'Resend OTP email request failed');
+        return false;
     }
 }
 
@@ -411,8 +441,10 @@ function constantTimeEqualBase64Url(left: string, right: string): boolean {
     return timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-function buildSessionCookie(token: string, requestUrl: string): string {
-    const secure = new URL(requestUrl).protocol === 'https:' ? '; Secure' : '';
+function buildSessionCookie(token: string, req: Request): string {
+    const forwardedProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+    const proto = forwardedProto || new URL(req.url).protocol.replace(':', '');
+    const secure = proto === 'https' ? '; Secure' : '';
     return `${SESSION_COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_TTL_SECONDS}${secure}`;
 }
 
