@@ -12,7 +12,7 @@
  * - *barge-in* over Superjoy's speech — it takes the floor: playback stops and
  *   a reply turn opens, once the transcript has cleared the self-echo check.
  * - *open* (the session default) — it means nothing unless it starts with the
- *   addressing phrase ("Superjoy, ..."); the rest is ambient and discarded.
+ *   addressing phrase ("Hey Jada, ..."); the rest is ambient and discarded.
  *
  * Engagement is always opened by the user — by addressing Superjoy, by tapping,
  * or by Superjoy speaking: once it has spoken, a short reply invitation accepts a
@@ -25,7 +25,7 @@
  * - `speak_freely`: speaks when it wants — the same chime, then it reads on.
  *    A standing consent for when user is auditorily available.
  * Superjoy can always be interrupted - while it is working or speaking.
- * Modes switch at any moment, decoupled from companion state: spoken ("Superjoy,
+ * Modes switch at any moment, decoupled from companion state: spoken ("Hey Jada,
  * speak freely" / "ask first" / "stop listening") in every parser context, or via UI.
  *
  * Turns use the segmented model: pauses close STT segments, never the turn;
@@ -89,7 +89,7 @@ export interface UseVoiceCompanionParams {
     activeConversationId: string | undefined;
     sendMessage: (text: string, conversationId?: string) => void;
     respondToConfirmation: (conversationId: string, runId: string, requestId: string, optionId: string, guidance?: string) => void;
-    /** Stop in flight run via voice command ("Superjoy, stop"), equivalent of clicking stop button. */
+    /** Stop in flight run via voice command ("Hey Jada, stop"), equivalent of clicking stop button. */
     stopRun?: () => void;
     onError?: (message: string) => void;
     /** Persist a mode change via voice commands. */
@@ -676,7 +676,7 @@ export function useVoiceCompanion(params: UseVoiceCompanionParams) {
             cancelTurn(turn);
         } else {
             // Re-addressing inside a turn is a command, not dictation. Without
-            // this, "Superjoy, stop" spoken over a readout lands in the transcript
+            // this, "Hey Jada, stop" spoken over a readout lands in the transcript
             // of the reply turn that just opened and sits there — it parses as
             // guidance, which is deliberately not decisive, so nothing happens.
             const addr = parseAddressing(turn.transcript.text);
