@@ -53,6 +53,11 @@ export function LocalLoginPage({ onLoginSuccess }: LocalLoginPageProps) {
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || 'Setup failed');
 
+            if (data.authenticated) {
+                onLoginSuccess();
+                return;
+            }
+
             setMessage('Account created. Sign in to receive your verification code.');
             setMode('login');
         } catch (err) {
