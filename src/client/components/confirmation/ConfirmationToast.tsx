@@ -4,8 +4,17 @@ import { useState } from 'react';
 import { ChevronDown, ChevronUp, X, Bot, Clock, Send, MessageCircleQuestion } from 'lucide-react';
 import type { PendingConfirmation } from '../../types/confirmation';
 import { DiffView } from '../tool-views/DiffView';
-import { shortenHomePath, parseMcpToolName, cleanOperationType } from '../../utils/formatting';
-import { getButtonClass, formatTimeRemaining, hasExpandableContent, getMessagePreview, getOperationTypePillClass, HIDDEN_MCP_ARGS, formatArgValue } from './utils';
+import { shortenHomePath, cleanOperationType } from '../../utils/formatting';
+import {
+    formatTimeRemaining,
+    formatArgValue,
+    getApprovalButtonClass,
+    getOperationTypePillClass,
+    getQuestionText,
+    getRiskBadgeClass,
+    getVisibleToolArgs,
+    hasExpandableContent,
+} from './utils';
 import { useTranslation } from 'react-i18next';
 
 interface ConfirmationToastProps {
@@ -33,15 +42,14 @@ export function ConfirmationToast({
 
     // Get structured command info from context (for shell_command operations)
     const commandInfo = request.context?.commandInfo;
-    const isMcpToolCall = request.operation === 'mcp_tool_call';
-    const mcpToolInfo = isMcpToolCall && request.context?.toolName
-        ? parseMcpToolName(request.context.toolName)
-        : null;
     const displayOpType = request.context?.operationType && !isAgentQuestion
         ? cleanOperationType(request.context.operationType)
         : null;
     const expandable = hasExpandableContent(request);
-    const messagePreview = getMessagePreview(request);
+    const detailsId = `toast-confirmation-details-${request.requestId}`;
+    const questionText = getQuestionText(request);
+    const riskLevel = request.context?.riskLevel;
+    const visibleToolArgs = getVisibleToolArgs(request);
 
     // Use all standard options - guidance is now sent independently via the input area
     const displayOptions = request.options;
@@ -99,20 +107,14 @@ export function ConfirmationToast({
                     <div className="toast-title-row">
                         <span className={`toast-title ${isAgentQuestion ? 'agent-question-title' : ''}`}>
                             {isAgentQuestion && <MessageCircleQuestion size={12} className="question-icon" />}
-                            {mcpToolInfo?.friendlyName || t(`confirmation.titles.${request.operation}`, { defaultValue: request.title })}
+                            {questionText}
                         </span>
-                        {isAgentQuestion && <span className="question-badge">{t('confirmation.question')}</span>}
-                        {displayOpType && (
-                            <span className={getOperationTypePillClass(displayOpType)}>
-                                {displayOpType}
+                        {riskLevel && (
+                            <span className={getRiskBadgeClass(riskLevel)}>
+                                {t(`confirmation.risk.${riskLevel}`, { defaultValue: riskLevel })}
                             </span>
                         )}
                     </div>
-
-                    {/* Command reason or message preview (not for MCP — args shown in body) */}
-                    {messagePreview && (
-                        <span className="toast-preview">{messagePreview}</span>
-                    )}
                 </div>
 
                 <div className="toast-controls">
@@ -129,9 +131,18 @@ export function ConfirmationToast({
                         <button
                             className="toast-expand-btn"
                             onClick={() => setIsExpanded(!isExpanded)}
-                            title={isExpanded ? t('confirmation.collapse') : t('confirmation.expand')}
+                            aria-expanded={isExpanded}
+                            aria-controls={detailsId}
+                            title={isExpanded
+                                ? t('confirmation.hideDetails', { defaultValue: 'Hide details' })
+                                : t('confirmation.showDetails', { defaultValue: 'Show details' })}
                         >
                             {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            <span>
+                                {isExpanded
+                                    ? t('confirmation.hideDetails', { defaultValue: 'Hide details' })
+                                    : t('confirmation.showDetails', { defaultValue: 'Show details' })}
+                            </span>
                         </button>
                     )}
 
@@ -148,37 +159,50 @@ export function ConfirmationToast({
 
             {/* Expandable content */}
             {isExpanded && (
-                <div className="toast-body">
-                    {/* Command display */}
-                    {commandInfo?.command && (
-                        <div className="toast-command-section">
-                            <div className="toast-command-header">
-                                <span className="toast-command-label">{t('confirmation.command')}</span>
-                                {commandInfo.workdir && (
-                                    <code className="toast-workdir">
-                                        in {shortenHomePath(commandInfo.workdir)}
-                                    </code>
-                                )}
-                            </div>
-                            <pre className="toast-command-code">
-                                <code>{commandInfo.command}</code>
-                            </pre>
-                        </div>
-                    )}
-
-                    {/* Full message for non-commands */}
-                    {!commandInfo && !isMcpToolCall && request.message && request.message.length > 120 && (
+                <div className="toast-body" id={detailsId}>
+                    {request.message && (
                         <div className="toast-message">{request.message}</div>
                     )}
 
-                    {/* MCP tool args */}
-                    {isMcpToolCall && request.context?.toolArgs && (() => {
-                        const args = Object.entries(request.context!.toolArgs!)
-                            .filter(([k]) => !HIDDEN_MCP_ARGS.has(k));
-                        if (args.length === 0) return null;
-                        return (
+                    <div className="confirmation-detail-row">
+                        <span className="confirmation-detail-label">{t('confirmation.operation', { defaultValue: 'Operation' })}</span>
+                        <code className="confirmation-operation-code">{request.operation}</code>
+                        {displayOpType && (
+                            <span className={getOperationTypePillClass(displayOpType)}>
+                                {displayOpType}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Command display */}
+                    {commandInfo && (
+                        <div className="toast-command-section">
+                            {commandInfo.reason && (
+                                <div className="toast-reason-content">{commandInfo.reason}</div>
+                            )}
+                            {commandInfo.command && (
+                                <>
+                                    <div className="toast-command-header">
+                                        <span className="toast-command-label">{t('confirmation.command')}</span>
+                                        {commandInfo.workdir && (
+                                            <code className="toast-workdir">
+                                                {t('confirmation.in')} {shortenHomePath(commandInfo.workdir)}
+                                            </code>
+                                        )}
+                                    </div>
+                                    <pre className="toast-command-code">
+                                        <code>{commandInfo.command}</code>
+                                    </pre>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {visibleToolArgs.length > 0 && (
+                        <div className="confirmation-detail-section">
+                            <span className="confirmation-detail-label">{t('confirmation.toolArgs', { defaultValue: 'Tool arguments' })}</span>
                             <div className="mcp-args-list">
-                                {args.map(([key, value]) => (
+                                {visibleToolArgs.map(([key, value]) => (
                                     <div key={key} className="mcp-arg-row">
                                         <span className="mcp-arg-key">{key}</span>
                                         <span className="mcp-arg-separator">:</span>
@@ -186,11 +210,22 @@ export function ConfirmationToast({
                                     </div>
                                 ))}
                             </div>
-                        );
-                    })()}
+                        </div>
+                    )}
 
                     {/* Diff view */}
                     {request.diff && <DiffView diff={request.diff} />}
+
+                    {request.context?.affectedFiles && request.context.affectedFiles.length > 0 && (
+                        <div className="confirmation-files">
+                            <span className="files-label">{t('confirmation.affectedFiles')}</span>
+                            <ul className="files-list">
+                                {request.context.affectedFiles.map((file, idx) => (
+                                    <li key={idx} className="file-item">{file}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -199,7 +234,7 @@ export function ConfirmationToast({
                 {displayOptions.map((option) => (
                     <button
                         key={option.id}
-                        className={getButtonClass(option.style)}
+                        className={getApprovalButtonClass(option, request.options, 'toast-btn')}
                         onClick={() => onRespond(key, option.id)}
                         title={option.description}
                     >

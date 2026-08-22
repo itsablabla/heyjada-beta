@@ -1,12 +1,14 @@
 // Settings page component
 
 import React, { useState, useEffect } from 'react';
-import { Save, Loader2, Check, AlertCircle, Shield, User, FolderLock, Headphones } from 'lucide-react';
+import { Save, Loader2, Check, AlertCircle, Shield, User, FolderLock, Headphones, Bell } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../utils/api';
 import { SUPPORTED_LANGUAGES } from '../../i18n';
 import { PathListEditor } from './PathListEditor';
 import { useVoiceSettings } from '../../hooks/useVoiceSettings';
+import { getApprovalPushNotificationSettings, saveApprovalPushNotificationSettings } from '../../utils/notifications';
+import { isTauri } from '../../utils/tauri';
 
 type SettingsTab = 'profile' | 'permissions';
 
@@ -65,6 +67,8 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
 
     // Voice feature flag (beta, per-device). Session mode lives in the chat-input menu.
     const { enabled: voiceFeatureEnabled, setEnabled: setVoiceEnabled } = useVoiceSettings();
+    const [pushSettings, setPushSettings] = useState(getApprovalPushNotificationSettings);
+    const [pushError, setPushError] = useState<string | null>(null);
 
     // Sandbox state
     const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus | null>(null);
@@ -209,6 +213,16 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
             setSandboxConfig(sandboxConfig); // revert
             setSandboxError(e instanceof Error ? e.message : t('settings.failedToSavePermissions'));
         }
+    };
+
+    const handlePushSettingsChange = (updates: Partial<typeof pushSettings>) => {
+        const next = { ...pushSettings, ...updates };
+        setPushSettings(next);
+        setPushError(null);
+        saveApprovalPushNotificationSettings(next).catch((e) => {
+            console.error('Failed to save push notification settings', e);
+            setPushError(e instanceof Error ? e.message : t('settings.failedToSave'));
+        });
     };
 
     if (isLoading) {
@@ -394,6 +408,49 @@ export function SettingsPage({ onUserContextSaved }: SettingsPageProps) {
                             <p className="settings-field-hint">{t('voice.betaHint')}</p>
                             <p className="settings-field-hint">{t('voice.enabledHint')}</p>
                         </div>
+
+                        {!isTauri() && (
+                            <div className="settings-section">
+                                <div className="settings-section-header">
+                                    <div>
+                                        <h3 className="settings-section-title">
+                                            <Bell size={18} />
+                                            {t('settings.pushNotifications')}
+                                        </h3>
+                                        <p className="settings-section-description">
+                                            {t('settings.pushNotificationsDescription')}
+                                        </p>
+                                    </div>
+                                    <label className="toggle-switch">
+                                        <input
+                                            id="approval-push-enabled"
+                                            type="checkbox"
+                                            checked={pushSettings.enabled}
+                                            onChange={(e) => handlePushSettingsChange({ enabled: e.target.checked })}
+                                        />
+                                        <span className="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div className="settings-form">
+                                    <div className="settings-field">
+                                        <label htmlFor="approval-push-delay">{t('settings.pushDelay')}</label>
+                                        <p className="settings-field-hint">{t('settings.pushDelayHint')}</p>
+                                        <input
+                                            id="approval-push-delay"
+                                            type="number"
+                                            min={1}
+                                            max={3600}
+                                            value={pushSettings.delaySeconds}
+                                            disabled={!pushSettings.enabled}
+                                            onChange={(e) => handlePushSettingsChange({
+                                                delaySeconds: Math.min(3600, Math.max(1, Number(e.target.value) || 10)),
+                                            })}
+                                        />
+                                    </div>
+                                    {pushError && <p className="settings-field-hint">{pushError}</p>}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Sandbox toggle */}
                         {sandboxStatus?.supported && <div className="settings-section">

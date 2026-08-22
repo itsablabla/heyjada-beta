@@ -15,6 +15,12 @@ import { useTranslation } from 'react-i18next';
 
 const MAX_VISIBLE_CHATS = 5;
 const EXPANDED_FOLDERS_STORAGE_KEY = 'heyjada.sidebar.expandedFolders.v1';
+// MIME type used to identify conversation drags so foreign drags (files, text) are ignored
+const CONVERSATION_DRAG_MIME = 'application/x-heyjada-conversation';
+// Hovering a collapsed folder while dragging auto-expands it after this delay
+const DRAG_AUTO_EXPAND_DELAY_MS = 600;
+// Sentinel drop target for the unfiled (root) area of the conversation list
+const ROOT_DROP_TARGET = '__root__';
 
 type FolderTreeNode = ConversationFolder & {
     children: FolderTreeNode[];
@@ -146,6 +152,10 @@ export function Sidebar({
     const [gravatarFailed, setGravatarFailed] = useState(false);
     const [showChangelog, setShowChangelog] = useState(false);
     const [changelogNotes, setChangelogNotes] = useState<string | null>(null);
+    // Drag-and-drop state: which conversation is being dragged and which target is hovered
+    const [draggingConversationId, setDraggingConversationId] = useState<string | null>(null);
+    const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+    const dragAutoExpandRef = useRef<{ folderId: string; timer: ReturnType<typeof setTimeout> } | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const { theme, setTheme, isDark } = useTheme();
     const { t } = useTranslation();
@@ -567,6 +577,77 @@ export function Sidebar({
         await onMoveConversationToFolder(conversationId, folderId);
     };
 
+    // ===== Drag-and-drop: move chats into folders =====
+
+    const clearDragAutoExpandTimer = () => {
+        if (dragAutoExpandRef.current) {
+            clearTimeout(dragAutoExpandRef.current.timer);
+            dragAutoExpandRef.current = null;
+        }
+    };
+
+    const handleConversationDragStart = (conv: ConversationSummary, e: React.DragEvent) => {
+        e.dataTransfer.setData(CONVERSATION_DRAG_MIME, conv.id);
+        e.dataTransfer.setData('text/plain', conv.title);
+        e.dataTransfer.effectAllowed = 'move';
+        setDraggingConversationId(conv.id);
+    };
+
+    const handleConversationDragEnd = () => {
+        setDraggingConversationId(null);
+        setDragOverTarget(null);
+        clearDragAutoExpandTimer();
+    };
+
+    const isConversationDrag = (e: React.DragEvent) =>
+        e.dataTransfer.types.includes(CONVERSATION_DRAG_MIME);
+
+    const handleDropTargetDragOver = (target: string, e: React.DragEvent) => {
+        if (!isConversationDrag(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        setDragOverTarget(prev => (prev === target ? prev : target));
+
+        // Auto-expand a collapsed folder after a short hover so nested folders are reachable
+        if (target !== ROOT_DROP_TARGET && !expandedFolders.has(target)) {
+            if (dragAutoExpandRef.current?.folderId !== target) {
+                clearDragAutoExpandTimer();
+                dragAutoExpandRef.current = {
+                    folderId: target,
+                    timer: setTimeout(() => {
+                        setExpandedFolders(prev => new Set(prev).add(target));
+                        dragAutoExpandRef.current = null;
+                    }, DRAG_AUTO_EXPAND_DELAY_MS),
+                };
+            }
+        }
+    };
+
+    const handleDropTargetDragLeave = (target: string, e: React.DragEvent) => {
+        // Ignore dragleave events fired when moving between children of the same target
+        const related = e.relatedTarget as Node | null;
+        if (related && e.currentTarget.contains(related)) return;
+        setDragOverTarget(prev => (prev === target ? null : prev));
+        if (dragAutoExpandRef.current?.folderId === target) {
+            clearDragAutoExpandTimer();
+        }
+    };
+
+    const handleDropTargetDrop = (folderId: string | null, e: React.DragEvent) => {
+        if (!isConversationDrag(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const conversationId = e.dataTransfer.getData(CONVERSATION_DRAG_MIME);
+        setDragOverTarget(null);
+        setDraggingConversationId(null);
+        clearDragAutoExpandTimer();
+        if (!conversationId) return;
+        const conv = conversations.find(c => c.id === conversationId);
+        if (conv && (conv.folderId ?? null) === folderId) return;
+        void moveConversation(conversationId, folderId);
+    };
+
     // Render a conversation item (reused in both sidebar and modal)
     const renderConversationItem = (
         conv: ConversationSummary,
@@ -590,8 +671,11 @@ export function Sidebar({
         return (
             <div
                 key={conv.id}
-                className={`conversation-item ${currentConversationId === conv.id ? 'active' : ''} ${isActive ? 'has-active-task' : ''} ${isSelected ? 'keyboard-selected' : ''} ${className}`}
+                className={`conversation-item ${currentConversationId === conv.id ? 'active' : ''} ${isActive ? 'has-active-task' : ''} ${isSelected ? 'keyboard-selected' : ''} ${draggingConversationId === conv.id ? 'dragging' : ''} ${className}`}
                 style={style}
+                draggable={!inModal && renamingConversationId !== conv.id}
+                onDragStart={(e) => !inModal && handleConversationDragStart(conv, e)}
+                onDragEnd={handleConversationDragEnd}
                 onClick={() => inModal ? handleModalSelectConversation(conv.id) : handleSelectConversation(conv.id)}
                 onMouseEnter={() => inModal && index !== undefined && setSelectedIndex(index)}
                 onKeyDown={(e) => handleConversationKeyDown(conv.id, e)}
@@ -824,9 +908,12 @@ export function Sidebar({
         return (
             <div className="folder-tree-node" key={folder.id}>
                 <div
-                    className="folder-row"
+                    className={`folder-row ${dragOverTarget === folder.id ? 'drag-over' : ''}`}
                     style={{ paddingLeft: 8 + indent }}
                     onClick={() => toggleFolderExpanded(folder.id)}
+                    onDragOver={(e) => handleDropTargetDragOver(folder.id, e)}
+                    onDragLeave={(e) => handleDropTargetDragLeave(folder.id, e)}
+                    onDrop={(e) => handleDropTargetDrop(folder.id, e)}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -898,7 +985,12 @@ export function Sidebar({
                 </div>
 
                 {isExpanded && (
-                    <div className="folder-children">
+                    <div
+                        className="folder-children"
+                        onDragOver={(e) => handleDropTargetDragOver(folder.id, e)}
+                        onDragLeave={(e) => handleDropTargetDragLeave(folder.id, e)}
+                        onDrop={(e) => handleDropTargetDrop(folder.id, e)}
+                    >
                         {folder.children.map(child => renderFolderNode(child, depth + 1))}
                         {folderConversations.map(conv => renderConversationItem(
                             conv,
@@ -1001,7 +1093,12 @@ export function Sidebar({
                     </button>
                 </div>
 
-                <div className="conversations-list">
+                <div
+                    className={`conversations-list ${dragOverTarget === ROOT_DROP_TARGET ? 'drag-over-root' : ''}`}
+                    onDragOver={(e) => handleDropTargetDragOver(ROOT_DROP_TARGET, e)}
+                    onDragLeave={(e) => handleDropTargetDragLeave(ROOT_DROP_TARGET, e)}
+                    onDrop={(e) => handleDropTargetDrop(null, e)}
+                >
                     {pinnedConversations.length > 0 && (
                         <div className="conversation-section">
                             <div className="conversation-section-title">{t('sidebar.pinned', 'Pinned')}</div>

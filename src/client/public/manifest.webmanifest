@@ -1,0 +1,18 @@
+{
+  "name": "Superjoy",
+  "short_name": "Superjoy",
+  "description": "Superjoy — an AI co-worker that can safely interact with files + the web to finish real work.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    { "src": "/icons/superjoy_64.png", "sizes": "64x64", "type": "image/png" },
+    { "src": "/icons/superjoy_128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "/icons/superjoy_256.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "/icons/superjoy_512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/superjoy_1024.png", "sizes": "1024x1024", "type": "image/png" }
+  ]
+}

@@ -191,7 +191,7 @@ test.describe('Confirmation Persistence', () => {
         const taskCard = page.locator(Selectors.taskCard, { hasText: reproQuery });
         await expect(taskCard).toBeVisible({ timeout: 15000 });
 
-        const toast = page.locator(Selectors.confirmationToast, { hasText: reproQuery });
+        const toast = page.locator(Selectors.confirmationToast);
         await expect(toast.first()).toBeVisible({ timeout: 15000 });
 
         // Reload while the run is blocked on confirmation
@@ -200,16 +200,16 @@ test.describe('Confirmation Persistence', () => {
         await homePage.waitForConnection();
 
         // The pending confirmation should be visible again after reload
-        await expect(page.locator(Selectors.confirmationToast, { hasText: reproQuery }).first()).toBeVisible({ timeout: 15000 });
+        await expect(page.locator(Selectors.confirmationToast).first()).toBeVisible({ timeout: 15000 });
 
         // Cleanup: decline so the run finishes
         const noBtn = page
-            .locator(Selectors.confirmationToast, { hasText: reproQuery })
+            .locator(Selectors.confirmationToast)
             .first()
-            .locator('.toast-actions .toast-btn.danger');
+            .locator('.toast-actions .toast-btn:has-text("No")');
         await expect(noBtn).toBeVisible({ timeout: 15000 });
         await noBtn.evaluate((el: HTMLElement) => el.click());
-        await expect(page.locator(Selectors.confirmationToast, { hasText: reproQuery })).toHaveCount(0, { timeout: 15000 });
+        await expect(page.locator(Selectors.confirmationToast)).toHaveCount(0, { timeout: 15000 });
 
         await stopAllActiveRunsFromHome(page);
     });

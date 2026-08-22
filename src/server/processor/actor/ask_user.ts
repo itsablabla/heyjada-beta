@@ -6,7 +6,7 @@
  */
 
 import type { ConfirmationContext } from '../confirmation';
-import { formatConfirmationAttachmentBlock } from '../confirmation';
+import { formatConfirmationAttachmentBlock, requestConfirmationWithPush } from '../confirmation';
 import type {
     ConfirmationOption,
     ConfirmationInputType,
@@ -79,10 +79,13 @@ function createAskUserConfirmation(
     options: ConfirmationOption[],
     inputType: ConfirmationInputType
 ): ConfirmationRequest {
+    const question = (message || title).trim().replace(/\s+/g, ' ');
+
     return {
         requestId: crypto.randomUUID(),
         inputType,
         title,
+        question: question.endsWith('?') ? question : `${question.replace(/[.!?]+$/, '')}?`,
         message,
         operation: 'ask_user',
         context: {
@@ -165,7 +168,7 @@ export async function askUser(
         );
 
         // Request response from user
-        const response = await confirmationContext.requestConfirmation(request);
+        const response = await requestConfirmationWithPush(confirmationContext, request);
         const attachmentBlock = formatConfirmationAttachmentBlock(response.attachments);
 
         // Handle free-form response via guidance field

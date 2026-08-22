@@ -309,13 +309,13 @@ export class ChatPage extends AppPage {
 
         switch (option) {
             case 'yes':
-                await this.confirmationBtnPrimary.click();
+                await this.confirmationDialog.locator(`${Selectors.confirmationButtons}:has-text("Yes")`).first().click();
                 break;
             case 'yes_dont_ask':
-                await this.confirmationBtnSecondary.click();
+                await this.confirmationDialog.locator(`${Selectors.confirmationButtons}:has-text("don't ask")`).click();
                 break;
             case 'no':
-                await this.confirmationBtnDanger.click();
+                await this.confirmationDialog.locator(`${Selectors.confirmationButtons}:has-text("No")`).click();
                 break;
         }
     }

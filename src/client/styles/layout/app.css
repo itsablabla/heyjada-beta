@@ -19,5 +19,7 @@
     height: 100%;
     min-width: 0;
     background: var(--color-bg-elevated);
+    /* Anchor for absolutely-positioned overlays like the new-chat folder prompt */
+    position: relative;
 }
 

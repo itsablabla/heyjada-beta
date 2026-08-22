@@ -29,7 +29,7 @@ import { useFocusManagement, useFileDrop, useModels, useSidecar, useWebSocketCha
 // Utils
 import { setApiBaseUrl, apiFetch } from "./utils/api";
 import { generateUUID, generateDeterministicId, getToolCategory, type ToolCategory } from "./utils/formatting";
-import { initNotifications, notifyConfirmationRequest, notifyTaskComplete, setNotificationClickHandler, setupNotificationClickListener, warmAudioContext } from "./utils/notifications";
+import { initNotifications, notifyConfirmationRequest, notifyTaskComplete, registerApprovalPushNotifications, setNotificationClickHandler, setupNotificationClickListener, warmAudioContext } from "./utils/notifications";
 import { ConversationNavigationContext } from "./hooks/useConversationNavigation";
 import { useVoiceSettings } from "./hooks/useVoiceSettings";
 import { useVoiceCompanion } from "./hooks/useVoiceCompanion";
@@ -37,7 +37,7 @@ import type { VoiceMode } from "./utils/voice/voice-config";
 import { isTauri, onWindowShown, onSidecarReady, listenForDeepLinks } from "./utils/tauri";
 
 // Components
-import { Header, Sidebar, InputArea } from "./components/layout";
+import { Header, Sidebar, InputArea, NewChatFolderPrompt, NEW_CHAT_FOLDER_DONT_ASK_KEY } from "./components/layout";
 import { MessageList } from "./components/messages";
 import { ToastContainer } from "./components/confirmation/ToastContainer";
 import { HomePage } from "./components/home";
@@ -167,6 +167,19 @@ const App = () => {
     // When on home page, observe active conversations so confirmations and live state
     // (e.g., needs_input) can appear without opening the conversation.
     const observedActiveConversationsRef = useRef<Set<string>>(new Set());
+    // Monotonic sequence for conversation list refreshes: websocket events fire
+    // fetchConversations() concurrently, and a stale response resolving after an
+    // optimistic update (e.g. a folder move) would otherwise revert it.
+    const conversationsRequestSeqRef = useRef(0);
+    const conversationsAppliedSeqRef = useRef(0);
+    // Locally-applied folder moves keyed by conversation id. A refetch that
+    // started before the move completed (requestSeq <= seq) must not clobber
+    // the locally-newer folderId; a later refetch is authoritative and clears it.
+    const localFolderMovesRef = useRef<Map<string, { folderId: string | null; seq: number }>>(new Map());
+    // New-chat folder prompt: folder chosen before the conversation exists is
+    // applied once the server reports the created conversation id.
+    const [showNewChatFolderPrompt, setShowNewChatFolderPrompt] = useState(false);
+    const pendingNewChatFolderIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         automationConfirmationsRef.current = automationConfirmations;
@@ -229,6 +242,13 @@ const App = () => {
             }
             // Refresh list so sidebar picks up new conversations quickly.
             fetchConversations();
+
+            // Apply the folder chosen in the new-chat folder prompt (if any).
+            const pendingFolderId = pendingNewChatFolderIdRef.current;
+            if (pendingFolderId && newConversationId) {
+                pendingNewChatFolderIdRef.current = null;
+                void moveConversationToFolder(newConversationId, pendingFolderId);
+            }
 
             // For background tasks, add the user message to the conversation state
             // so it shows up in the task gallery with the correct title.
@@ -489,7 +509,7 @@ const App = () => {
 
     // Initialize native OS notifications and register click handler
     useEffect(() => {
-        initNotifications();
+        void initNotifications().then(() => registerApprovalPushNotifications());
 
         // Register click handler for web notifications (navigates to conversation)
         // This handler is also used by the focus navigation listener for Tauri notifications
@@ -754,11 +774,34 @@ const App = () => {
 
     const fetchConversations = async () => {
         try {
+            const requestSeq = ++conversationsRequestSeqRef.current;
             const modelSeqAtRequest = new Map(conversationModelChangeSeq.current);
             const res = await apiFetch('/api/conversations');
             if (res.ok) {
+                // Discard stale responses that resolve after a newer refetch already applied.
+                if (requestSeq < conversationsAppliedSeqRef.current) return;
+                conversationsAppliedSeqRef.current = requestSeq;
+
                 const data = await res.json();
-                const nextConversations = data.conversations as ConversationSummary[];
+                let nextConversations = data.conversations as ConversationSummary[];
+
+                // Merge locally-newer folder moves: a request started before the move
+                // completed may carry the old folderId, so keep the local one until a
+                // refetch that started after the move confirms (or supersedes) it.
+                if (localFolderMovesRef.current.size > 0) {
+                    nextConversations = nextConversations.map(conversation => {
+                        const move = localFolderMovesRef.current.get(conversation.id);
+                        if (!move) return conversation;
+                        if (requestSeq > move.seq) {
+                            // This refetch started after the server acknowledged the
+                            // move; its data is authoritative, so drop the override.
+                            localFolderMovesRef.current.delete(conversation.id);
+                            return conversation;
+                        }
+                        return { ...conversation, folderId: move.folderId };
+                    });
+                }
+
                 for (const conversation of nextConversations) {
                     cacheConversationModelFromServer(
                         conversation.id,
@@ -1327,6 +1370,8 @@ const App = () => {
 
     const selectConversation = (id: string, highlightTerm?: string) => {
         setCurrentPage('chat');
+        setShowNewChatFolderPrompt(false);
+        pendingNewChatFolderIdRef.current = null;
         if (conversationId) {
             syncConversationState(conversationId, messages);
         }
@@ -1348,10 +1393,35 @@ const App = () => {
         conversationIdRef.current = undefined;
         awaitingConversationIdRef.current = false;
         pendingNewConversationMessagesRef.current = [];
+        pendingNewChatFolderIdRef.current = null;
+
+        // Offer to file the new chat into a folder (dismissible, never blocks sending)
+        let dontAsk = false;
+        try {
+            dontAsk = localStorage.getItem(NEW_CHAT_FOLDER_DONT_ASK_KEY) === 'true';
+        } catch { /* storage unavailable */ }
+        setShowNewChatFolderPrompt(!dontAsk);
 
         setCurrentPage('chat');
         clearConversation();
         syncSelectedModelForConversation(undefined);
+    };
+
+    const handleNewChatFolderPick = (folderId: string | null) => {
+        setShowNewChatFolderPrompt(false);
+        if (!folderId) return;
+        if (conversationIdRef.current) {
+            // Conversation already exists (user sent a message first) — move it now.
+            void moveConversationToFolder(conversationIdRef.current, folderId);
+        } else {
+            // Applied when the server reports the created conversation id.
+            pendingNewChatFolderIdRef.current = folderId;
+        }
+    };
+
+    const handleNewChatFolderSkip = () => {
+        setShowNewChatFolderPrompt(false);
+        pendingNewChatFolderIdRef.current = null;
     };
 
     const renameConversation = async (id: string, title: string): Promise<boolean> => {
@@ -1447,6 +1517,12 @@ const App = () => {
                 body: JSON.stringify({ folderId }),
             });
             if (res.ok) {
+                // Record the move so in-flight refetches (fired by websocket events)
+                // that started before the server acknowledged it cannot revert it.
+                localFolderMovesRef.current.set(conversationId, {
+                    folderId,
+                    seq: conversationsRequestSeqRef.current,
+                });
                 setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, folderId } : c));
                 await fetchConversations();
                 return true;
@@ -1891,6 +1967,14 @@ const App = () => {
                     )}
                     {currentPage === 'chat' && (
                         <ErrorBoundary>
+                            {showNewChatFolderPrompt && !conversationId && (
+                                <NewChatFolderPrompt
+                                    folders={folders}
+                                    onPick={handleNewChatFolderPick}
+                                    onSkip={handleNewChatFolderSkip}
+                                    onFoldersChanged={fetchFolders}
+                                />
+                            )}
                             <MessageList messages={messages} conversationId={conversationId} platformFrontendUrl={platformFrontendUrl} onDeleteMessage={deleteMessage} onBillingContinue={handleBillingContinue} onBillingDismiss={handleBillingDismiss} onAuthSignIn={handleAuthSignIn} onAuthDismiss={handleAuthDismiss} onRunErrorDismiss={handleRunErrorDismiss} userFirstName={userName?.split(' ')[0] ?? authStatus?.user?.name?.split(' ')[0]} hasInput={input.trim().length > 0} isProcessing={isProcessing} />
                         </ErrorBoundary>
                     )}

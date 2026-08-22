@@ -41,11 +41,18 @@ export function ExternalLink({ href, children, node: _node, ...props }: External
             return;
         }
 
-        // Handle external links (http/https) - open in browser
+        // Handle external links (http/https)
         if (isHttpHref && href) {
-            e.preventDefault();
+            if (inTauri) {
+                // Tauri: open in the system browser via the shell-open/opener API
+                e.preventDefault();
+                e.stopPropagation();
+                void openInBrowser(href);
+                return;
+            }
+            // Web: let the browser handle it via target="_blank" so the app
+            // never navigates away from the running conversation.
             e.stopPropagation();
-            void openInBrowser(href);
             return;
         }
         // Let other links (like anchors) work normally
@@ -56,8 +63,13 @@ export function ExternalLink({ href, children, node: _node, ...props }: External
         ? { ...props, title: props.title || 'Open with default application' }
         : props;
 
+    // External links always open in a new tab and never carry an opener reference
+    const externalProps = isHttpHref
+        ? { target: '_blank', rel: 'noopener noreferrer' }
+        : {};
+
     return (
-        <a {...linkProps} href={href} onMouseDown={handleMouseDown} onClick={handleClick}>
+        <a {...linkProps} {...externalProps} href={href} onMouseDown={handleMouseDown} onClick={handleClick}>
             {children}
         </a>
     );

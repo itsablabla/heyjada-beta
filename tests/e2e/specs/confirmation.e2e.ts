@@ -56,11 +56,12 @@ test.describe('Confirmation Dialogs', () => {
         // Dialog should be visible
         await expect(chatPage.confirmationDialog).toBeVisible();
 
-        // Should have primary (Yes) and danger (No) buttons
+        // Should have primary (Yes) and secondary (No) buttons
         await expect(chatPage.confirmationBtnPrimary).toBeVisible();
-        await expect(chatPage.confirmationBtnDanger).toBeVisible();
+        await expect(chatPage.confirmationDialog.locator(`${Selectors.confirmationButtons}:has-text("No")`)).toBeVisible();
 
         // Operation type pill should show read-only
+        await chatPage.confirmationDialog.locator(Selectors.confirmationDetailsToggle).click();
         const operationPill = chatPage.confirmationDialog.locator(Selectors.operationTypePill);
         if (await operationPill.isVisible()) {
             const pillText = await operationPill.textContent();
@@ -105,7 +106,7 @@ test.describe('Confirmation Dialogs', () => {
         await homePage.waitForTaskWithTitle(query);
 
         // Wait for confirmation toast to appear (background tasks show toast instead of dialog)
-        const confirmationToast = page.locator(Selectors.confirmationToast, { hasText: query });
+        const confirmationToast = page.locator(Selectors.confirmationToast);
 
         // Toast might appear - check after a delay
         await expect(confirmationToast.first()).toBeVisible({ timeout: 15000 });
@@ -115,7 +116,7 @@ test.describe('Confirmation Dialogs', () => {
         expect(await toastButtons.count()).toBeGreaterThan(0);
 
         // Cleanup: decline so we don't leave a needs_input run around for later tests.
-        const noBtn = confirmationToast.first().locator('.toast-actions .toast-btn.danger');
+        const noBtn = confirmationToast.first().locator('.toast-actions .toast-btn:has-text("No")');
         await expect(noBtn).toBeVisible({ timeout: 15000 });
         await noBtn.evaluate((el: HTMLElement) => el.click());
         await expect(confirmationToast).toHaveCount(0, { timeout: 15000 });
@@ -171,6 +172,7 @@ test.describe('Confirmation Dialogs', () => {
 
         // For read-write commands, there should be warning styling
         // The operation type pill should indicate write
+        await chatPage.confirmationDialog.locator(Selectors.confirmationDetailsToggle).click();
         const operationPill = chatPage.confirmationDialog.locator(Selectors.operationTypePill);
         if (await operationPill.isVisible()) {
             const pillText = await operationPill.textContent();

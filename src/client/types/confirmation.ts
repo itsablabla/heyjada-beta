@@ -25,6 +25,7 @@ export type ConfirmationRequest = {
     requestId: string;
     inputType: 'choice' | 'multi_select' | 'number_range' | 'text_input';
     title: string;
+    question?: string;
     message?: string;
     operation: string;
     context?: {

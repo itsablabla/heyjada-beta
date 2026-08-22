@@ -237,6 +237,15 @@
     }
   },
   "confirmation": {
+    "showDetails": "Details anzeigen",
+    "hideDetails": "Details ausblenden",
+    "operation": "Vorgang",
+    "toolArgs": "Tool-Argumente",
+    "risk": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch"
+    },
     "titles": {
       "edit_file": "Dateibearbeitung bestätigen",
       "write_file": "Dateischreiben bestätigen",
@@ -330,6 +339,10 @@
     "failedToSave": "Einstellungen konnten nicht gespeichert werden",
     "sandbox": "Sandbox",
     "sandboxDescription": "Wenn aktiviert, laufen Shell-Befehle in einer vom Betriebssystem erzwungenen Sandbox ohne Bestätigung.",
+    "pushNotifications": "Push-Benachrichtigungen bei erforderlicher Genehmigung",
+    "pushNotificationsDescription": "Diesen Browser benachrichtigen, wenn Superjoy nach Ablauf der Verzögerung noch auf deine Genehmigung wartet.",
+    "pushDelay": "Verzögerungsschwelle (Sekunden)",
+    "pushDelayHint": "Standard ist 10 Sekunden. Superjoy sendet keine Push-Nachricht, wenn du vor Ablauf der Verzögerung antwortest.",
     "filePermissions": "Dateiberechtigungen",
     "filePermissionsDescription": "Lege fest, welche Dateien und Ordner Superjoy ohne Nachfrage lesen oder schreiben darf.",
     "allowedWriteDirectories": "Erlaubte Schreibverzeichnisse",

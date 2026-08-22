@@ -1,10 +1,12 @@
 import path from 'path';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { serveStatic } from 'hono/bun'
 import {
     EMBEDDED_INDEX_HTML,
     EMBEDDED_STYLES_CSS,
     EMBEDDED_APP_JS,
+    EMBEDDED_WEB_MANIFEST,
+    EMBEDDED_SERVICE_WORKER_JS,
     EMBEDDED_ICONS,
     EMBEDDED_BRAND,
     IS_COMPILED_BINARY,
@@ -12,30 +14,27 @@ import {
 
 const app = new Hono();
 
-// Web App manifest — lets the UI be installed as a PWA when served from a
-// (remote) server. Served from a constant so it works in both dev and
-// compiled-binary modes without touching the asset embedding pipeline.
-const WEB_APP_MANIFEST = {
-    name: 'Superjoy',
-    short_name: 'Superjoy',
-    description: 'Superjoy — an AI co-worker that can safely interact with files + the web to finish real work.',
-    id: '/',
-    start_url: '/',
-    scope: '/',
-    display: 'standalone',
-    background_color: '#1a1a1a',
-    theme_color: '#1a1a1a',
-    icons: [
-        { src: '/icons/superjoy_64.png', sizes: '64x64', type: 'image/png' },
-        { src: '/icons/superjoy_128.png', sizes: '128x128', type: 'image/png' },
-        { src: '/icons/superjoy_256.png', sizes: '256x256', type: 'image/png' },
-        { src: '/icons/superjoy_512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-    ],
-};
+const clientRoot = process.env.PIPALI_SERVER_RESOURCE_DIR
+    ? path.join(process.env.PIPALI_SERVER_RESOURCE_DIR, 'src', 'client')
+    : './src/client';
 
-app.get('/manifest.webmanifest', (c) => {
-    return c.body(JSON.stringify(WEB_APP_MANIFEST), 200, {
+app.get('/manifest.webmanifest', async (c) => {
+    const manifest = IS_COMPILED_BINARY
+        ? EMBEDDED_WEB_MANIFEST
+        : await Bun.file(path.join(clientRoot, 'public', 'manifest.webmanifest')).text();
+    return c.body(manifest, 200, {
         'Content-Type': 'application/manifest+json',
+    });
+});
+
+app.get('/sw.js', async (c: Context) => {
+    const serviceWorker = IS_COMPILED_BINARY
+        ? EMBEDDED_SERVICE_WORKER_JS
+        : await Bun.file(path.join(clientRoot, 'public', 'sw.js')).text();
+    return c.body(serviceWorker, 200, {
+        'Content-Type': 'application/javascript; charset=utf-8',
+        'Service-Worker-Allowed': '/',
+        'Cache-Control': 'no-cache',
     });
 });
 
@@ -91,9 +90,6 @@ if (IS_COMPILED_BINARY) {
         return c.html(EMBEDDED_INDEX_HTML);
     });
 } else {
-    const clientRoot = process.env.PIPALI_SERVER_RESOURCE_DIR
-        ? path.join(process.env.PIPALI_SERVER_RESOURCE_DIR, 'src', 'client')
-        : './src/client';
     // Development mode - serve from disk
     app.get('/', serveStatic({ path: path.join(clientRoot, 'index.html') }));
     // Serve public assets (icons, etc.)

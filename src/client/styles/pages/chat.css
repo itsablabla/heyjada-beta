@@ -19,3 +19,141 @@
     width: 100%;
 }
 
+
+/* ===== New-chat folder prompt ===== */
+
+.new-chat-folder-prompt {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 30;
+    width: 280px;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.new-chat-folder-prompt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.new-chat-folder-prompt-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.new-chat-folder-prompt-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    padding: 2px;
+    border-radius: 4px;
+}
+
+.new-chat-folder-prompt-close:hover {
+    background: var(--color-bg-muted);
+    color: var(--color-text);
+}
+
+.new-chat-folder-prompt-options {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.new-chat-folder-prompt-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-text);
+    text-align: left;
+    width: 100%;
+}
+
+.new-chat-folder-prompt-option:hover,
+.new-chat-folder-prompt-option:focus-visible {
+    background: var(--color-bg-muted);
+}
+
+.new-chat-folder-prompt-create {
+    display: flex;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+.new-chat-folder-prompt-create input {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 8px;
+    font-size: 13px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+.new-chat-folder-prompt-create button {
+    padding: 5px 10px;
+    font-size: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg-muted);
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.new-chat-folder-prompt-create button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.new-chat-folder-prompt-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-top: 1px solid var(--color-border-subtle);
+    padding-top: 8px;
+}
+
+.new-chat-folder-prompt-dont-ask {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.new-chat-folder-prompt-skip {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.new-chat-folder-prompt-skip:hover {
+    background: var(--color-bg-muted);
+    color: var(--color-text);
+}

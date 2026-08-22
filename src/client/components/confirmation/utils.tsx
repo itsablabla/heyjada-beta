@@ -18,6 +18,42 @@ export function getButtonClass(style?: ConfirmationOption['style']): string {
     }
 }
 
+export function isStandardApprovalOptions(options: ConfirmationOption[]): boolean {
+    const ids = options.map(option => option.id).sort().join(',');
+    return ids === 'no,yes' || ids === 'no,yes,yes_dont_ask';
+}
+
+export function getApprovalButtonClass(
+    option: ConfirmationOption,
+    options: ConfirmationOption[],
+    baseClass: 'confirmation-btn' | 'toast-btn'
+): string {
+    if (isStandardApprovalOptions(options)) {
+        if (option.id === 'yes') return `${baseClass} primary`;
+        return `${baseClass} secondary`;
+    }
+
+    switch (option.style) {
+        case 'primary': return `${baseClass} primary`;
+        case 'danger': return `${baseClass} danger`;
+        case 'warning': return `${baseClass} warning`;
+        default: return `${baseClass} secondary`;
+    }
+}
+
+export function getQuestionText(request: ConfirmationRequest): string {
+    return request.question || request.title;
+}
+
+export function getRiskBadgeClass(riskLevel?: NonNullable<ConfirmationRequest['context']>['riskLevel']): string {
+    return `risk-badge ${riskLevel || 'low'}`;
+}
+
+export function getVisibleToolArgs(request: ConfirmationRequest): [string, unknown][] {
+    return Object.entries(request.context?.toolArgs || {})
+        .filter(([key]) => !HIDDEN_MCP_ARGS.has(key));
+}
+
 /**
  * Format time remaining until expiration
  */
@@ -38,13 +74,20 @@ export function formatTimeRemaining(expiresAt: string): string {
 }
 
 /**
- * Check if request has expandable content (command, diff, or long message)
+ * Check if request has details worth putting behind the expander.
  */
 export function hasExpandableContent(request: ConfirmationRequest): boolean {
     const commandInfo = request.context?.commandInfo;
-    const hasMcpArgs = request.operation === 'mcp_tool_call' && request.context?.toolArgs
-        && Object.keys(request.context.toolArgs).filter(k => !HIDDEN_MCP_ARGS.has(k)).length > 0;
-    return !!(commandInfo?.command || request.diff || hasMcpArgs || (request.message && request.message.length > 120));
+    const hasToolArgs = getVisibleToolArgs(request).length > 0;
+    const hasAffectedFiles = !!request.context?.affectedFiles?.length;
+    return !!(
+        commandInfo?.command ||
+        commandInfo?.reason ||
+        request.diff ||
+        hasToolArgs ||
+        hasAffectedFiles ||
+        request.message
+    );
 }
 
 /**

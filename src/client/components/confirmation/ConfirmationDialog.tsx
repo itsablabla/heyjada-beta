@@ -2,12 +2,20 @@
 // Compact inline dialog for user confirmation of operations and agent questions.
 // Renders above the chat input. The chat textarea doubles as guidance input.
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageCircleQuestion } from 'lucide-react';
-import type { ConfirmationRequest, ConfirmationOption } from '../../types';
+import type { ConfirmationRequest } from '../../types';
 import { DiffView } from '../tool-views/DiffView';
-import { shortenHomePath, parseMcpToolName, cleanOperationType } from '../../utils/formatting';
-import { getOperationTypePillClass, HIDDEN_MCP_ARGS, formatArgValue } from './utils';
+import { shortenHomePath, cleanOperationType } from '../../utils/formatting';
+import {
+    getApprovalButtonClass,
+    getOperationTypePillClass,
+    getQuestionText,
+    getRiskBadgeClass,
+    getVisibleToolArgs,
+    hasExpandableContent,
+    formatArgValue,
+} from './utils';
 
 import { ALT_KEY } from '../../utils/platform';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +27,7 @@ interface ConfirmationDialogProps {
 
 export function ConfirmationDialog({ request, onRespond }: ConfirmationDialogProps) {
     const { t } = useTranslation();
+    const [showDetails, setShowDetails] = useState(false);
     const isAgentQuestion = request.operation === 'ask_user';
 
     // Handle keyboard shortcuts (Alt+1, Alt+2, etc. to select options)
@@ -40,73 +49,74 @@ export function ConfirmationDialog({ request, onRespond }: ConfirmationDialogPro
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [request.options, onRespond]);
 
-    // Get button style class
-    const getButtonClass = (option: ConfirmationOption): string => {
-        const baseClass = 'confirmation-btn';
-        switch (option.style) {
-            case 'primary': return `${baseClass} primary`;
-            case 'danger': return `${baseClass} danger`;
-            case 'warning': return `${baseClass} warning`;
-            default: return `${baseClass} secondary`;
-        }
-    };
-
     // Get structured command info from context
     const commandInfo = request.context?.commandInfo;
 
-    // MCP tool call detection
-    const isMcpToolCall = request.operation === 'mcp_tool_call';
-    const mcpToolInfo = isMcpToolCall && request.context?.toolName
-        ? parseMcpToolName(request.context.toolName)
-        : null;
-    const mcpToolArgs = isMcpToolCall ? request.context?.toolArgs : null;
-    const filteredMcpArgs = mcpToolArgs
-        ? Object.entries(mcpToolArgs).filter(([k]) => !HIDDEN_MCP_ARGS.has(k))
-        : null;
+    const visibleToolArgs = getVisibleToolArgs(request);
+    const hasDetails = hasExpandableContent(request);
+    const detailsId = `confirmation-details-${request.requestId}`;
+    const questionText = getQuestionText(request);
     const displayOpType = request.context?.operationType && !isAgentQuestion
         ? cleanOperationType(request.context.operationType)
         : null;
+    const riskLevel = request.context?.riskLevel;
 
     return (
         <div className="confirmation-container">
             <div className={`confirmation-dialog ${isAgentQuestion ? 'agent-question' : ''}`}>
-                {/* Header: title + badges, compact single row */}
+                {/* Header: question + risk badge, compact single row */}
                 <div className="confirmation-header">
                     <h3 className={`confirmation-title ${isAgentQuestion ? 'agent-question-title' : ''}`}>
                         {isAgentQuestion && <MessageCircleQuestion size={14} className="question-icon" />}
-                        {mcpToolInfo?.friendlyName || t(`confirmation.titles.${request.operation}`, { defaultValue: request.title })}
+                        {questionText}
                     </h3>
                     <div className="confirmation-badges">
-                        {isAgentQuestion && (
-                            <span className="question-badge">{t('confirmation.question')}</span>
-                        )}
-                        {displayOpType && (
-                            <span className={getOperationTypePillClass(displayOpType)}>
-                                {displayOpType}
+                        {riskLevel && (
+                            <span className={getRiskBadgeClass(riskLevel)}>
+                                {t(`confirmation.risk.${riskLevel}`, { defaultValue: riskLevel })}
                             </span>
                         )}
                     </div>
                 </div>
 
-                {/* Body: content area with max-height cap. Hidden when empty (e.g. MCP tool with no args) */}
-                {(
-                    (isMcpToolCall && filteredMcpArgs && filteredMcpArgs.length > 0) ||
-                    (!isMcpToolCall && (commandInfo || request.message || request.diff ||
-                        (request.context?.affectedFiles && request.context.affectedFiles.length > 0)))
-                ) && (
-                    <div className="confirmation-body">
-                        {/* MCP tool call view — args only, title already shows tool name */}
-                        {isMcpToolCall && filteredMcpArgs && filteredMcpArgs.length > 0 ? (
-                            <div className="mcp-args-list">
-                                {filteredMcpArgs.map(([key, value]) => (
-                                    <div key={key} className="mcp-arg-row">
-                                        <span className="mcp-arg-key">{key}</span>
-                                        <span className="mcp-arg-separator">:</span>
-                                        {formatArgValue(value)}
-                                    </div>
+                {hasDetails && (
+                    <div className="confirmation-details-toggle-row">
+                        <button
+                            type="button"
+                            className="confirmation-details-toggle"
+                            aria-expanded={showDetails}
+                            aria-controls={detailsId}
+                            onClick={() => setShowDetails(!showDetails)}
+                        >
+                            {showDetails
+                                ? t('confirmation.hideDetails', { defaultValue: 'Hide details' })
+                                : t('confirmation.showDetails', { defaultValue: 'Show details' })}
+                        </button>
+                    </div>
+                )}
+
+                {/* Details stay collapsed by default so raw command text, args, and diffs are hidden. */}
+                {showDetails && hasDetails && (
+                    <div className="confirmation-body confirmation-details" id={detailsId}>
+                        {request.message && (
+                            <div className="confirmation-message">
+                                {request.message.split('\n').map((line, idx) => (
+                                    <p key={idx}>{line || <br />}</p>
                                 ))}
                             </div>
-                        ) : commandInfo ? (
+                        )}
+
+                        <div className="confirmation-detail-row">
+                            <span className="confirmation-detail-label">{t('confirmation.operation', { defaultValue: 'Operation' })}</span>
+                            <code className="confirmation-operation-code">{request.operation}</code>
+                            {displayOpType && (
+                                <span className={getOperationTypePillClass(displayOpType)}>
+                                    {displayOpType}
+                                </span>
+                            )}
+                        </div>
+
+                        {commandInfo && (
                             <div className="command-confirmation">
                                 {commandInfo.reason && (
                                     <div className="command-section">
@@ -129,19 +139,27 @@ export function ConfirmationDialog({ request, onRespond }: ConfirmationDialogPro
                                     </div>
                                 )}
                             </div>
-                        ) : request.message ? (
-                            <div className="confirmation-message">
-                                {request.message.split('\n').map((line, idx) => (
-                                    <p key={idx}>{line || <br />}</p>
+                        )}
+
+                        {visibleToolArgs.length > 0 && (
+                            <div className="confirmation-detail-section">
+                                <span className="confirmation-detail-label">{t('confirmation.toolArgs', { defaultValue: 'Tool arguments' })}</span>
+                                <div className="mcp-args-list">
+                                    {visibleToolArgs.map(([key, value]) => (
+                                    <div key={key} className="mcp-arg-row">
+                                        <span className="mcp-arg-key">{key}</span>
+                                        <span className="mcp-arg-separator">:</span>
+                                        {formatArgValue(value)}
+                                    </div>
                                 ))}
+                                </div>
                             </div>
-                        ) : null}
+                        )}
 
                         {/* Diff view for edits/writes */}
                         {request.diff && <DiffView diff={request.diff} />}
 
-                        {/* Affected files fallback */}
-                        {!request.diff && !request.message && !commandInfo && request.context?.affectedFiles && request.context.affectedFiles.length > 0 && (
+                        {request.context?.affectedFiles && request.context.affectedFiles.length > 0 && (
                             <div className="confirmation-files">
                                 <span className="files-label">{t('confirmation.affectedFiles')}</span>
                                 <ul className="files-list">
@@ -159,7 +177,7 @@ export function ConfirmationDialog({ request, onRespond }: ConfirmationDialogPro
                     {request.options.map((option, index) => (
                         <button
                             key={option.id}
-                            className={getButtonClass(option)}
+                            className={getApprovalButtonClass(option, request.options, 'confirmation-btn')}
                             onClick={() => onRespond(option.id)}
                             title={`${option.description || option.label} (${ALT_KEY}${index + 1})`}
                         >
