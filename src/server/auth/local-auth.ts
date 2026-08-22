@@ -34,9 +34,20 @@ const rateLimits = new Map<string, RateLimitBucket>();
 let lastRateLimitPrune = 0;
 let sessionSecret: Buffer | null = null;
 let localAuthStatusCache: { value: { enabled: boolean; needsSetup: boolean }; expiresAt: number } | null = null;
+let localAuthDefaultEnabled = false;
 const dummyHashPromise = Bun.password.hash('invalid-password', { algorithm: 'argon2id' });
 
 export const localAuth = new Hono();
+
+/**
+ * Enable local auth by default (unless explicitly disabled via
+ * SUPERJOY_LOCAL_AUTH=false). Called at startup for fresh deployments exposed
+ * beyond localhost so the first user can register their email and password.
+ */
+export function setLocalAuthDefaultEnabled(enabled: boolean): void {
+    localAuthDefaultEnabled = enabled;
+    invalidateLocalAuthStatusCache();
+}
 
 export function isOtpEmailConfigured(): boolean {
     const resendApiKey = process.env.RESEND_API_KEY || getBrandedEnv('RESEND_API_KEY');
@@ -57,11 +68,16 @@ export async function getLocalAuthStatus(options: { fresh?: boolean } = {}): Pro
         .limit(1);
 
     const hasPasswordUser = !!passwordUser;
-    const forcedEnabled = getBrandedEnv('LOCAL_AUTH') === 'true';
+    const localAuthEnv = getBrandedEnv('LOCAL_AUTH');
+    const forcedEnabled = localAuthEnv === 'true';
+    const explicitlyDisabled = localAuthEnv === 'false';
+    const enabled = hasPasswordUser
+        || forcedEnabled
+        || (localAuthDefaultEnabled && !explicitlyDisabled);
 
     const value = {
-        enabled: hasPasswordUser || forcedEnabled,
-        needsSetup: !hasPasswordUser && forcedEnabled,
+        enabled,
+        needsSetup: !hasPasswordUser && enabled,
     };
     localAuthStatusCache = { value, expiresAt: now + LOCAL_AUTH_STATUS_TTL_MS };
     return value;

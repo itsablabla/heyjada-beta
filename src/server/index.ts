@@ -23,7 +23,7 @@ import { killAllBackgroundProcesses } from './events/background-processes';
 import { initPlatformTransport, shutdownPlatformTransport } from './telemetry/platform-transport';
 import { setServer } from './server-instance';
 import { getBrandedEnv } from './env';
-import { getLocalAuthStatus, isOtpEmailConfigured, verifyLocalSessionFromRequest } from './auth/local-auth';
+import { getLocalAuthStatus, isOtpEmailConfigured, setLocalAuthDefaultEnabled, verifyLocalSessionFromRequest } from './auth/local-auth';
 import { timingSafeEqual } from 'node:crypto';
 
 const log = createChildLogger({ component: 'server' });
@@ -84,6 +84,7 @@ Options:
       --auth-password <p>  Password for HTTP Basic Auth (env: SUPERJOY_AUTH_PASSWORD)
                             Basic Auth is only active when SUPERJOY_BASIC_AUTH=true
                             Local username/password + email OTP is enabled by SUPERJOY_LOCAL_AUTH=true
+                            (enabled automatically when the host is not localhost; SUPERJOY_LOCAL_AUTH=false opts out)
       --help               Show this help message
 
 Deprecated: HEYJADA_* environment variables still work as fallbacks but emit a warning.
@@ -317,6 +318,15 @@ async function main() {
       log.warn('⚠️  SUPERJOY_BASIC_AUTH=true was set, but Basic Auth credentials are missing.');
   }
 
+  // When the server is deployed beyond localhost, enable local auth by default
+  // so the first-run setup screen lets the user register their email and
+  // password. Desktop/localhost installs keep using platform auth, and
+  // SUPERJOY_LOCAL_AUTH=false opts out for exposed deployments.
+  const isExposedHost = config.host !== '127.0.0.1' && config.host !== 'localhost';
+  if (isExposedHost && !basicAuthEnabled) {
+      setLocalAuthDefaultEnabled(true);
+  }
+
   const initialLocalAuthStatus = await getLocalAuthStatus();
   if (initialLocalAuthStatus.enabled) {
       const resendConfigured = isOtpEmailConfigured();
@@ -328,8 +338,8 @@ async function main() {
       if (!resendConfigured) {
           log.warn('⚠️  Local auth email delivery is not configured, so login falls back to password-only (no email OTP). Set RESEND_API_KEY and SUPERJOY_OTP_FROM to enable OTP codes.');
       }
-  } else if (config.host !== '127.0.0.1' && config.host !== 'localhost') {
-      log.warn('⚠️  Server is exposed beyond localhost without local auth. Set SUPERJOY_LOCAL_AUTH=true or SUPERJOY_BASIC_AUTH=true to protect it.');
+  } else if (isExposedHost && !basicAuthEnabled) {
+      log.warn('⚠️  Server is exposed beyond localhost without local auth. Unset SUPERJOY_LOCAL_AUTH=false or set SUPERJOY_BASIC_AUTH=true to protect it.');
   }
 
   const server = Bun.serve<WebSocketData, any>({
