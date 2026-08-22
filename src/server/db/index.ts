@@ -19,6 +19,17 @@ export async function closeDatabase(): Promise<void> {
     log.info('Database connection closed.');
 }
 
+/**
+ * The embedded server is single-user: all local state belongs to the first
+ * user row. That row is created at boot as admin@localhost, but local auth
+ * setup can later change its email/username, so lookups must use the first
+ * row rather than keying on the default email.
+ */
+export async function getDefaultUserRecord(): Promise<typeof User.$inferSelect | undefined> {
+    const [user] = await db.select().from(User).orderBy(asc(User.id)).limit(1);
+    return user;
+}
+
 export async function getChatModelById(chatModelId: number): Promise<ChatModelWithApi | undefined> {
     const [result] = await db.select({ chatModel: ChatModel, aiModelApi: AiModelApi }).from(ChatModel).leftJoin(AiModelApi, eq(ChatModel.aiModelApiId, AiModelApi.id)).where(eq(ChatModel.id, chatModelId));
     return result ? { chatModel: result.chatModel, aiModelApi: result.aiModelApi } : undefined;

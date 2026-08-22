@@ -7,10 +7,9 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { db } from '../db';
+import { db, getDefaultUserRecord } from '../db';
 import { Automation, AutomationExecution, Conversation, User } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { getDefaultUser } from '../utils';
 import { getOrCreateAutomationsFolder } from '../db/folders';
 import {
     queueExecution,
@@ -92,7 +91,7 @@ automations.get('/executions/:id', async (c) => {
 // ============== CONFIRMATIONS ==============
 // Get pending confirmations for user
 automations.get('/confirmations/pending', async (c) => {
-    const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const user = await getDefaultUserRecord();
     if (!user) return c.json({ error: 'User not found' }, 404);
 
     const pending = await getPendingConfirmations(user.id);
@@ -136,7 +135,7 @@ automations.post('/confirmations/:id/respond', zValidator('json', confirmationRe
 
 // List all automations for user
 automations.get('/', async (c) => {
-    const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const user = await getDefaultUserRecord();
     if (!user) return c.json({ error: 'User not found' }, 404);
 
     const allAutomations = await db.select()
@@ -186,7 +185,7 @@ automations.get('/:id', async (c) => {
 automations.post('/', zValidator('json', createAutomationSchema), async (c) => {
     const data = c.req.valid('json');
 
-    const [user] = await db.select().from(User).where(eq(User.email, getDefaultUser().email));
+    const user = await getDefaultUserRecord();
     if (!user) return c.json({ error: 'User not found' }, 404);
 
     // Ensure the persistent "Automations" folder exists; automation

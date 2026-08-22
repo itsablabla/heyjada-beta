@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { db } from './db';
+import { db, getDefaultUserRecord } from './db';
 import { User, AiModelApi, ChatModel, Conversation, McpServer } from './db/schema';
 import { eq } from 'drizzle-orm';
 import { getDefaultUser } from './utils';
@@ -72,12 +72,15 @@ async function listOpenAICompatibleModels(apiKey: string, apiBaseUrl?: string): 
 }
 
 export async function initializeDatabase() {
-    // 1. Create default local user (used to associate all local state in the embedded DB)
-    const defaultUserEmail = getDefaultUser().email;
-
-    const [existingUser] = await db.select().from(User).where(eq(User.email, defaultUserEmail));
+    // 1. Create default local user (used to associate all local state in the embedded DB).
+    // Local auth setup may rename the first user's email/username, so check for
+    // any existing user rather than looking up the default email (which would
+    // re-insert a duplicate admin@localhost row and hit the username unique
+    // constraint after a rename).
+    const existingUser = await getDefaultUserRecord();
 
     if (!existingUser) {
+        const defaultUserEmail = getDefaultUser().email;
         log.info(`👤 Creating default local user: ${defaultUserEmail}`);
         await db.insert(User).values({
             email: defaultUserEmail,
